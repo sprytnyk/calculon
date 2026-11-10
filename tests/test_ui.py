@@ -398,6 +398,23 @@ def test_find_in_sheet(window, app) -> None:
     assert window.editor.match_count()[1] > 0
 
 
+def test_shortcuts_work_while_a_menu_is_open(window, app) -> None:
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+    from PySide6.QtWidgets import QApplication
+
+    fired = []
+    help_menu = window.menuBar().actions()[-1].menu()
+    refresh = next(a for a in help_menu.actions() if a.text() == "Refresh Exchange Rates")
+    refresh.triggered.connect(lambda: fired.append(1))
+    help_menu.popup(window.mapToGlobal(window.rect().center()))
+    pump(app)
+    QTest.keyClick(help_menu, Qt.Key.Key_R, Qt.KeyboardModifier.ControlModifier)
+    pump(app)
+    assert fired == [1]
+    assert QApplication.activePopupWidget() is None
+
+
 def test_autocomplete_lists_variables_first_with_their_kind(window, app) -> None:
     from PySide6.QtTest import QTest
 
@@ -416,3 +433,18 @@ def test_autocomplete_lists_variables_first_with_their_kind(window, app) -> None
     assert all(kind for _, kind in rows)
     assert ed.kind_label("unit") == "unit"
     ed._completer.popup().hide()
+
+
+def test_every_shortcut_belongs_to_one_action(window) -> None:
+    from PySide6.QtGui import QKeySequence
+    from PySide6.QtWidgets import QMenu
+
+    seen: dict[str, str] = {}
+    for menu in window.menuBar().findChildren(QMenu):
+        for action in menu.actions():
+            for key in action.shortcuts():
+                text = key.toString(QKeySequence.SequenceFormat.PortableText)
+                assert seen.setdefault(text, action.text()) == action.text(), text
+    by_name = {a.text(): a for m in window.menuBar().findChildren(QMenu) for a in m.actions()}
+    assert by_name["Settings…"].shortcut() == QKeySequence("Ctrl+,")  # shown in the menu
+    assert by_name["Keyboard Shortcuts"].shortcut() == QKeySequence("Shift+F1")

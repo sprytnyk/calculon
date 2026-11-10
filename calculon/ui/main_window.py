@@ -5,8 +5,10 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import (
+    QEvent,
     QFileSystemWatcher,
     QLibraryInfo,
+    QObject,
     QSettings,
     Qt,
     QTimer,
@@ -22,6 +24,7 @@ from PySide6.QtGui import (
     QFont,
     QFontDatabase,
     QGuiApplication,
+    QKeyEvent,
     QKeySequence,
     QMouseEvent,
     QTextDocument,
@@ -31,6 +34,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QPushButton,
     QSplitter,
@@ -240,9 +244,7 @@ class MainWindow(QMainWindow):
         )
         self._action(m, "open_folder", lambda: self.show_in_folder(""))
         m.addSeparator()
-        self._action(
-            m, "settings", self.open_settings, [QKeySequence(K.Preferences), QKeySequence("Ctrl+,")]
-        )
+        self._action(m, "settings", self.open_settings, "Ctrl+,")
         m.addSeparator()
         quit_act = self._action(m, "quit", self.close, K.Quit)
         quit_act.setMenuRole(QAction.MenuRole.QuitRole)
@@ -304,12 +306,42 @@ class MainWindow(QMainWindow):
             m,
             "shortcuts",
             self.show_shortcuts,
-            [QKeySequence("Ctrl+?"), QKeySequence("Ctrl+Shift+/")],
+            "Shift+F1",  # next to F1 for help; Ctrl+? sat on top of Ctrl+/ for comments
         )
         self._action(m, "refresh_rates", self.rates.refresh, "Ctrl+R")
         m.addSeparator()
         about = self._action(m, "about", self.about)
         about.setMenuRole(QAction.MenuRole.AboutRole)
+        for menu in bar.findChildren(QMenu):
+            menu.installEventFilter(self)
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # noqa: N802
+        """Shortcuts work while a menu is open too; Qt ignores them there by default."""
+        if isinstance(obj, QMenu) and event.type() == QEvent.Type.KeyPress:
+            assert isinstance(event, QKeyEvent)
+            action = self._action_for_key(event)
+            if action is not None:
+                while (popup := QApplication.activePopupWidget()) is not None:
+                    popup.close()
+                QTimer.singleShot(0, action.trigger)
+                return True
+        return super().eventFilter(obj, event)
+
+    def _action_for_key(self, event: QKeyEvent) -> QAction | None:
+        mods = event.modifiers()
+        function_key = Qt.Key.Key_F1.value <= event.key() <= Qt.Key.Key_F35.value
+        chord = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier
+        if not (mods & (chord | Qt.KeyboardModifier.MetaModifier) or function_key):
+            return None  # plain letters pick menu items by their underlined letter
+        pressed = QKeySequence(event.keyCombination())
+        for menu in self.menuBar().findChildren(QMenu):
+            for action in menu.actions():
+                if action.isEnabled() and any(
+                    key.matches(pressed) == QKeySequence.SequenceMatch.ExactMatch
+                    for key in action.shortcuts()
+                ):
+                    return action
+        return None
 
     def apply_settings(self) -> None:
         s = self.settings
