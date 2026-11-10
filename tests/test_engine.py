@@ -410,3 +410,11 @@ def test_data_rates_in_ukrainian() -> None:
     assert one("100 Мбіт/с у МБ/с", lang="uk") == "12.5 МБ/с"
     assert one("10 ГБ по 100 Мбіт/с у хвилинах", lang="uk") == "13.333333 хвилини"
     assert one("1 мбіт/с у мб/с", lang="uk") == "0.125 МБ/с"
+
+
+def test_variables_carry_their_values_for_hover() -> None:
+    lines = evaluate_sheet("rent = $1000\nrent = rent + 50\nrent * 2 // rent", RATES, CONFIG).lines
+    assert lines[0].hints == [(0, 4, "$1,000.00")]
+    # the value the line used, then the new one on the name being assigned
+    assert sorted(lines[1].hints) == [(0, 4, "$1,050.00"), (7, 11, "$1,000.00")]
+    assert lines[2].hints == [(0, 4, "$1,050.00")]  # not the word in the comment

@@ -4,8 +4,10 @@ import re
 
 from PySide6.QtCore import (
     QEasingCurve,
+    QEvent,
     QModelIndex,
     QObject,
+    QPoint,
     QRect,
     QRectF,
     QSize,
@@ -40,6 +42,7 @@ from PySide6.QtWidgets import (
     QStyleOptionSlider,
     QStyleOptionViewItem,
     QTextEdit,
+    QToolTip,
     QWidget,
 )
 
@@ -729,6 +732,40 @@ class SheetEdit(QPlainTextEdit):
         )
         cur.insertText(completion)
         self.setTextCursor(cur)
+
+    def hint_at(self, pos: QPoint) -> str:
+        """The value of the variable under `pos` (viewport coordinates), or ""."""
+        if self.result is None:
+            return ""
+        cur = self.cursorForPosition(pos)
+        block = cur.block()
+        n = block.blockNumber()
+        if n >= len(self.result.lines):
+            return ""
+        at = cur.positionInBlock()
+        for start, end, text in self.result.lines[n].hints:
+            if not start <= at <= end:
+                continue
+            first = QTextCursor(block)
+            first.setPosition(block.position() + start)
+            last = QTextCursor(block)
+            last.setPosition(block.position() + end)
+            a, b = self.cursorRect(first), self.cursorRect(last)
+            if a.top() != b.top():  # wrapped onto two rows: close enough
+                return text
+            if a.left() <= pos.x() <= b.right() and a.top() <= pos.y() <= a.bottom():
+                return text
+        return ""
+
+    def viewportEvent(self, event: QEvent) -> bool:  # noqa: N802
+        if event.type() == QEvent.Type.ToolTip:
+            text = self.hint_at(event.pos())
+            if text:
+                QToolTip.showText(event.globalPos(), text, self.viewport())
+            else:
+                QToolTip.hideText()
+            return True
+        return super().viewportEvent(event)
 
     def delete_to_line_edge(self, forward: bool) -> None:
         """Delete from the cursor to the start (or end) of the line, as one undo step.

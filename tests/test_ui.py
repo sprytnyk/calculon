@@ -447,3 +447,18 @@ def test_ctrl_shift_backspace_deletes_to_the_line_start(window, app) -> None:
     ed.undo()
     assert ed.toPlainText() == "rent = $900\n a month"  # one undo step each
     ed.moveCursor(QTextCursor.MoveOperation.End)
+
+
+def test_hovering_a_variable_shows_its_value(window, app) -> None:
+    window.new_sheet("")
+    ed = window.editor
+    ed.setPlainText("rent = $900\nrent * 12")
+    pump(app)
+    block = ed.document().findBlockByNumber(1)
+    cur = ed.textCursor()
+    cur.setPosition(block.position() + 2)
+    over = ed.cursorRect(cur).center()
+    assert ed.hint_at(over) == "$900.00"
+    cur.setPosition(block.position() + len("rent * 1"))
+    assert ed.hint_at(ed.cursorRect(cur).center()) == ""  # over the number
+    assert ed.hint_at(over + type(over)(400, 0)) == ""  # past the end of the line

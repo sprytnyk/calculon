@@ -56,6 +56,7 @@ class LineResult:
     error: str = ""
     spans: list[tuple[int, int, str]] = field(default_factory=list)
     is_total: bool = False
+    hints: list[tuple[int, int, str]] = field(default_factory=list)  # variables' values
 
 
 @dataclass
@@ -130,11 +131,13 @@ def _evaluate_line(raw: str, ctx: Context, opts: FormatOptions) -> LineResult:
     body = line[offset:]
     var_name = None
     op = None
+    name_span = (0, 0)
     m = ASSIGN_RE.match(body)
     if m:
         var_name = m.group("name").strip()
         op = m.group("op")
-        res.spans.append((offset + m.start("name"), offset + m.end("name"), "variable"))
+        name_span = (offset + m.start("name"), offset + m.end("name"))
+        res.spans.append((*name_span, "variable"))
         offset += m.end()
         body = line[offset:]
     toks = tokenize_line(body, ctx)
@@ -142,6 +145,8 @@ def _evaluate_line(raw: str, ctx: Context, opts: FormatOptions) -> LineResult:
         t.start += offset
         t.end += offset
     items = classify(toks, ctx)
+    # each variable's value as the line sees it, before an assignment changes it
+    seen = {id(it): ctx.variables.get(it.key) for it in items if it.kind == "var"}
     plain: set[int] = set()  # "if", "to", "in" in prose: not coloured as keywords
     _evaluate_items(res, items, body, var_name, op, ctx, opts, plain)
     if res.kind != "value":
@@ -150,7 +155,18 @@ def _evaluate_line(raw: str, ctx: Context, opts: FormatOptions) -> LineResult:
         cls = SPAN_CLASSES.get(it.kind)
         if cls and id(it) not in plain:
             res.spans.append((it.start, it.end, cls))
+        if (value := seen.get(id(it))) is not None and (text := _format(value, opts)):
+            res.hints.append((it.start, it.end, text))
+    if var_name and res.kind == "value":
+        res.hints.append((*name_span, res.text))
     return res
+
+
+def _format(value: Value, opts: FormatOptions) -> str:
+    try:
+        return format_value(value, opts)
+    except ArithmeticError, ValueError:
+        return ""
 
 
 def _evaluate_items(
