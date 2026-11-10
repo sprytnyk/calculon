@@ -1,5 +1,6 @@
 """Ukrainian sheets: 1 234,56 numbers, metric units in Cyrillic, Ukrainian results."""
 
+import time
 from dataclasses import replace
 
 import pytest
@@ -14,6 +15,20 @@ UK_CONFIG = replace(CONFIG, number_style="space_comma")
 
 def uk(text: str) -> str:
     return evaluate_sheet(text, RATES, UK_CONFIG, UK).lines[-1].text
+
+
+@pytest.fixture
+def kyiv_time(monkeypatch: pytest.MonkeyPatch):
+    """Answers in other cities depend on the machine's own time zone; pin it."""
+    monkeypatch.setenv("TZ", "Europe/Kyiv")
+    time.tzset()
+    yield
+    monkeypatch.undo()
+    time.tzset()
+
+
+def test_time_in_another_city(kyiv_time) -> None:
+    assert uk("15:00 у Лондоні") == "13:00 Лондон"  # Kyiv is 2 hours ahead in November
 
 
 @pytest.mark.parametrize(
@@ -66,7 +81,6 @@ def uk(text: str) -> str:
         ("днів від 10 листопада", "0 днів"),
         ("з 3 березня до 30 травня", "2 місяці 3 тижні 6 днів"),
         ("3 тижні після 14 березня 2027", "4 квітня 2027"),
-        ("15:00 у Лондоні", "13:00 Лондон"),
         # words for operations
         ("30 плюс 20 мінус 5", "45"),
         ("1 000 поділити на 8", "125"),
