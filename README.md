@@ -10,39 +10,16 @@ Runs on Linux, Windows and macOS (Intel and Apple Silicon). Built with PySide6.
 
 ## Features
 
-- **Words around maths.** `$19 for breakfast + $22 for the uber` → `$41.00`
-- **Percentages.** `20% off $80`, `200 + 10%`, `20 is 10% of what`, `50 to 75 is what %`
-- **Money.** `100 EUR in USD`, `₴5,000 in €`, `$3k + €2k`, your own rate with
-  `50 EUR in USD at 1.05 USD/EUR`. About 160 currencies.
-- **Variables.** `rent = $1,900`, then `rent / 3`; `rent += $100`
-- **Totals.** A line with `total`, `sum`, `average`, `median` or `count` covers the lines
-  above it, up to the previous total or heading. `total of #food` adds tagged lines.
-  The status bar shows the sheet total; click it to copy.
-- **Units.** `10 km in miles`, `100 °C in °F`, `2 GB in MB`, `20 sq m × 3`, `5 km cast miles`
-- **Rates.** `$20/hour × 40 hours`, `$500 at $20/hour`, `$99 per week as / month`,
-  `€95/night × 5 nights`. A word used as a rate becomes a unit.
-- **Dates and times.** `today + 3 weeks`, `March 3 to May 30`, `days until December 25`,
-  `7:45am - 4:20pm`, `time in Tokyo`, `3pm in London`
-- **Functions.** `sqrt`, `round(x, 2)` or `round(2,345; 2)`, `floor`, `ceil`, `log`, `ln`, `sin` (with `°`),
-  `5!`, `pi`, `255 as hex`, `0b1010`, `1.5e3`, `2.5k`, `5M`
-- **Earlier lines.** `line3 * 2`, `prev + 1`, or start a line with `+`, `*` or `/`
-- **Comments and headings.** `// comment`, `"quoted text"`, `Label: $120`, `# Heading`,
-  `---` starts a new section
-- **In Ukrainian.** Everything above has a Ukrainian form: `10% знижки від 200`,
-  `20 це 10% від чого`, `1 000 грн у доларах`, `₴500 за годину × 40 годин`,
-  `5 тис. грн`, `днів до 25 грудня`, `час у Токіо`, `разом від #їжа`. Function names
-  (`sqrt`, `round`, `sin`) stay as in maths. Sheets understand both languages whatever
-  the interface language is. With the Ukrainian interface, numbers look like
-  `1 234,56`, units and months are in Ukrainian, and the currency sign goes after the
-  number.
-- Line numbers on the left, so `line12` is easy to find (View → Line Numbers)
-- Several sheets with folders, search, pins, drag to reorder and a trash
-- Dark theme by default, light theme, or follow the system
-- English and Ukrainian interface
-- Autocomplete for variables, units and currencies; click an answer to copy it
-- Help → Keyboard Shortcuts (Ctrl+?) lists every shortcut
+- Lines mix words and maths: `$19 for breakfast + $22 for the uber`, `20% off $80`,
+  `100 EUR in USD`, `10 km in miles`, `today + 3 weeks`
+- Variables, totals of the lines above, and answers from earlier lines
+- About 160 currencies, with rates updated daily
+- English and Ukrainian, in sheets and in the interface
+- Sheets in folders, with search, pins and a trash
+- Dark, light or system theme
 
-The built-in **Help** sheet in the sidebar has a live example of everything above.
+The **Help** sheet in the sidebar (F1) shows everything with live examples. Help →
+Keyboard Shortcuts lists the keys.
 
 ## Sheets
 
