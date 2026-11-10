@@ -3,6 +3,7 @@
 import re
 
 from PySide6.QtCore import (
+    QEasingCurve,
     QModelIndex,
     QObject,
     QRect,
@@ -10,6 +11,7 @@ from PySide6.QtCore import (
     QSize,
     Qt,
     QTimer,
+    QVariantAnimation,
     Signal,
 )
 from PySide6.QtGui import (
@@ -32,8 +34,10 @@ from PySide6.QtWidgets import (
     QCompleter,
     QPlainTextDocumentLayout,
     QPlainTextEdit,
+    QScrollBar,
     QStyle,
     QStyledItemDelegate,
+    QStyleOptionSlider,
     QStyleOptionViewItem,
     QTextEdit,
     QWidget,
@@ -275,6 +279,95 @@ class LineNumbers(QWidget):
             block = block.next()
 
 
+class SheetScrollBar(QScrollBar):
+    """A thin bar that shows while scrolling or under the mouse, then fades out.
+
+    Find matches show as marks on it, so you can see where they are in the sheet.
+    """
+
+    HIDE_AFTER_MS = 1000
+
+    def __init__(self, editor: SheetEdit):
+        super().__init__(Qt.Orientation.Vertical, editor)
+        self.setObjectName("sheetScroll")
+        self.editor = editor
+        self._hover = False
+        self._pressed = False
+        self.opacity = 0.0
+        self._fade = QVariantAnimation(self)
+        self._fade.setDuration(180)
+        self._fade.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._fade.valueChanged.connect(self._set_opacity)
+        self._hide_timer = QTimer(self)
+        self._hide_timer.setSingleShot(True)
+        self._hide_timer.setInterval(self.HIDE_AFTER_MS)
+        self._hide_timer.timeout.connect(lambda: self._fade_to(0.0))
+        self.valueChanged.connect(lambda _v: self.reveal())
+
+    def _set_opacity(self, value: float) -> None:
+        self.opacity = float(value)
+        self.update()
+
+    def _fade_to(self, target: float) -> None:
+        if self._hover or self._pressed:
+            return
+        self._fade.stop()
+        self._fade.setStartValue(self.opacity)
+        self._fade.setEndValue(target)
+        self._fade.start()
+
+    def reveal(self) -> None:
+        self._fade.stop()
+        self._set_opacity(1.0)
+        self._hide_timer.start()
+
+    def enterEvent(self, event) -> None:  # noqa: N802
+        self._hover = True
+        self.reveal()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:  # noqa: N802
+        self._hover = False
+        self._hide_timer.start()
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802
+        self._pressed = True
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event) -> None:  # noqa: N802
+        self._pressed = False
+        self._hide_timer.start()
+        super().mouseReleaseEvent(event)
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        theme = self.editor.theme
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        # find matches, always shown while there are any
+        doc = self.editor.document()
+        lines = max(1, doc.lastBlock().firstLineNumber() + doc.lastBlock().lineCount())
+        color = QColor(theme.accent)
+        color.setAlpha(200)
+        for match in self.editor.find_matches():
+            y = round(match.block().firstLineNumber() / lines * self.height())
+            painter.fillRect(QRect(2, min(y, self.height() - 3), self.width() - 4, 3), color)
+        if self.maximum() <= self.minimum() or self.opacity <= 0:
+            return
+        opt = QStyleOptionSlider()
+        self.initStyleOption(opt)
+        handle = self.style().subControlRect(
+            QStyle.ComplexControl.CC_ScrollBar, opt, QStyle.SubControl.SC_ScrollBarSlider, self
+        )
+        width = 8 if self._hover or self._pressed else 5
+        rect = QRectF(self.width() - width - 2, handle.top() + 2, width, handle.height() - 4)
+        color = QColor(theme.muted)
+        color.setAlphaF(self.opacity * (0.9 if self._hover or self._pressed else 0.5))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(color)
+        painter.drawRoundedRect(rect, width / 2, width / 2)
+
+
 class CompletionDelegate(QStyledItemDelegate):
     """A completion row: the word, with the typed part in the accent colour, and its kind."""
 
@@ -346,6 +439,7 @@ class SheetEdit(QPlainTextEdit):
         self.show_line_numbers = True
         self._last_text: str | None = None
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
+        self.setVerticalScrollBar(SheetScrollBar(self))
         self.setTabChangesFocus(False)
         self.setCenterOnScroll(False)
         self.highlighter = Highlighter(self, theme)
@@ -580,6 +674,10 @@ class SheetEdit(QPlainTextEdit):
             self._matches.append(cur)
             cur = doc.find(self._needle, cur)
         self._cursor_moved()
+        self.verticalScrollBar().update()
+
+    def find_matches(self) -> list[QTextCursor]:
+        return self._matches
 
     def match_count(self) -> tuple[int, int]:
         """(number of the selected match, from 1, or 0; how many there are)."""

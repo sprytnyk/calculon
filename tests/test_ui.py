@@ -435,6 +435,28 @@ def test_autocomplete_lists_variables_first_with_their_kind(window, app) -> None
     ed._completer.popup().hide()
 
 
+def test_sheet_scrollbar_shows_while_scrolling_then_fades(window, app) -> None:
+    import time
+
+    from calculon.ui.editor import SheetScrollBar
+
+    window.open_help()
+    bar = window.editor.verticalScrollBar()
+    assert isinstance(bar, SheetScrollBar)
+    bar.HIDE_AFTER_MS = 0
+    bar._hide_timer.setInterval(0)
+    bar.setValue(bar.maximum() // 2)
+    assert bar.opacity == 1.0
+    end = time.time() + 1
+    while bar.opacity > 0 and time.time() < end:
+        app.processEvents()
+    assert bar.opacity == 0.0
+    window.find_bar.open()
+    window.find_bar.field.setText("percent")
+    assert bar.width() == 12 and window.editor.find_matches()  # marks stay on the bar
+    window.find_bar.close_bar()
+
+
 def test_every_shortcut_belongs_to_one_action(window) -> None:
     from PySide6.QtGui import QKeySequence
     from PySide6.QtWidgets import QMenu

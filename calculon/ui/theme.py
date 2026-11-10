@@ -221,6 +221,17 @@ def apply(app: QApplication, theme: Theme) -> None:
         QMenuBar::item:pressed {{ background: {theme.selection}; }}
         QToolTip {{ background: {theme.surface}; color: {theme.text};
                     border: 1px solid {theme.border}; }}
+        QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px 1px; }}
+        QScrollBar:horizontal {{ background: transparent; height: 10px; margin: 1px 2px; }}
+        QScrollBar::handle {{ background: {theme.border}; border-radius: 4px; }}
+        QScrollBar::handle:hover, QScrollBar::handle:pressed {{ background: {theme.muted}; }}
+        QScrollBar::handle:vertical {{ min-height: 28px; }}
+        QScrollBar::handle:horizontal {{ min-width: 28px; }}
+        QScrollBar::add-line, QScrollBar::sub-line {{ width: 0; height: 0; border: none;
+                                                      background: none; }}
+        QScrollBar::add-page, QScrollBar::sub-page {{ background: none; }}
+        QScrollBar#sheetScroll:vertical {{ width: 12px; margin: 0; }}
+        QScrollBar#sheetScroll::handle {{ background: transparent; min-height: 32px; }}
         """
         + controls_stylesheet(theme)
     )
