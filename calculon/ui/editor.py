@@ -190,11 +190,12 @@ class ResultsArea(QWidget):
         theme = ed.theme
         painter = QPainter(self)
         painter.fillRect(event.rect(), QColor(theme.bg))
-        # the line between the sheet and its answers; the border colour was too faint to see
+        # The line between the sheet and its answers. A 1px strip inside the widget, not a
+        # line on its edge: with 1.25x-style scaling an edge line can fall between pixels
+        # and vanish, depending on the window size.
         divider = QColor(theme.muted)
         divider.setAlphaF(0.45)
-        painter.setPen(divider)
-        painter.drawLine(0, 0, 0, self.height())
+        painter.fillRect(QRect(0, 0, 1, self.height()), divider)
         result = ed.result
         if result is None:
             return
@@ -229,8 +230,10 @@ class ResultsArea(QWidget):
                         rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, text
                     )
                     if line.is_total:
-                        painter.setPen(QColor(theme.border))
-                        painter.drawLine(pad, top, self.width() - pad, top)
+                        # a strip, not a line, for the same reason as the divider
+                        painter.fillRect(
+                            QRect(pad, top, self.width() - 2 * pad, 1), QColor(theme.border)
+                        )
             block = block.next()
 
 
