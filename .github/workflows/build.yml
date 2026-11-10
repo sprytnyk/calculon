@@ -103,6 +103,13 @@ jobs:
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
             ./dist/calculon.exe --self-test
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            # PyInstaller signs the app ad hoc. Apple Silicon Macs refuse to start an unsigned app.
+            codesign --verify --deep --strict --verbose=2 dist/Calculon.app
+            plutil -p dist/Calculon.app/Contents/Info.plist
+            test -f dist/Calculon.app/Contents/Resources/icon.icns
+            ./dist/Calculon.app/Contents/MacOS/calculon --version
+            ./dist/Calculon.app/Contents/MacOS/calculon --self-test
           else
             ./dist/calculon --version
             ./dist/calculon --self-test
@@ -116,6 +123,12 @@ jobs:
           if [ "$RUNNER_OS" = "Windows" ]; then
             cp LICENSE dist/
             (cd dist && 7z a -tzip "../out/$name.zip" calculon.exe LICENSE)
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            # ditto zips the app like Finder does and keeps its symlinks and signature
+            mkdir -p "pack/$name"
+            ditto dist/Calculon.app "pack/$name/Calculon.app"
+            cp LICENSE "pack/$name/"
+            ditto -c -k --keepParent "pack/$name" "out/$name.zip"
           else
             cp LICENSE dist/
             tar -czf "out/$name.tar.gz" -C dist calculon LICENSE
