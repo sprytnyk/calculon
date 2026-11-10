@@ -263,6 +263,9 @@ class MainWindow(QMainWindow):
         self._action(m, "copy_result", self._copy_current_result, "Ctrl+Shift+C")
         self._action(m, "copy_with_results", self._copy_with_results, "Ctrl+Alt+C")
         m.addSeparator()
+        self._action(m, "insert_total", ed.insert_total, "Ctrl+T")
+        self._action(m, "insert_reference", ed.insert_line_reference, "Ctrl+L")
+        m.addSeparator()
         fb = self.find_bar
         self._action(m, "find_in_sheet", fb.open, K.Find)
         self._action(m, "find_next", fb.step, K.FindNext)
@@ -368,6 +371,7 @@ class MainWindow(QMainWindow):
         self.sidebar.retranslate()
         self.find_bar.retranslate()
         self.editor.kind_labels = {k: self.t(f"kind_{k}") for k in KIND_ORDER}
+        self.editor.words = {k: self.t(f"word_{k}") for k in ("total", "prev", "line")}
         self._update_rates_label()
         self.setWindowTitle(self._title())
         self.build_menus()

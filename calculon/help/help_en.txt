@@ -100,14 +100,14 @@ pi × 2
 $20 lunch #food
 $35 dinner #food
 $15 taxi #travel
-total
+total // Ctrl+T types it
 total of #food
 average of 36, 42, 19 and 81
 
 # Earlier lines
 100
-line108 * 2 // the line number is shown on the left
-prev + 1 // the answer just above
+line108 * 2 // the line number is shown on the left; or double-click an answer
+prev + 1 // the answer just above; Ctrl+L types it
 + 10 // a line starting with an operator continues the previous answer
 
 ---

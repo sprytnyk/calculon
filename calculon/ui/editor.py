@@ -54,6 +54,7 @@ from ..engine.interpreter import AGGREGATES, FUNCTIONS, KEYWORDS, ROUNDERS
 from .theme import Theme
 
 WORD_RE = re.compile(r"[^\W\d_][\w]*$")
+LINE_NUMBER_RE = re.compile(r"(?<![\w.,])\d+$")  # "12" just before the cursor, on its own
 SYMBOL_RUN = re.compile(r"[-=<>!+*/|&:~.^%]{2,}")
 MIN_RESULTS_WIDTH = 120
 COMMENT_PREFIX = "// "
@@ -182,6 +183,17 @@ class ResultsArea(QWidget):
                 self._flash_timer.start(700)
                 self.copied.emit(text)
                 self.update()
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        x = int(event.position().x())
+        if event.button() != Qt.MouseButton.LeftButton or self._near_edge(x):
+            super().mouseDoubleClickEvent(event)
+            return
+        # the first click already copied the answer; the second puts a reference to it
+        # into the line being edited
+        n = self._block_at(int(event.position().y()))
+        if self.editor.result_text(n) and self.editor.insert_reference(n):
+            self.editor.setFocus()
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
         if self._drag_x is not None:
@@ -454,6 +466,8 @@ class SheetEdit(QPlainTextEdit):
         self.highlighter = Highlighter(self, theme)
         self.highlighter.setDocument(self.document())
         self.kind_labels: dict[str, str] = {}
+        # what Ctrl+T and Ctrl+L type, in the interface language
+        self.words = {"total": "total", "prev": "prev", "line": "line"}
         self._needle = ""
         self._matches: list[QTextCursor] = []
         self.results = ResultsArea(self)
@@ -732,6 +746,49 @@ class SheetEdit(QPlainTextEdit):
         )
         cur.insertText(completion)
         self.setTextCursor(cur)
+
+    def insert_word(self, word: str) -> None:
+        """Type `word` at the cursor, with a space before it if it needs one."""
+        if self.isReadOnly():
+            return
+        cur = self.textCursor()
+        cur.beginEditBlock()
+        cur.removeSelectedText()
+        text = cur.block().text()
+        before, after = text[: cur.positionInBlock()], text[cur.positionInBlock() :]
+        if before and not before[-1].isspace() and before[-1] != "(":
+            word = " " + word
+        if after and (after[0].isalnum() or after[0] == "_"):
+            word += " "
+        cur.insertText(word)
+        cur.endEditBlock()
+        self.setTextCursor(cur)
+
+    def insert_total(self) -> None:
+        self.insert_word(self.words["total"])
+
+    def insert_line_reference(self) -> None:
+        """A reference to the answer above, or to line N if N was just typed."""
+        if self.isReadOnly():
+            return
+        cur = self.textCursor()
+        if not cur.hasSelection():
+            m = LINE_NUMBER_RE.search(cur.block().text()[: cur.positionInBlock()])
+            if m:
+                cur.movePosition(
+                    QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.KeepAnchor, len(m.group())
+                )
+                cur.insertText(f"{self.words['line']}{m.group()}")
+                self.setTextCursor(cur)
+                return
+        self.insert_word(self.words["prev"])
+
+    def insert_reference(self, block_number: int) -> bool:
+        """Put a reference to an earlier line's answer at the cursor; False if it can't."""
+        if self.isReadOnly() or not 0 <= block_number < self.textCursor().blockNumber():
+            return False
+        self.insert_word(f"{self.words['line']}{block_number + 1}")
+        return True
 
     def hint_at(self, pos: QPoint) -> str:
         """The value of the variable under `pos` (viewport coordinates), or ""."""

@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QCoreApplication, QSettings, Qt
+from PySide6.QtCore import QCoreApplication, QPoint, QSettings, Qt
 from PySide6.QtGui import QColor, QFont, QGuiApplication, QKeySequence, QTextCursor
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMenu, QStyle
@@ -449,6 +449,61 @@ def test_ctrl_shift_backspace_deletes_to_the_line_start(window, app) -> None:
     ed.moveCursor(QTextCursor.MoveOperation.End)
 
 
+def test_ctrl_t_and_ctrl_l_type_total_and_references(window, app) -> None:
+    acts = {
+        a.shortcut().toString(): a
+        for m in window.menuBar().findChildren(QMenu)
+        for a in m.actions()
+    }
+    window.new_sheet("")
+    ed = window.editor
+    ed.setPlainText("$1000\n$200\nmonthly =")
+    ed.moveCursor(ed.textCursor().MoveOperation.End)
+    acts["Ctrl+T"].trigger()
+    assert ed.toPlainText().endswith("\nmonthly = total")
+    QTest.keyClick(ed, Qt.Key.Key_Return)
+    QTest.keyClicks(ed, "2 *")
+    acts["Ctrl+L"].trigger()  # nothing typed: the answer above
+    QTest.keyClicks(ed, " + 1")
+    acts["Ctrl+L"].trigger()  # a number just typed: that line
+    assert ed.toPlainText().endswith("\n2 * prev + line1")
+    pump(app)
+    assert [ed.result_text(n) for n in (2, 3)] == ["$1,200.00", "$3,400.00"]
+    ed.undo()
+    assert ed.toPlainText().endswith("\n2 * prev + 1")  # one undo step
+
+
+def test_insert_words_follow_the_interface_language(window, app) -> None:
+    window.set_language("uk")
+    window.new_sheet("")
+    ed = window.editor
+    ed.setPlainText("5\n")
+    ed.moveCursor(ed.textCursor().MoveOperation.End)
+    ed.insert_total()
+    ed.insert_line_reference()
+    assert ed.toPlainText() == "5\nразом попередній"
+
+
+def test_double_click_an_answer_inserts_a_reference(window, app) -> None:
+    window.new_sheet("")
+    ed = window.editor
+    ed.setPlainText("$1000\n$200\nx = ")
+    ed.moveCursor(ed.textCursor().MoveOperation.End)
+    pump(app)
+
+    def answer(n: int) -> QPoint:
+        geo = ed.blockBoundingGeometry(ed.document().findBlockByNumber(n))
+        y = int(geo.translated(ed.contentOffset()).center().y())
+        return QPoint(ed.results.width() // 2, y)
+
+    QTest.mouseDClick(ed.results, Qt.MouseButton.LeftButton, pos=answer(1))
+    assert ed.toPlainText().endswith("\nx = line2")
+    pump(app)
+    assert ed.result_text(2) == "$200.00"
+    QTest.mouseDClick(ed.results, Qt.MouseButton.LeftButton, pos=answer(2))  # its own line
+    assert ed.toPlainText().endswith("\nx = line2")
+
+
 def test_hovering_a_variable_shows_its_value(window, app) -> None:
     window.new_sheet("")
     ed = window.editor
@@ -462,3 +517,13 @@ def test_hovering_a_variable_shows_its_value(window, app) -> None:
     cur.setPosition(block.position() + len("rent * 1"))
     assert ed.hint_at(ed.cursorRect(cur).center()) == ""  # over the number
     assert ed.hint_at(over + type(over)(400, 0)) == ""  # past the end of the line
+
+
+def test_help_sheet_ignores_the_insert_keys(window, app) -> None:
+    window.open_help()
+    ed = window.editor
+    before = ed.toPlainText()
+    ed.insert_total()
+    ed.insert_line_reference()
+    assert not ed.insert_reference(0)
+    assert ed.toPlainText() == before

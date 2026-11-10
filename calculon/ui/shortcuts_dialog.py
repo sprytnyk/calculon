@@ -94,6 +94,11 @@ class ShortcutsDialog(QDialog):
                 [
                     (None, tr("delete_line_start"), key_text(line_keys | Qt.Key.Key_Backspace)),
                     (None, tr("delete_line_end"), key_text(line_keys | Qt.Key.Key_Delete)),
+                    (
+                        icons.icon("insert_reference"),
+                        tr("reference_answer"),
+                        tr("double_click_answer"),
+                    ),
                 ],
             )
         )
