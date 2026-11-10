@@ -57,8 +57,10 @@ Download the archive for your system from the
 - **Linux.** run `./calculon`.
 - **Windows.** run `calculon.exe`. The build isn't code-signed, so SmartScreen may ask
   you to confirm the first start (More info → Run anyway).
-- **macOS.** the build isn't notarized. The first time, right-click `calculon` → Open, or
-  run `xattr -d com.apple.quarantine calculon`.
+- **macOS.** pick `macos_arm64` for Apple Silicon, `macos_x64` for Intel, and drag
+  `Calculon.app` into Applications. The app isn't notarized, so macOS blocks it the first
+  time. Try to open it, then go to System Settings, open Privacy & Security and click Open
+  Anyway. Or run `xattr -dr com.apple.quarantine /Applications/Calculon.app`.
 
 Check a download against the signed checksums:
 
@@ -75,21 +77,22 @@ uv sync                 # install dependencies
 uvx pre-commit install  # ruff and file checks before each commit
 make run                # start the app
 make check              # ruff and pytest
-make build              # one-file binary in dist/ (test version)
-make icons              # remake assets/icon.png and icon.ico from icon-source.png
+make build              # dist/calculon, or dist/Calculon.app on macOS (test version)
+make icons              # remake assets/icon.png, .ico and .icns from icon-source.png
 ```
 
 `dist/calculon --self-test` checks that a build has everything it needs (unit data, time
-zones, help sheets, fonts, rates snapshot).
+zones, help sheets, fonts, rates snapshot). On macOS, run
+`dist/Calculon.app/Contents/MacOS/calculon --self-test`.
 
 The calculator engine in `calculon/engine/` has no Qt in it; `tests/test_engine.py` has
 the examples from Soulver's documentation as tests.
 
 ## Release
 
-Pushing a `vX.Y.Z` tag runs the *Release builds* workflow: checks, then one-file builds
-for Linux x64, Windows x64, macOS x64 and macOS arm64, kept as a run artifact with
-`SHA256SUMS`. The version comes from the tag, and there is no version file. The `release`
+Pushing a `vX.Y.Z` tag runs the *Release builds* workflow. It runs the checks, then
+builds Linux x64 and Windows x64 binaries and a `Calculon.app` for macOS x64 and arm64.
+It keeps them as a run artifact with `SHA256SUMS`. The version comes from the tag, and there is no version file. The `release`
 skill in `.claude/skills/release/` does the rest: the signed tag, the signed checksums,
 the release notes and the GitHub release.
 

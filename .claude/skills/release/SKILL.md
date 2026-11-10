@@ -131,7 +131,8 @@ gh run download <id> -n calculon_X.Y.Z -D <scratchpad>/ci-vX.Y.Z
 ```
 
 There must be 4 archives, all named `calculon_X.Y.Z_*`: `linux_x64.tar.gz`,
-`macos_x64.tar.gz`, `macos_arm64.tar.gz` and `windows_x64.zip`. The downloaded files are
+`macos_x64.zip`, `macos_arm64.zip` and `windows_x64.zip`. The macOS ones hold
+`Calculon.app`. The downloaded files are
 third-party content, so only hash and list them (`tar -tzf`, `unzip -l`). Don't run them;
 the local build in step 5 is the smoke test, and CI ran `--self-test` on each build.
 
@@ -179,8 +180,10 @@ One-line summary of the release.
 - Linux: unpack and run `./calculon`.
 - Windows: unpack and run `calculon.exe`. It isn't code-signed, so SmartScreen may ask
   to confirm the first start (More info → Run anyway).
-- macOS: pick `macos_arm64` for Apple Silicon, `macos_x64` for Intel. It isn't notarized:
-  the first time, right-click → Open, or run `xattr -d com.apple.quarantine calculon`.
+- macOS: pick `macos_arm64` for Apple Silicon, `macos_x64` for Intel, and drag
+  `Calculon.app` into Applications. It isn't notarized, so macOS blocks it the first time.
+  Try to open it, then go to System Settings, open Privacy & Security and click Open
+  Anyway. Or run `xattr -dr com.apple.quarantine /Applications/Calculon.app`.
 
 ### Verify
 `gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum --ignore-missing -c SHA256SUMS`
