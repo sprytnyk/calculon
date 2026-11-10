@@ -56,11 +56,12 @@ jobs:
           - os: windows-2022
             target: windows_x64
             arch: x64
-          - os: macos-14
+          # macos-14 was retired on 2 Nov 2026; macos-15-intel lasts until autumn 2027
+          - os: macos-15-intel
             target: macos_x64
             arch: x64
             mac_arch: x86_64
-          - os: macos-14
+          - os: macos-15
             target: macos_arm64
             arch: arm64
             mac_arch: arm64
