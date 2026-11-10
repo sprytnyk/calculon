@@ -1,7 +1,5 @@
 """Main window."""
 
-from __future__ import annotations
-
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -162,8 +160,6 @@ class MainWindow(QMainWindow):
         self._open_initial()
         QTimer.singleShot(0, self.rates.refresh_if_stale)
 
-    # --- helpers --------------------------------------------------------------------
-
     def t(self, key: str, **kw) -> str:
         return tr(self.settings.language, key, **kw)
 
@@ -195,8 +191,6 @@ class MainWindow(QMainWindow):
             self.open_sheet(sheets[0])
         else:
             self.open_help()
-
-    # --- menus ----------------------------------------------------------------------
 
     # menu text key -> icon name, where they differ
     ICONS = {
@@ -301,8 +295,6 @@ class MainWindow(QMainWindow):
         m.addSeparator()
         about = self._action(m, "about", self.about)
         about.setMenuRole(QAction.MenuRole.AboutRole)
-
-    # --- settings -------------------------------------------------------------------
 
     def apply_settings(self) -> None:
         s = self.settings
@@ -412,8 +404,6 @@ class MainWindow(QMainWindow):
         self.settings.save()
         self.editor.set_line_numbers(self.settings.line_numbers)
 
-    # --- opening sheets -------------------------------------------------------------
-
     def _title(self) -> str:
         kind, key = self.current
         app = self.t("app_name")
@@ -473,8 +463,6 @@ class MainWindow(QMainWindow):
             text = ""
         self._load(TRASHED, name, text, read_only=True, banner=self.t("read_only_trash"))
 
-    # --- saving ---------------------------------------------------------------------
-
     def _text_changed(self) -> None:
         if self.current[0] == SHEET and not self.editor.isReadOnly():
             self._dirty = True
@@ -530,8 +518,6 @@ class MainWindow(QMainWindow):
                 self.open_sheet(sheets[0])
             else:
                 self.open_help()
-
-    # --- sheet actions ----------------------------------------------------------------
 
     def new_sheet(self, folder: str = "") -> None:
         self.save_current()
@@ -658,8 +644,6 @@ class MainWindow(QMainWindow):
         folder = path if path.is_dir() else path.parent
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
 
-    # --- clipboard and status -----------------------------------------------------------
-
     def _copy(self, text: str) -> None:
         QGuiApplication.clipboard().setText(text)
         self.statusBar().showMessage(self.t("copied", text=text), 2000)
@@ -726,8 +710,6 @@ class MainWindow(QMainWindow):
         box.setText(self.t("about_text", version=__version__))
         box.setIconPixmap(self.windowIcon().pixmap(64, 64))
         box.exec()
-
-    # --- closing --------------------------------------------------------------------
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         self.save_current()

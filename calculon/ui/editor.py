@@ -1,7 +1,5 @@
 """The sheet editor: text on the left, results in a column on the right."""
 
-from __future__ import annotations
-
 import re
 
 from PySide6.QtCore import QRect, QSize, QStringListModel, Qt, QTimer, Signal
@@ -304,8 +302,6 @@ class SheetEdit(QPlainTextEdit):
         self.set_results_width(self.results_width)
         self.apply_theme(theme)
 
-    # --- setup ----------------------------------------------------------------------
-
     def apply_theme(self, theme: Theme) -> None:
         self.theme = theme
         self.highlighter.set_theme(theme)
@@ -342,8 +338,6 @@ class SheetEdit(QPlainTextEdit):
         self.document().setDocumentMargin(14)
         self._update_margins()
         self.results.update()
-
-    # --- evaluation -----------------------------------------------------------------
 
     def _schedule(self) -> None:
         # long sheets: wait for a pause in typing so keystrokes never lag
@@ -391,8 +385,6 @@ class SheetEdit(QPlainTextEdit):
             out.append(f"{line.ljust(width)}  = {res}" if res else line)
         return "\n".join(out)
 
-    # --- geometry -------------------------------------------------------------------
-
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
         self._place_results()
@@ -422,8 +414,6 @@ class SheetEdit(QPlainTextEdit):
         self.results.update()
         if hasattr(self, "gutter"):
             self.gutter.update()
-
-    # --- editing helpers ------------------------------------------------------------
 
     def toggle_comment(self) -> None:
         cur = self.textCursor()
@@ -458,8 +448,6 @@ class SheetEdit(QPlainTextEdit):
             else:
                 c.insertText(COMMENT_PREFIX)
         edit.endEditBlock()
-
-    # --- autocomplete ---------------------------------------------------------------
 
     def _word_before_cursor(self) -> str:
         cur = self.textCursor()

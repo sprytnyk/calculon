@@ -1,7 +1,5 @@
 """Where things live, both from a checkout and inside a PyInstaller build."""
 
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 

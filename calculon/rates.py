@@ -1,7 +1,5 @@
 """Exchange rates: fetched daily, cached on disk, bundled snapshot as a last resort."""
 
-from __future__ import annotations
-
 import json
 import logging
 import time
@@ -44,8 +42,6 @@ class RatesService(QObject):
         self._timer.timeout.connect(self.refresh_if_stale)
         self._timer.start(CHECK_EVERY_MS)
 
-    # --- loading ----------------------------------------------------------------
-
     def _load_initial(self) -> None:
         try:
             data = json.loads(cache_file().read_text(encoding="utf-8"))
@@ -67,8 +63,6 @@ class RatesService(QObject):
             path.write_text(json.dumps(payload), encoding="utf-8")
         except OSError:
             log.warning("could not write the rates cache", exc_info=True)
-
-    # --- fetching ----------------------------------------------------------------
 
     def set_sources(self, sources: list[str]) -> None:
         if sources != self.sources:

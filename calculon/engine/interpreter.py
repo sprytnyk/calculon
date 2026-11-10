@@ -5,8 +5,6 @@ treated as plain text and skipped, which lets lines mix prose and maths:
 "$19 for breakfast + $22 for the uber" gives $41.
 """
 
-from __future__ import annotations
-
 import math
 import re
 import zoneinfo
@@ -283,9 +281,6 @@ class ParseError(Exception):
     pass
 
 
-# --- classification ----------------------------------------------------------------
-
-
 def classify(toks: list[Tok], ctx: Context) -> list[Item]:
     items: list[Item] = []
     var_keys = [tuple(k.split()) for k in ctx.variables]
@@ -436,8 +431,6 @@ def _mark_comment_parens(items: list[Item]) -> None:
                 for x in items[start : idx + 1]:
                     x.kind = "noise"
 
-
-# --- parser ------------------------------------------------------------------------
 
 ADD_OPS = {"+": 1, "plus": 1, "-": -1, "−": -1, "–": -1, "minus": -1}
 MUL_OPS = {"*", "×", "·", "times", "x"}
@@ -1340,9 +1333,6 @@ def aggregate(kind: str, values: list[Value], rates: RateTable, lines: bool = Tr
     raise CalcError(kind)
 
 
-# --- Soulver phrase patterns -----------------------------------------------------
-
-
 def _hole(p: Parser, *stop: str) -> Value:
     return p.expr(0, frozenset(stop))
 
@@ -1509,9 +1499,6 @@ PATTERNS: list[Callable[[Parser], Value | None]] = [
     _pat_proportion,
     _pat_what_per,
 ]
-
-
-# --- line evaluation ---------------------------------------------------------------
 
 
 def evaluate_tokens(items: list[Item], ctx: Context) -> Value:

@@ -4,8 +4,6 @@ Pins, custom order and where trashed sheets came from live in a small hidden
 file, .calculon.json, in the sheets folder. Trashed sheets go to .trash/.
 """
 
-from __future__ import annotations
-
 import contextlib
 import json
 import os
@@ -37,8 +35,6 @@ class SheetStore:
         self.root.mkdir(parents=True, exist_ok=True)
         self.meta = self._load_meta()
 
-    # --- metadata -------------------------------------------------------------------
-
     def _load_meta(self) -> dict:
         try:
             data = json.loads((self.root / META_FILE).read_text(encoding="utf-8"))
@@ -54,8 +50,6 @@ class SheetStore:
     def _save_meta(self) -> None:
         _atomic_write(self.root / META_FILE, json.dumps(self.meta, indent=1, ensure_ascii=False))
 
-    # --- paths ----------------------------------------------------------------------
-
     def path(self, rel: str) -> Path:
         p = (self.root / rel).resolve()
         if p != self.root.resolve() and self.root.resolve() not in p.parents:
@@ -69,8 +63,6 @@ class SheetStore:
     def display_name(rel: str) -> str:
         name = rel.rsplit("/", 1)[-1]
         return name[: -len(EXT)] if name.endswith(EXT) else name
-
-    # --- listing --------------------------------------------------------------------
 
     def tree(self) -> Node:
         root = Node("", "", True)
@@ -133,8 +125,6 @@ class SheetStore:
             except OSError:
                 continue
         return hits
-
-    # --- sheets ---------------------------------------------------------------------
 
     def read(self, rel: str) -> str:
         return self.path(rel).read_text(encoding="utf-8")
@@ -219,8 +209,6 @@ class SheetStore:
         self.meta["pinned"] = [fix(p) for p in self.meta["pinned"]]
         self.meta["order"] = {fix(k) if k else k: v for k, v in self.meta["order"].items()}
 
-    # --- pins -----------------------------------------------------------------------
-
     def is_pinned(self, rel: str) -> bool:
         return rel in self.meta["pinned"]
 
@@ -235,8 +223,6 @@ class SheetStore:
         if rel in self.meta["pinned"]:
             self.meta["pinned"].remove(rel)
             self._save_meta()
-
-    # --- trash ----------------------------------------------------------------------
 
     @property
     def trash_dir(self) -> Path:

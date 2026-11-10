@@ -1,7 +1,5 @@
 """Help → Keyboard Shortcuts: every shortcut, read from the menus so the list never drifts."""
 
-from __future__ import annotations
-
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QAction, QFont, QKeySequence
 from PySide6.QtWidgets import (

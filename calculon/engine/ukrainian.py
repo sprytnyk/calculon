@@ -5,8 +5,6 @@ languages go through the same parser: "180 це 10% знижки від чого
 "180 is 10% off what". Function names (sqrt, round, sin...) stay as they are.
 """
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 from . import units as U

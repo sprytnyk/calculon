@@ -3,8 +3,6 @@
 The SVGs in assets/icons are named after what they do here; SOURCES maps them back.
 """
 
-from __future__ import annotations
-
 import tempfile
 from functools import cache
 from pathlib import Path

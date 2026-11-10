@@ -1,7 +1,5 @@
 """Evaluate a whole sheet, line by line."""
 
-from __future__ import annotations
-
 import logging
 import re
 from dataclasses import dataclass, field, replace

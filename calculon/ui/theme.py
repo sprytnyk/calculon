@@ -1,7 +1,5 @@
 """Dark and light themes."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from PySide6.QtCore import QEvent, QObject, Qt

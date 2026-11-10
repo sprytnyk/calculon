@@ -1,7 +1,5 @@
 """Values and arithmetic."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation, localcontext
@@ -66,9 +64,6 @@ type Value = Q | DateVal
 
 def num(x: int | str | Decimal) -> Q:
     return Q(Decimal(x))
-
-
-# --- unit helpers -----------------------------------------------------------------
 
 
 def _cur_atoms(units: U.Units) -> list[tuple[str, int]]:
@@ -148,9 +143,6 @@ def _winner(a: U.Units, b: U.Units) -> U.Units:
         if pa == pb == 1 and ua not in U.TEMPERATURES:
             return ((U.larger(ua, ub), 1),)
     return b if _cur_atoms(b) else a
-
-
-# --- arithmetic --------------------------------------------------------------------
 
 
 def add(a: Value, b: Value, rates: RateTable, sign: int = 1) -> Value:
@@ -268,8 +260,6 @@ def _need_q(v: Value) -> Q:
         raise CalcError("can't do that with a date")
     return v
 
-
-# --- dates -------------------------------------------------------------------------
 
 _REL_FIELDS = {
     "century": ("years", 100),

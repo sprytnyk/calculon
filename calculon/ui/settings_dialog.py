@@ -1,7 +1,5 @@
 """Settings window: pages on the left, grouped cards on the right."""
 
-from __future__ import annotations
-
 import html
 from dataclasses import replace
 
@@ -159,8 +157,6 @@ class SettingsDialog(QDialog):
         layout.addLayout(body, 1)
         layout.addWidget(footer)
         self._net = QNetworkAccessManager(self)
-
-    # --- pages ----------------------------------------------------------------------
 
     def _add_page(self, icon_name: str, title: str, cards: list[tuple[str, QWidget]]) -> None:
         item = QListWidgetItem(icons.icon(icon_name), title)
@@ -321,8 +317,6 @@ class SettingsDialog(QDialog):
             else:
                 parts.append(f"<p>{text.replace(chr(10), '<br>')}</p>")
         return "".join(parts)
-
-    # --- actions --------------------------------------------------------------------
 
     def _browse(self) -> None:
         path = QFileDialog.getExistingDirectory(self, self.t("sheets_dir"), self.sheets_dir.text())

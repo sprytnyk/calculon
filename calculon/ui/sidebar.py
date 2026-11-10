@@ -1,7 +1,5 @@
 """The sheet list: pinned sheets, folders and sheets, help and trash."""
 
-from __future__ import annotations
-
 from PySide6.QtCore import (
     QFileSystemWatcher,
     QPoint,
@@ -157,8 +155,6 @@ class Sidebar(QWidget):
         self._debounce.timeout.connect(self._disk_changed)
         self.retranslate()
 
-    # --- text -----------------------------------------------------------------------
-
     def t(self, key: str, **kw) -> str:
         return self.tr_(key, **kw)
 
@@ -173,8 +169,6 @@ class Sidebar(QWidget):
         self.btn_folder.setIconSize(size)
         self.tree.setIconSize(size)
         self.rebuild()
-
-    # --- building -------------------------------------------------------------------
 
     def set_store(self, store: SheetStore) -> None:
         self.store = store
@@ -379,8 +373,6 @@ class Sidebar(QWidget):
         if kind in (SHEET, PINNED) and "/" in key:
             return key.rsplit("/", 1)[0]
         return ""
-
-    # --- interaction ----------------------------------------------------------------
 
     def _clicked(self, item: QTreeWidgetItem) -> None:
         data = item.data(0, ROLE)

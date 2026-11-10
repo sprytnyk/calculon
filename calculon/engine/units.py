@@ -5,8 +5,6 @@ recognised, so ordinary words like "at", "a" or "in" never turn into obscure uni
 Magnitudes stay Decimal; pint only provides conversion factors.
 """
 
-from __future__ import annotations
-
 from decimal import Decimal
 from functools import cache
 

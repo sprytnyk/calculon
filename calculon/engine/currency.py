@@ -1,7 +1,5 @@
 """Currency codes, symbols and the exchange rate table."""
 
-from __future__ import annotations
-
 import json
 import time
 from dataclasses import dataclass, field
@@ -143,8 +141,6 @@ class RateTable:
             return self.rates[dst] / self.rates[src]
         except KeyError as exc:
             raise RatesError(f"no exchange rate for {exc.args[0]}") from exc
-
-    # --- (de)serialisation -------------------------------------------------
 
     @classmethod
     def parse(cls, payload: bytes | str, source: str = "") -> RateTable:

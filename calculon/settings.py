@@ -1,7 +1,5 @@
 """User settings, stored with QSettings in the usual place for each OS."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, fields
 from pathlib import Path
 
