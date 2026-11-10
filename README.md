@@ -95,6 +95,7 @@ Needs [uv](https://docs.astral.sh/uv/). Python 3.14 is picked from `.python-vers
 
 ```bash
 uv sync                 # install dependencies
+uvx pre-commit install  # ruff and file checks before each commit
 make run                # start the app
 make check              # ruff and pytest
 make build              # one-file binary in dist/ (test version)
