@@ -190,7 +190,10 @@ class ResultsArea(QWidget):
         theme = ed.theme
         painter = QPainter(self)
         painter.fillRect(event.rect(), QColor(theme.bg))
-        painter.setPen(QColor(theme.border))
+        # the line between the sheet and its answers; the border colour was too faint to see
+        divider = QColor(theme.muted)
+        divider.setAlphaF(0.45)
+        painter.setPen(divider)
         painter.drawLine(0, 0, 0, self.height())
         result = ed.result
         if result is None:
