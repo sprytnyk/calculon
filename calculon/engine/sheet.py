@@ -8,6 +8,7 @@ from .currency import RateTable
 from .format import FormatOptions, format_value
 from .interpreter import (
     AGGREGATES,
+    SOFT,
     Config,
     Context,
     Item,
@@ -17,7 +18,7 @@ from .interpreter import (
     evaluate_tokens,
     tokenize_line,
 )
-from .values import CalcError, Q, Value
+from .values import CalcError, Q, Value, add
 
 log = logging.getLogger(__name__)
 
@@ -141,15 +142,32 @@ def _evaluate_line(raw: str, ctx: Context, opts: FormatOptions) -> LineResult:
         t.start += offset
         t.end += offset
     items = classify(toks, ctx)
+    plain: set[int] = set()  # "if", "to", "in" in prose: not coloured as keywords
+    _evaluate_items(res, items, body, var_name, op, ctx, opts, plain)
+    if res.kind != "value":
+        plain = {id(it) for it in items if it.kind == "kw" and it.key in SOFT}
     for it in items:
         cls = SPAN_CLASSES.get(it.kind)
-        if cls:
+        if cls and id(it) not in plain:
             res.spans.append((it.start, it.end, cls))
+    return res
+
+
+def _evaluate_items(
+    res: LineResult,
+    items: list[Item],
+    body: str,
+    var_name: str | None,
+    op: str | None,
+    ctx: Context,
+    opts: FormatOptions,
+    plain: set[int],
+) -> None:
     meaningful = [it for it in items if it.kind != "noise"]
     res.is_total = _is_total_line(meaningful)
     if not [it for it in meaningful if it.kind != "tag"]:
         res.kind = "text"
-        return res
+        return
     # a line starting with an operator continues from the previous answer
     if CONTINUE_RE.match(body) and ctx.prev is not None and meaningful[0].kind == "op":
         meaningful.insert(0, _prev_item(meaningful[0]))
@@ -159,23 +177,21 @@ def _evaluate_line(raw: str, ctx: Context, opts: FormatOptions) -> LineResult:
             if key not in ctx.variables:
                 raise ParseError(f"{var_name} is not defined")
             current = ctx.variables[key]
-            from .values import add
-
             value = add(
-                current, evaluate_tokens(meaningful, ctx), ctx.rates, 1 if op == "+=" else -1
+                current, evaluate_tokens(meaningful, ctx, plain), ctx.rates, 1 if op == "+=" else -1
             )
         else:
-            value = evaluate_tokens(meaningful, ctx)
+            value = evaluate_tokens(meaningful, ctx, plain)
     except (ParseError, CalcError, ArithmeticError, ValueError, OverflowError) as exc:
         res.kind = "text"
         res.error = str(exc)
-        return res
+        return
     try:
         text = format_value(value, opts)
     except ArithmeticError, ValueError:  # 1e999999 as % overflows while formatting
         res.kind = "text"
         res.error = "number too large"
-        return res
+        return
     if var_name:
         ctx.set_var(var_name, value)
     res.kind = "value"
@@ -188,7 +204,6 @@ def _evaluate_line(raw: str, ctx: Context, opts: FormatOptions) -> LineResult:
     for i, it in enumerate(items):
         if it.kind == "tag" and not (i and items[i - 1].key == "of"):
             ctx.tags.setdefault(it.key, []).append(value)
-    return res
 
 
 def _is_total_line(items: list[Item]) -> bool:

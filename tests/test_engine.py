@@ -351,6 +351,9 @@ def test_bad_input_gives_an_error_not_a_crash() -> None:
     assert big.lines[0].text == "1e25 км"
     assert calc("1e999999 as %") == [""]
     assert evaluate_sheet("9e999999\n9e999999", RATES, CONFIG).total is None
+    # a maths error in one part of the line: the rest still gets a go
+    line = evaluate_sheet("3 days 10% ago", RATES, CONFIG).lines[0]
+    assert (line.text, line.error) == ("3 days", "")
 
 
 @pytest.mark.parametrize("line", ["1e999999 in hex", "5 km^1e999999", "round(1.5; 1e999999)"])
@@ -361,3 +364,15 @@ def test_huge_numbers_answer_fast(line: str) -> None:
     start = time.perf_counter()
     one(line)
     assert time.perf_counter() - start < 1
+
+
+def test_words_in_prose_are_not_coloured_as_keywords() -> None:
+    def coloured(src: str) -> list[str]:
+        res = evaluate_sheet(src, RateTable(), Config(), FormatOptions())
+        return [src[a:b] for a, b, cls in res.lines[0].spans if cls == "keyword"]
+
+    assert coloured("if I buy 3 apples") == []
+    assert coloured("go to the shop 5") == []
+    assert coloured("go to the shop") == []
+    assert coloured("10 km to miles") == ["to"]
+    assert coloured("if 20 is 30%, what is 60%") == ["if", "is", "what", "is"]

@@ -444,6 +444,15 @@ class Parser:
         self.pos = 0
         self.ctx = ctx
         self.rates = ctx.rates
+        self.plain: list[int] = []  # positions of soft keywords read as plain text
+
+    def rewind(self, pos: int) -> None:
+        self.pos = pos
+        self.plain = [i for i in self.plain if i < pos]
+
+    def skip_plain(self) -> None:
+        self.plain.append(self.pos)
+        self.pos += 1
 
     # helpers
     def peek(self, offset: int = 0) -> Item | None:
@@ -470,14 +479,14 @@ class Parser:
     # entry
     def statement(self) -> Value:
         for pattern in PATTERNS:
-            self.pos = 0
+            self.rewind(0)
             try:
                 value = pattern(self)
             except ParseError, CalcError, ArithmeticError, ValueError, OverflowError:
                 continue
             if value is not None and self.done():
                 return value
-        self.pos = 0
+        self.rewind(0)
         value = self.expr(0, frozenset())
         if not self.done():
             raise ParseError("unexpected text")
@@ -496,15 +505,15 @@ class Parser:
             try:
                 result = self.infix(left, it, min_bp, stops)
             except ParseError:
-                self.pos = save
+                self.rewind(save)
                 if it.kind == "kw" and it.key in SOFT:
-                    self.pos += 1  # read it as plain text
+                    self.skip_plain()
                     continue
                 raise
             if result is None:
-                self.pos = save
+                self.rewind(save)
                 if it.kind == "kw" and it.key in SOFT and min_bp == 0:
-                    self.pos += 1
+                    self.skip_plain()
                     continue
                 break
             left = result
@@ -632,7 +641,7 @@ class Parser:
             try:
                 right = self.prefix(stops)
             except ParseError:
-                self.pos = save
+                self.rewind(save)
                 return None
             if (
                 isinstance(right, Q)
@@ -640,7 +649,7 @@ class Parser:
                 and U.dims_of(right.units) == U.dims_of(left.units)
             ):
                 return add(left, right, r)
-            self.pos = save
+            self.rewind(save)
             return None
         if kind == "city" and isinstance(left, DateVal):
             self.pos += 1
@@ -775,7 +784,7 @@ class Parser:
                 return self.expr(25, stops)
             return self.postfix(Q(ONE, unit))
         if key in SOFT:
-            self.pos += 1  # plain text at the start of an expression
+            self.skip_plain()  # plain text at the start of an expression
             return self.prefix(stops)
         raise ParseError(f"unexpected {key}")
 
@@ -817,7 +826,7 @@ class Parser:
             if isinstance(v, Decimal) and 1000 <= v <= 2999 and v == int(v):
                 self.pos += 1
                 return int(v)
-        self.pos = save
+        self.rewind(save)
         return None
 
     def _make_date(self, year: int | None, month: int, day: int) -> DateVal:
@@ -938,7 +947,7 @@ class Parser:
         units: list[tuple[str, int]] = []
         first = self._unit_atom(allow_currency_code or attach)
         if first is None:
-            self.pos = save
+            self.rewind(save)
             return None
         units.extend(first)
         while True:
@@ -950,7 +959,7 @@ class Parser:
                 self.pos += 1
                 atom = self._unit_atom(True)
                 if atom is None:
-                    self.pos = save2
+                    self.rewind(save2)
                     break
                 units.extend((a, -p) for a, p in atom)
                 continue
@@ -1501,8 +1510,12 @@ PATTERNS: list[Callable[[Parser], Value | None]] = [
 ]
 
 
-def evaluate_tokens(items: list[Item], ctx: Context) -> Value:
-    """Evaluate the line; if it fails, use the longest tail (then head) that works."""
+def evaluate_tokens(items: list[Item], ctx: Context, plain: set[int] | None = None) -> Value:
+    """Evaluate the line; if it fails, use the longest tail (then head) that works.
+
+    `plain` gets the id() of each soft keyword ("if", "to", "in") the maths didn't use.
+    """
+    soft = [it for it in items if it.kind == "kw" and it.key in SOFT]
     items = [
         it
         for i, it in enumerate(items)
@@ -1515,13 +1528,19 @@ def evaluate_tokens(items: list[Item], ctx: Context) -> Value:
     candidates += [items[:e] for e in range(len(items) - 1, 0, -1)]
     for n, cand in enumerate(candidates):
         try:
-            return Parser(cand, ctx).statement()
+            parser = Parser(cand, ctx)
+            value = parser.statement()
         except CalcError:
             if n == 0:
                 raise  # the whole line is maths that can't be done: show no answer
             errors.append(ParseError("no answer"))
         except (ParseError, ArithmeticError, ValueError, OverflowError, KeyError) as exc:
             errors.append(exc)
+        else:
+            if plain is not None:
+                used = {id(it) for i, it in enumerate(cand) if i not in parser.plain}
+                plain.update(id(it) for it in soft if id(it) not in used)
+            return value
     first = errors[0] if errors else ParseError("nothing to calculate")
     if isinstance(first, CalcError):
         raise first
