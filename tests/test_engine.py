@@ -1,5 +1,6 @@
 """Engine tests, mostly examples from Soulver's documentation."""
 
+import time
 from datetime import datetime
 from decimal import Decimal
 
@@ -359,8 +360,6 @@ def test_bad_input_gives_an_error_not_a_crash() -> None:
 @pytest.mark.parametrize("line", ["1e999999 in hex", "5 km^1e999999", "round(1.5; 1e999999)"])
 def test_huge_numbers_answer_fast(line: str) -> None:
     """int(1e999999) takes about a minute, which froze the window."""
-    import time
-
     start = time.perf_counter()
     one(line)
     assert time.perf_counter() - start < 1

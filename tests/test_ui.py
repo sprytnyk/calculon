@@ -1,9 +1,23 @@
 """UI smoke tests: the real window, offscreen, with every user folder in a temp dir."""
 
 import os
+import time
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import QCoreApplication, QSettings, Qt
+from PySide6.QtGui import QColor, QFont, QGuiApplication, QKeySequence, QTextCursor
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMenu, QStyle
+
+from calculon import rates
+from calculon.settings import Settings
+from calculon.storage import SheetStore
+from calculon.ui import icons
+from calculon.ui.editor import KIND_ROLE, SheetScrollBar
+from calculon.ui.main_window import MainWindow
+from calculon.ui.settings_dialog import SettingsDialog
+from calculon.ui.shortcuts_dialog import ShortcutsDialog, key_text
 
 
 @pytest.fixture(scope="module")
@@ -21,9 +35,6 @@ def home(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 @pytest.fixture(scope="module")
 def app(home: Path):
-    from PySide6.QtCore import QCoreApplication
-    from PySide6.QtWidgets import QApplication
-
     QCoreApplication.setOrganizationName("calculon-tests")
     QCoreApplication.setApplicationName("Calculon")
     return QApplication.instance() or QApplication([])
@@ -31,11 +42,6 @@ def app(home: Path):
 
 @pytest.fixture
 def window(app, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
-    from PySide6.QtCore import QSettings
-
-    from calculon import rates
-    from calculon.ui.main_window import MainWindow
-
     monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
     qs = QSettings()
     qs.clear()
@@ -95,8 +101,6 @@ def test_search_filters_sheets(window, app) -> None:
 
 
 def test_comment_toggle_and_copy(window, app) -> None:
-    from PySide6.QtGui import QGuiApplication
-
     window.new_sheet("")
     window.editor.setPlainText("2 + 2")
     pump(app)
@@ -118,8 +122,6 @@ def test_help_is_read_only_and_translated(window, app) -> None:
 
 
 def test_theme_switch(window, app) -> None:
-    from PySide6.QtWidgets import QApplication
-
     window.set_theme("light")
     assert QApplication.palette().base().color().name() == "#fbfbf9"
     window.set_theme("dark")
@@ -160,10 +162,6 @@ def test_menu_icons(window) -> None:
 
 
 def test_icons_are_coloured_from_the_start(window) -> None:
-    from PySide6.QtGui import QColor
-
-    from calculon.ui import icons
-
     trash = window.menuBar().actions()[0].menu().actions()[-1]  # Quit, red group
     image = trash.icon().pixmap(icons.ICON_SIZE).toImage()
     colours = {
@@ -176,10 +174,6 @@ def test_icons_are_coloured_from_the_start(window) -> None:
 
 
 def test_shortcuts_dialog_lists_menu_and_sidebar_keys(window) -> None:
-    from PySide6.QtGui import QKeySequence
-
-    from calculon.ui.shortcuts_dialog import ShortcutsDialog, key_text
-
     rows = dict(ShortcutsDialog(window.menuBar(), window.t, window).rows())
     assert rows["New Sheet"] == key_text(QKeySequence.StandardKey.New)
     assert rows["Comment Line"] == key_text("Ctrl+/")
@@ -189,8 +183,6 @@ def test_shortcuts_dialog_lists_menu_and_sidebar_keys(window) -> None:
 
 
 def test_qt_buttons_follow_language(window) -> None:
-    from PySide6.QtWidgets import QDialogButtonBox
-
     window.set_language("uk")
     box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
     assert box.button(QDialogButtonBox.StandardButton.Close).text().replace("&", "") == "Закрити"
@@ -220,8 +212,6 @@ def test_ligatures_form_across_coloured_operators(window, app) -> None:
 
 
 def test_settings_dialog_round_trip(window) -> None:
-    from calculon.ui.settings_dialog import SettingsDialog
-
     dlg = SettingsDialog(window.settings, window.t, window)
     assert dlg.nav.count() == 3
     dlg.max_decimals.setValue(4)
@@ -237,16 +227,10 @@ def test_settings_dialog_round_trip(window) -> None:
 
 
 def test_dialog_buttons_have_no_stock_icons(app) -> None:
-    from PySide6.QtWidgets import QStyle
-
     assert app.style().styleHint(QStyle.StyleHint.SH_DialogButtonBox_ButtonsHaveIcons) == 0
 
 
 def test_ligature_sample_follows_checkbox(window) -> None:
-    from PySide6.QtGui import QFont
-
-    from calculon.ui.settings_dialog import SettingsDialog
-
     dlg = SettingsDialog(window.settings, window.t, window)
     calt = QFont.Tag("calt")
     dlg.ligatures.setChecked(False)
@@ -275,12 +259,6 @@ def test_switching_sheets_between_folders_keeps_the_sidebar_still(
 ) -> None:
     """Startup: folder A closed, B open, last sheet in A. Switching between them must not
     close A again or move any row (it used to collapse A, so the list jumped)."""
-    from PySide6.QtCore import QSettings, Qt
-
-    from calculon import rates
-    from calculon.storage import SheetStore
-    from calculon.ui.main_window import MainWindow
-
     monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
     sheets = tmp_path / "sheets"
     store = SheetStore(sheets)
@@ -320,10 +298,6 @@ def test_switching_sheets_between_folders_keeps_the_sidebar_still(
 
 def test_unknown_settings_fall_back_to_defaults(app) -> None:
     """A hand-edited or newer config must not leave the app in a state it can't show."""
-    from PySide6.QtCore import QSettings
-
-    from calculon.settings import Settings
-
     qs = QSettings()
     qs.clear()
     for key, value in {
@@ -350,8 +324,6 @@ def test_unknown_settings_fall_back_to_defaults(app) -> None:
 
 
 def test_undo_survives_switching_sheets(window, app) -> None:
-    from PySide6.QtGui import QTextCursor
-
     store = window.store
     first = store.create_sheet("", "First", "1 + 1")
     second = store.create_sheet("", "Second", "2 + 2")
@@ -399,10 +371,6 @@ def test_find_in_sheet(window, app) -> None:
 
 
 def test_shortcuts_work_while_a_menu_is_open(window, app) -> None:
-    from PySide6.QtCore import Qt
-    from PySide6.QtTest import QTest
-    from PySide6.QtWidgets import QApplication
-
     fired = []
     help_menu = window.menuBar().actions()[-1].menu()
     refresh = next(a for a in help_menu.actions() if a.text() == "Refresh Exchange Rates")
@@ -416,10 +384,6 @@ def test_shortcuts_work_while_a_menu_is_open(window, app) -> None:
 
 
 def test_autocomplete_lists_variables_first_with_their_kind(window, app) -> None:
-    from PySide6.QtTest import QTest
-
-    from calculon.ui.editor import KIND_ROLE
-
     window.new_sheet("")
     ed = window.editor
     ed.setPlainText("metres_walked = 5 km\n")
@@ -436,10 +400,6 @@ def test_autocomplete_lists_variables_first_with_their_kind(window, app) -> None
 
 
 def test_sheet_scrollbar_shows_while_scrolling_then_fades(window, app) -> None:
-    import time
-
-    from calculon.ui.editor import SheetScrollBar
-
     window.open_help()
     bar = window.editor.verticalScrollBar()
     assert isinstance(bar, SheetScrollBar)
@@ -458,9 +418,6 @@ def test_sheet_scrollbar_shows_while_scrolling_then_fades(window, app) -> None:
 
 
 def test_every_shortcut_belongs_to_one_action(window) -> None:
-    from PySide6.QtGui import QKeySequence
-    from PySide6.QtWidgets import QMenu
-
     seen: dict[str, str] = {}
     for menu in window.menuBar().findChildren(QMenu):
         for action in menu.actions():
@@ -473,10 +430,6 @@ def test_every_shortcut_belongs_to_one_action(window) -> None:
 
 
 def test_ctrl_shift_backspace_deletes_to_the_line_start(window, app) -> None:
-    from PySide6.QtCore import Qt
-    from PySide6.QtGui import QTextCursor
-    from PySide6.QtTest import QTest
-
     keys = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
     window.new_sheet("")
     ed = window.editor
