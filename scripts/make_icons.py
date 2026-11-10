@@ -1,4 +1,4 @@
-"""Make assets/icon.png and assets/icon.ico from assets/icon-source.png.
+"""Make assets/icon.png, icon.ico and icon.icns from assets/icon-source.png.
 
 The source is the Calculon head cut from the seeklogo vector (see
 assets/ICON-LICENSE.txt). If it is missing, the original robot artwork in
@@ -17,6 +17,19 @@ from PySide6.QtSvg import QSvgRenderer
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 ICO_SIZES = [16, 24, 32, 48, 64, 128, 256]
+# macOS icon types that hold PNG data, and their sizes in pixels
+ICNS_TYPES = [
+    (b"icp4", 16),
+    (b"icp5", 32),
+    (b"ic11", 32),  # 16 on Retina
+    (b"ic12", 64),  # 32 on Retina
+    (b"ic07", 128),
+    (b"ic13", 256),  # 128 on Retina
+    (b"ic08", 256),
+    (b"ic14", 512),  # 256 on Retina
+    (b"ic09", 512),
+    (b"ic10", 1024),  # 512 on Retina
+]
 
 
 def render(renderer: QSvgRenderer, size: int) -> bytes:
@@ -42,6 +55,14 @@ def write_ico(path: Path, images: list[tuple[int, bytes]]) -> None:
         entries += struct.pack("<BBBBHHII", dim, dim, 0, 0, 1, 32, len(png), offset)
         offset += len(png)
     path.write_bytes(header + entries + b"".join(png for _, png in images))
+
+
+def write_icns(path: Path, png_for_size) -> None:
+    entries = b""
+    for kind, size in ICNS_TYPES:
+        png = png_for_size(size)
+        entries += kind + struct.pack(">I", 8 + len(png)) + png
+    path.write_bytes(b"icns" + struct.pack(">I", 8 + len(entries)) + entries)
 
 
 def scaled(image: QImage, size: int) -> bytes:
@@ -70,6 +91,7 @@ def main() -> int:
         (ASSETS / "icon.png").write_bytes(scaled(image, biggest))
         sizes = [s for s in ICO_SIZES if s <= image.width()]
         write_ico(ASSETS / "icon.ico", [(s, scaled(image, s)) for s in sizes])
+        write_icns(ASSETS / "icon.icns", lambda s: scaled(image, s))
         return 0
     renderer = QSvgRenderer(str(ASSETS / "robot-icon.svg"))
     if not renderer.isValid():
@@ -77,6 +99,7 @@ def main() -> int:
         return 1
     (ASSETS / "icon.png").write_bytes(render(renderer, 512))
     write_ico(ASSETS / "icon.ico", [(s, render(renderer, s)) for s in ICO_SIZES])
+    write_icns(ASSETS / "icon.icns", lambda s: render(renderer, s))
     return 0
 
 
