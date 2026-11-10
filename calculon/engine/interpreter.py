@@ -989,7 +989,7 @@ class Parser:
         if it.kind == "unit":
             self.pos += 1
             name, p = U.split_power(it.key)
-            return [(name, p * power_)]
+            return U.expand(name, p * power_)
         if it.kind == "cur" and allow_currency and it.tok.kind == "WORD":
             self.pos += 1
             return [(U.CUR + it.key, 1)]

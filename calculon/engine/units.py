@@ -11,8 +11,9 @@ from functools import cache
 import pint
 
 UREG = pint.UnitRegistry(autoconvert_offset_to_baseunit=True)
-for _prefix in ("kilo", "mega", "giga"):
+for _prefix in ("", "kilo", "mega", "giga", "tera"):
     UREG.define(f"{_prefix}bit_per_second = {_prefix}bit / second")
+    UREG.define(f"{_prefix}byte_per_second = {_prefix}byte / second")
 
 # A unit expression is a tuple of (atom, power). An atom is a pint unit name
 # ("kilometer") or a currency code prefixed with CUR ("¤USD").
@@ -99,28 +100,38 @@ _DEFS: list[tuple[str, tuple[str, str], list[str], list[str]]] = [
     ("degree_Celsius", ("°C", "°C"), ["°C", "℃", "C"], ["celsius", "degc"]),
     ("degree_Fahrenheit", ("°F", "°F"), ["°F", "℉", "F"], ["fahrenheit", "degf"]),
     ("kelvin", ("K", "K"), ["K"], ["kelvin", "kelvins"]),
-    # data
+    # data: exact case is SI (Mb megabit, MB megabyte); lowercase mb, gb, kb mean bytes,
+    # the way people write file sizes. Anything with "bit" or "bps" is bits.
     ("bit", ("bit", "bits"), ["b"], ["bit", "bits"]),
     ("byte", ("B", "B"), ["B"], ["byte", "bytes"]),
-    ("kilobit", ("kb", "kb"), ["kb", "kbit"], ["kilobit", "kilobits"]),
-    ("megabit", ("Mb", "Mb"), ["Mb", "Mbit"], ["megabit", "megabits"]),
-    ("gigabit", ("Gb", "Gb"), ["Gb", "Gbit"], ["gigabit", "gigabits"]),
-    ("kilobyte", ("kB", "kB"), ["kB", "KB"], ["kilobyte", "kilobytes"]),
-    ("megabyte", ("MB", "MB"), ["MB"], ["megabyte", "megabytes"]),
-    ("gigabyte", ("GB", "GB"), ["GB"], ["gigabyte", "gigabytes"]),
-    ("terabyte", ("TB", "TB"), ["TB"], ["terabyte", "terabytes"]),
-    ("petabyte", ("PB", "PB"), ["PB"], ["petabyte", "petabytes"]),
-    ("kibibyte", ("KiB", "KiB"), ["KiB"], ["kibibyte", "kibibytes"]),
-    ("mebibyte", ("MiB", "MiB"), ["MiB"], ["mebibyte", "mebibytes"]),
-    ("gibibyte", ("GiB", "GiB"), ["GiB"], ["gibibyte", "gibibytes"]),
-    ("tebibyte", ("TiB", "TiB"), ["TiB"], ["tebibyte", "tebibytes"]),
+    ("kilobit", ("kbit", "kbit"), ["kbit"], ["kilobit", "kilobits"]),
+    ("megabit", ("Mb", "Mb"), ["Mb", "Mbit", "mbit"], ["megabit", "megabits"]),
+    ("gigabit", ("Gb", "Gb"), ["Gb", "Gbit", "gbit"], ["gigabit", "gigabits"]),
+    ("terabit", ("Tb", "Tb"), ["Tb", "Tbit", "tbit"], ["terabit", "terabits"]),
+    ("kilobyte", ("kB", "kB"), ["kB", "KB", "kb"], ["kilobyte", "kilobytes"]),
+    ("megabyte", ("MB", "MB"), ["MB", "mb"], ["megabyte", "megabytes"]),
+    ("gigabyte", ("GB", "GB"), ["GB", "gb"], ["gigabyte", "gigabytes"]),
+    ("terabyte", ("TB", "TB"), ["TB", "tb"], ["terabyte", "terabytes"]),
+    ("petabyte", ("PB", "PB"), ["PB", "pb"], ["petabyte", "petabytes"]),
+    ("kibibyte", ("KiB", "KiB"), ["KiB", "kib"], ["kibibyte", "kibibytes"]),
+    ("mebibyte", ("MiB", "MiB"), ["MiB", "mib"], ["mebibyte", "mebibytes"]),
+    ("gibibyte", ("GiB", "GiB"), ["GiB", "gib"], ["gibibyte", "gibibytes"]),
+    ("tebibyte", ("TiB", "TiB"), ["TiB", "tib"], ["tebibyte", "tebibytes"]),
     # speed (compound units are also built with "/" and "per")
     ("mile_per_hour", ("mph", "mph"), ["mph"], []),
     ("kilometer_per_hour", ("km/h", "km/h"), ["kph", "kmh"], []),
     ("knot", ("kn", "kn"), ["kn", "kt"], ["knot", "knots"]),
-    ("kilobit_per_second", ("kbps", "kbps"), ["kbps"], []),
+    # "x_per_y" names are read as x / y, so 10 GB / 100 Mbps gives a time
+    ("bit_per_second", ("bps", "bps"), ["bps"], []),
+    ("kilobit_per_second", ("kbps", "kbps"), ["kbps", "Kbps"], []),
     ("megabit_per_second", ("Mbps", "Mbps"), ["Mbps", "mbps"], []),
     ("gigabit_per_second", ("Gbps", "Gbps"), ["Gbps", "gbps"], []),
+    ("terabit_per_second", ("Tbps", "Tbps"), ["Tbps", "tbps"], []),
+    ("byte_per_second", ("B/s", "B/s"), ["Bps"], []),
+    ("kilobyte_per_second", ("kB/s", "kB/s"), ["kBps", "KBps", "kBs", "KBs", "kbs"], []),
+    ("megabyte_per_second", ("MB/s", "MB/s"), ["MBps", "MBs", "mbs"], []),
+    ("gigabyte_per_second", ("GB/s", "GB/s"), ["GBps", "GBs", "gbs"], []),
+    ("terabyte_per_second", ("TB/s", "TB/s"), ["TBps", "TBs", "tbs"], []),
     # energy, power, pressure, frequency
     ("joule", ("J", "J"), ["J"], ["joule", "joules"]),
     ("kilojoule", ("kJ", "kJ"), ["kJ"], ["kilojoule", "kilojoules"]),
@@ -227,12 +238,13 @@ _UK_DEFS: list[tuple[str, tuple[str, str, str], list[str], list[str]]] = [
     ("bit", ("біт", "біти", "бітів"), [], ["біт", "біти", "бітів"]),
     ("byte", ("Б", "Б", "Б"), ["Б"], ["байт", "байти", "байтів"]),
     ("kilobit", ("кбіт", "кбіт", "кбіт"), ["кбіт"], []),
-    ("megabit", ("Мбіт", "Мбіт", "Мбіт"), ["Мбіт"], []),
-    ("gigabit", ("Гбіт", "Гбіт", "Гбіт"), ["Гбіт"], []),
-    ("kilobyte", ("кБ", "кБ", "кБ"), ["кБ", "КБ"], ["кілобайт", "кілобайти", "кілобайтів"]),
-    ("megabyte", ("МБ", "МБ", "МБ"), ["МБ"], ["мегабайт", "мегабайти", "мегабайтів"]),
-    ("gigabyte", ("ГБ", "ГБ", "ГБ"), ["ГБ"], ["гігабайт", "гігабайти", "гігабайтів"]),
-    ("terabyte", ("ТБ", "ТБ", "ТБ"), ["ТБ"], ["терабайт", "терабайти", "терабайтів"]),
+    ("megabit", ("Мбіт", "Мбіт", "Мбіт"), ["Мбіт", "мбіт"], []),
+    ("gigabit", ("Гбіт", "Гбіт", "Гбіт"), ["Гбіт", "гбіт"], []),
+    ("terabit", ("Тбіт", "Тбіт", "Тбіт"), ["Тбіт", "тбіт"], []),
+    ("kilobyte", ("кБ", "кБ", "кБ"), ["кБ", "КБ", "кб"], ["кілобайт", "кілобайти", "кілобайтів"]),
+    ("megabyte", ("МБ", "МБ", "МБ"), ["МБ", "мб"], ["мегабайт", "мегабайти", "мегабайтів"]),
+    ("gigabyte", ("ГБ", "ГБ", "ГБ"), ["ГБ", "гб"], ["гігабайт", "гігабайти", "гігабайтів"]),
+    ("terabyte", ("ТБ", "ТБ", "ТБ"), ["ТБ", "тб"], ["терабайт", "терабайти", "терабайтів"]),
     ("petabyte", ("ПБ", "ПБ", "ПБ"), ["ПБ"], []),
     ("kibibyte", ("КіБ", "КіБ", "КіБ"), ["КіБ"], []),
     ("mebibyte", ("МіБ", "МіБ", "МіБ"), ["МіБ"], []),
@@ -352,6 +364,14 @@ def lookup(word: str) -> str | None:
         name = SYMBOLS.get(base) or NAMES.get(base.lower())
         return name and f"{name}{'**2' if power == '²' else '**3'}"
     return NAMES.get(word.lower())
+
+
+def expand(atom: str, power: int) -> list[tuple[str, int]]:
+    """'megabit_per_second' becomes megabit / second, so it divides and cancels like Mb/s."""
+    head, sep, tail = atom.partition("_per_")
+    if sep and tail:
+        return [(head, power), (tail, -power)]
+    return [(atom, power)]
 
 
 def split_power(atom: str) -> tuple[str, int]:
@@ -479,6 +499,16 @@ COMPOUND_NAMES: dict[Units, str] = {
     (("megabyte", 1), ("second", -1)): "MB/s",
     (("gigabyte", 1), ("second", -1)): "GB/s",
     (("kilobyte", 1), ("second", -1)): "kB/s",
+    (("byte", 1), ("second", -1)): "B/s",
+    (("terabyte", 1), ("second", -1)): "TB/s",
+    (("kibibyte", 1), ("second", -1)): "KiB/s",
+    (("mebibyte", 1), ("second", -1)): "MiB/s",
+    (("gibibyte", 1), ("second", -1)): "GiB/s",
+    (("bit", 1), ("second", -1)): "bps",
+    (("kilobit", 1), ("second", -1)): "kbps",
+    (("megabit", 1), ("second", -1)): "Mbps",
+    (("gigabit", 1), ("second", -1)): "Gbps",
+    (("terabit", 1), ("second", -1)): "Tbps",
 }
 COMPOUND_NAMES_UK: dict[Units, str] = {
     (("kilometer", 1), ("hour", -1)): "км/год",
@@ -487,6 +517,16 @@ COMPOUND_NAMES_UK: dict[Units, str] = {
     (("megabyte", 1), ("second", -1)): "МБ/с",
     (("gigabyte", 1), ("second", -1)): "ГБ/с",
     (("kilobyte", 1), ("second", -1)): "кБ/с",
+    (("byte", 1), ("second", -1)): "Б/с",
+    (("terabyte", 1), ("second", -1)): "ТБ/с",
+    (("kibibyte", 1), ("second", -1)): "КіБ/с",
+    (("mebibyte", 1), ("second", -1)): "МіБ/с",
+    (("gibibyte", 1), ("second", -1)): "ГіБ/с",
+    (("bit", 1), ("second", -1)): "біт/с",
+    (("kilobit", 1), ("second", -1)): "кбіт/с",
+    (("megabit", 1), ("second", -1)): "Мбіт/с",
+    (("gigabit", 1), ("second", -1)): "Гбіт/с",
+    (("terabit", 1), ("second", -1)): "Тбіт/с",
 }
 
 

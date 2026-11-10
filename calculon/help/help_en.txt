@@ -54,6 +54,8 @@ $5m // k, m, bn, tn work with money
 5 hours 30 minutes in seconds
 100 °C in °F
 2 GB in MB
+100 Mbps in MB/s
+10 GB at 100 Mbps in minutes // how long a download takes
 20 sq m × 3
 60 mph in km/h
 meters in 10 km
@@ -104,7 +106,7 @@ average of 36, 42, 19 and 81
 
 # Earlier lines
 100
-line106 * 2 // the line number is shown on the left
+line108 * 2 // the line number is shown on the left
 prev + 1 // the answer just above
 + 10 // a line starting with an operator continues the previous answer
 

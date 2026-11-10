@@ -376,3 +376,38 @@ def test_words_in_prose_are_not_coloured_as_keywords() -> None:
     assert coloured("go to the shop") == []
     assert coloured("10 km to miles") == ["to"]
     assert coloured("if 20 is 30%, what is 60%") == ["if", "is", "what", "is"]
+
+
+@pytest.mark.parametrize(
+    ("line", "answer"),
+    [
+        ("100 Mbps in MB/s", "12.5 MB/s"),
+        ("12.5 MB/s in Mbps", "100 Mbps"),
+        ("100 MBps in Mbps", "800 Mbps"),
+        ("1 GB/s in Gbps", "8 Gbps"),
+        ("1 Tbps in Gbps", "1,000 Gbps"),
+        ("100 bps in kbps", "0.1 kbps"),
+        ("1 MiB/s in Mbps", "8.388608 Mbps"),
+        ("100 Mbps + 10 MB/s", "180 Mbps"),
+        ("10 GB / 100 Mbps", "800 seconds"),
+        ("10 GB at 100 Mbps in minutes", "13.333333 minutes"),
+        ("100 Mbps × 1 hour in GB", "45 GB"),
+        ("10 km at 5 kph", "2 hours"),
+        # lowercase, as people type it: mb is megabytes, mbps is megabits
+        ("1 mbps in mb/s", "0.125 MB/s"),
+        ("1 mbps in mbs", "0.125 MB/s"),
+        ("1 MBs in Mbps", "8 Mbps"),
+        ("500 mb in gb", "0.5 GB"),
+        ("1 mbit in mb", "0.125 MB"),
+        ("1 Mb in MB", "0.125 MB"),  # exact case stays SI
+        ("10 gb at 100 mbps in minutes", "13.333333 minutes"),
+    ],
+)
+def test_data_rates(line: str, answer: str) -> None:
+    assert one(line) == answer
+
+
+def test_data_rates_in_ukrainian() -> None:
+    assert one("100 Мбіт/с у МБ/с", lang="uk") == "12.5 МБ/с"
+    assert one("10 ГБ по 100 Мбіт/с у хвилинах", lang="uk") == "13.333333 хвилини"
+    assert one("1 мбіт/с у мб/с", lang="uk") == "0.125 МБ/с"
