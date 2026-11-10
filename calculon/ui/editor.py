@@ -724,7 +724,39 @@ class SheetEdit(QPlainTextEdit):
         cur.insertText(completion)
         self.setTextCursor(cur)
 
+    def delete_to_line_edge(self, forward: bool) -> None:
+        """Delete from the cursor to the start (or end) of the line, as one undo step.
+
+        At the very start of a line it joins the line above, like Backspace.
+        """
+        if self.isReadOnly():
+            return
+        cur = self.textCursor()
+        if not cur.hasSelection():
+            at_edge = cur.atBlockEnd() if forward else cur.atBlockStart()
+            move = QTextCursor.MoveOperation
+            if at_edge:
+                cur.movePosition(
+                    move.NextCharacter if forward else move.PreviousCharacter,
+                    QTextCursor.MoveMode.KeepAnchor,
+                )
+            else:
+                cur.movePosition(
+                    move.EndOfBlock if forward else move.StartOfBlock,
+                    QTextCursor.MoveMode.KeepAnchor,
+                )
+        cur.removeSelectedText()
+        self.setTextCursor(cur)
+
     def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
+        line_edge = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+        if event.modifiers() == line_edge and event.key() in (
+            Qt.Key.Key_Backspace,
+            Qt.Key.Key_Delete,
+        ):
+            self._completer.popup().hide()
+            self.delete_to_line_edge(forward=event.key() == Qt.Key.Key_Delete)
+            return
         popup = self._completer.popup()
         if popup.isVisible() and event.key() in (
             Qt.Key.Key_Enter,

@@ -87,6 +87,16 @@ class ShortcutsDialog(QDialog):
                 ],
             )
         )
+        line_keys = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+        sections.append(
+            (
+                tr("shortcuts_editor"),
+                [
+                    (None, tr("delete_line_start"), key_text(line_keys | Qt.Key.Key_Backspace)),
+                    (None, tr("delete_line_end"), key_text(line_keys | Qt.Key.Key_Delete)),
+                ],
+            )
+        )
         sections.append(
             (
                 tr("shortcuts_autocomplete"),

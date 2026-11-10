@@ -470,3 +470,27 @@ def test_every_shortcut_belongs_to_one_action(window) -> None:
     by_name = {a.text(): a for m in window.menuBar().findChildren(QMenu) for a in m.actions()}
     assert by_name["Settings…"].shortcut() == QKeySequence("Ctrl+,")  # shown in the menu
     assert by_name["Keyboard Shortcuts"].shortcut() == QKeySequence("Shift+F1")
+
+
+def test_ctrl_shift_backspace_deletes_to_the_line_start(window, app) -> None:
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QTextCursor
+    from PySide6.QtTest import QTest
+
+    keys = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+    window.new_sheet("")
+    ed = window.editor
+    ed.setPlainText("rent = $900\nfood is $300 a month")
+    cur = ed.textCursor()
+    cur.setPosition(len("rent = $900\nfood is $300"))
+    ed.setTextCursor(cur)
+    QTest.keyClick(ed, Qt.Key.Key_Backspace, keys)
+    assert ed.toPlainText() == "rent = $900\n a month"
+    QTest.keyClick(ed, Qt.Key.Key_Delete, keys)
+    assert ed.toPlainText() == "rent = $900\n"
+    QTest.keyClick(ed, Qt.Key.Key_Backspace, keys)  # at the start: joins the line above
+    assert ed.toPlainText() == "rent = $900"
+    ed.undo()
+    ed.undo()
+    assert ed.toPlainText() == "rent = $900\n a month"  # one undo step each
+    ed.moveCursor(QTextCursor.MoveOperation.End)
