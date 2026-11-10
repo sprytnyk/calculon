@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6f7dff"/>
+      <stop offset="1" stop-color="#3d45c9"/>
+    </linearGradient>
+    <linearGradient id="head" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d9def0"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bg)"/>
+  <!-- soft shadow under the robot -->
+  <ellipse cx="128" cy="236" rx="64" ry="8" fill="#2a2f96" opacity="0.6"/>
+  <!-- body with a little display showing "=" -->
+  <rect x="80" y="186" width="96" height="50" rx="18" fill="url(#head)" stroke="#1d1f2e" stroke-width="7"/>
+  <rect x="100" y="198" width="56" height="24" rx="8" fill="#1d1f2e"/>
+  <path d="M114 206h28M114 214h28" stroke="#8fd6a4" stroke-width="4.5" stroke-linecap="round"/>
+  <!-- antenna -->
+  <path d="M128 62V40" stroke="#1d1f2e" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="128" cy="32" r="15" fill="#ffb366" stroke="#1d1f2e" stroke-width="6"/>
+  <circle cx="123" cy="27" r="4.5" fill="#fff" opacity="0.9"/>
+  <!-- ears -->
+  <rect x="30" y="104" width="30" height="54" rx="15" fill="#ffb366" stroke="#1d1f2e" stroke-width="6"/>
+  <rect x="196" y="104" width="30" height="54" rx="15" fill="#ffb366" stroke="#1d1f2e" stroke-width="6"/>
+  <!-- head -->
+  <rect x="50" y="58" width="156" height="138" rx="52" fill="url(#head)" stroke="#1d1f2e" stroke-width="7"/>
+  <path d="M74 92c6-14 18-22 34-24" stroke="#fff" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <!-- eyes -->
+  <circle cx="99" cy="118" r="23" fill="#fff" stroke="#1d1f2e" stroke-width="6"/>
+  <circle cx="157" cy="118" r="23" fill="#fff" stroke="#1d1f2e" stroke-width="6"/>
+  <circle cx="103" cy="122" r="12" fill="#1d1f2e"/>
+  <circle cx="161" cy="122" r="12" fill="#1d1f2e"/>
+  <circle cx="108" cy="116" r="4.5" fill="#fff"/>
+  <circle cx="166" cy="116" r="4.5" fill="#fff"/>
+  <!-- cheeks -->
+  <ellipse cx="74" cy="152" rx="11" ry="7" fill="#ff8fab" opacity="0.85"/>
+  <ellipse cx="182" cy="152" rx="11" ry="7" fill="#ff8fab" opacity="0.85"/>
+  <!-- smile -->
+  <path d="M104 152h48a24 22 0 0 1-48 0z" fill="#1d1f2e" stroke="#1d1f2e" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M116 166a14 9 0 0 1 24 0a16 12 0 0 1-24 0z" fill="#ff7a8f"/>
+</svg>

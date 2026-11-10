@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# Version file written at build time from the git tag
+calculon/_version.py
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+
+# Virtual environments and tool caches
+.venv/
+venv/
+.ruff_cache/
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

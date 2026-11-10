@@ -1,0 +1,112 @@
+# Welcome to Calculon
+// Type anywhere. Answers appear on the right. Click an answer to copy it.
+// This sheet is read-only. Make your own with File → New Sheet (Ctrl+N).
+
+# Basics
+3 × 3
+120 + 30% // percentages
+(2 + 3) * 4
+2^10
+12²
+30 plus 20 minus 5
+1,000 divided by 8
+remainder of 21 divided by 5
+
+# Words are fine
+$19 for breakfast + $22 for the uber
+4 people × $20
+Hotel room: $120 // a label ends with a colon and a space
+Boeing "747" costs $386.8M // text in quotes and after two slashes is ignored
+$999 (for the new phone)
+
+# Variables
+rent = $1,900
+people = 3
+rent / people
+rent += $100
+rent
+
+# Percentages
+10% of 200
+200 + 10%
+200 - 10%
+10% off 200
+10% on 200
+20 is 10% of what
+180 is 10% off what
+50 to 75 is what %
+20 is what % of 200
+20 as a % of 200
+0.35 as %
+2/10 as fraction
+20/5 as multiplier
+
+# Money
+100 EUR in USD
+₴5,000 in €
+$3k + €2k
+1500 UAH as GBP
+50 EUR in USD at 1.05 USD/EUR // your own rate
+$5m // k, m, bn, tn work with money
+
+# Units
+10 km in miles
+5 hours 30 minutes in seconds
+100 °C in °F
+2 GB in MB
+20 sq m × 3
+60 mph in km/h
+meters in 10 km
+5 km cast miles // swap the unit, keep the number
+
+# Rates
+$20/hour × 40 hours
+$99 per week as / month
+30 hours at $30/hour
+$500 at $20/hour
+$24 a day for a year
+90 km / 3 days
+
+# Dates and times
+today + 3 weeks
+next friday
+3 days ago
+3 weeks after March 14, 2027
+March 3 to May 30
+days until December 25
+days between 3 March and 30 May
+7:45am - 4:20pm
+time in Tokyo
+3pm in London
+
+# Functions and numbers
+sqrt 16
+square root of 81
+round(3.14159, 2)
+sin(90°)
+log 1000
+5!
+pi × 2
+255 as hex
+0b1010 + 1
+2.5k + 5M
+1.5e3
+
+# Totals
+// "total" or "sum" adds the lines above it, up to the previous total or heading.
+// "average", "median" and "count" work the same way.
+$20 lunch #food
+$35 dinner #food
+$15 taxi #travel
+total
+total of #food
+average of 36, 42, 19 and 81
+
+# Earlier lines
+100
+line106 * 2 // the line number is shown on the left
+prev + 1 // the answer just above
++ 10 // a line starting with an operator continues the previous answer
+
+---
+// three dashes start a new section and clear variables and tags

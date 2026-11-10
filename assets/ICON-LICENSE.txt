@@ -1,0 +1,10 @@
+App icon (assets/icon-source.png, and icon.png / icon.ico made from it)
+
+Calculon, cut to the head and antennas from the "Futurama Calculon" vector logo on
+seeklogo.com: https://seeklogo.com/vector-logo/406194/futurama-calculon
+The download comes with no license grant. The character is (c) Matt Groening /
+Comedy Central (Futurama).
+
+This icon is NOT covered by Calculon's MIT license. Anyone who wants to use or ship
+Calculon beyond personal use should replace it, for example with assets/robot-icon.svg
+(original artwork, MIT like the rest of the project).
