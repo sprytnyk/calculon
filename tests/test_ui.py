@@ -347,3 +347,72 @@ def test_unknown_settings_fall_back_to_defaults(app) -> None:
         "USD",
     )
     assert (s.font_size, s.max_decimals) == (14, 20)
+
+
+def test_undo_survives_switching_sheets(window, app) -> None:
+    from PySide6.QtGui import QTextCursor
+
+    store = window.store
+    first = store.create_sheet("", "First", "1 + 1")
+    second = store.create_sheet("", "Second", "2 + 2")
+    window.open_sheet(first)
+    window.editor.moveCursor(QTextCursor.MoveOperation.End)
+    window.editor.insertPlainText(" + 5")
+    pump(app)
+    window.open_sheet(second)
+    window.open_help()
+    window.open_sheet(first)
+    assert window.editor.toPlainText() == "1 + 1 + 5"
+    assert window.editor.textCursor().position() == len("1 + 1 + 5")  # cursor kept too
+    assert window.editor.document().isUndoAvailable()
+    window.editor.undo()
+    pump(app)
+    assert window.editor.toPlainText() == "1 + 1"
+    assert window.editor.result_text(0) == "2"
+
+
+def test_find_in_sheet(window, app) -> None:
+    window.new_sheet("")
+    window.editor.setPlainText("rent = $900\nfood = $300\nrent + food")
+    pump(app)
+    bar = window.find_bar
+    bar.open()
+    bar.field.setText("RENT")  # any case
+    pump(app)
+    assert window.editor.match_count() == (1, 2)
+    assert bar.count.text() == "1 of 2"
+    bar.step()
+    assert window.editor.match_count() == (2, 2)
+    bar.step()  # goes round to the first
+    assert window.editor.match_count() == (1, 2)
+    bar.step(backward=True)
+    assert window.editor.match_count() == (2, 2)
+    bar.field.setText("nothing like this")
+    assert bar.count.text() == "No results"
+    bar.close_bar()
+    assert not bar.isVisible()
+    assert window.editor._matches == []
+    window.open_help()  # works in the read-only help too
+    bar.open()
+    bar.field.setText("percent")
+    assert window.editor.match_count()[1] > 0
+
+
+def test_autocomplete_lists_variables_first_with_their_kind(window, app) -> None:
+    from PySide6.QtTest import QTest
+
+    from calculon.ui.editor import KIND_ROLE
+
+    window.new_sheet("")
+    ed = window.editor
+    ed.setPlainText("metres_walked = 5 km\n")
+    ed.moveCursor(ed.textCursor().MoveOperation.End)
+    pump(app)
+    QTest.keyClicks(ed, "me")
+    pump(app)
+    model = ed._completer.completionModel()
+    rows = [(model.index(i, 0).data(), model.index(i, 0).data(KIND_ROLE)) for i in range(5)]
+    assert rows[0] == ("metres_walked", "variable")
+    assert all(kind for _, kind in rows)
+    assert ed.kind_label("unit") == "unit"
+    ed._completer.popup().hide()

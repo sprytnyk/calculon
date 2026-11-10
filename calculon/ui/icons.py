@@ -57,6 +57,7 @@ SOURCES = {
     "rates": "currency-circle-dollar",
     "caret_down": "caret-down (bold)",
     "caret_up": "caret-up (bold)",
+    "close": "x (bold)",
 }
 NAMES = frozenset(SOURCES)
 

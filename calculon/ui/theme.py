@@ -203,6 +203,12 @@ def apply(app: QApplication, theme: Theme) -> None:
         QToolButton#sidebarButton:hover {{ background: {theme.surface}; color: {theme.text}; }}
         QLabel#banner {{ background: {theme.surface}; color: {theme.muted}; padding: 6px 12px;
                          border-bottom: 1px solid {theme.border}; }}
+        QWidget#findBar {{ background: {theme.sidebar}; border-top: 1px solid {theme.border}; }}
+        QLabel#findCount {{ color: {theme.muted}; padding: 0 6px; }}
+        QToolButton#findButton {{ border: none; padding: 4px; border-radius: 5px; }}
+        QToolButton#findButton:hover {{ background: {theme.surface}; }}
+        QListView#completer {{ background: {theme.surface}; border: 1px solid {theme.border};
+                               padding: 3px 0; outline: 0; }}
         QMenu {{ background: {theme.surface}; border: 1px solid {theme.border}; padding: 4px; }}
         QMenu::item {{ padding: 6px 28px 6px 8px; border-radius: 5px; }}
         QMenu::item:selected {{ background: {theme.selection}; }}

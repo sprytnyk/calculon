@@ -24,6 +24,7 @@ from PySide6.QtGui import (
     QGuiApplication,
     QKeySequence,
     QMouseEvent,
+    QTextDocument,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -47,7 +48,8 @@ from ..storage import SheetStore, StorageError
 from ..translations import LANGUAGES, tr
 from . import icons
 from . import theme as themes
-from .editor import SheetEdit
+from .editor import KIND_ORDER, SheetEdit
+from .find_bar import FindBar
 from .settings_dialog import SettingsDialog
 from .shortcuts_dialog import ShortcutsDialog
 from .sidebar import HELP, SHEET, TRASHED, Sidebar
@@ -95,6 +97,10 @@ class MainWindow(QMainWindow):
         self._saved_mtime = 0.0
         self._dirty = False
         self._qt_translator: QTranslator | None = None
+        # one document per opened sheet, so undo survives switching sheets
+        self._docs: dict[str, QTextDocument] = {}
+        self._positions: dict[str, tuple[int, int]] = {}  # cursor and scroll per sheet
+        self._loose_doc: QTextDocument | None = None  # help or trash: not kept
 
         self.rates = RatesService(self.settings.rates_sources(), self)
         self.rates.changed.connect(self._engine_changed)
@@ -112,6 +118,8 @@ class MainWindow(QMainWindow):
         box.setSpacing(0)
         box.addWidget(self.banner)
         box.addWidget(self.editor, 1)
+        self.find_bar = FindBar(self.editor, self.t)
+        box.addWidget(self.find_bar)
         self.splitter = QSplitter()
         self.splitter.addWidget(self.sidebar)
         self.splitter.addWidget(right)
@@ -195,7 +203,10 @@ class MainWindow(QMainWindow):
     # menu text key -> icon name, where they differ
     ICONS = {
         "toggle_comment": "comment",
-        "find": "search",
+        "find_in_sheet": "search",
+        "find_next": "caret_down",
+        "find_previous": "caret_up",
+        "find": "sheet",
         "toggle_sidebar": "sidebar",
         "toggle_line_numbers": "line_numbers",
         "help_sheet": "help",
@@ -250,7 +261,11 @@ class MainWindow(QMainWindow):
         self._action(m, "copy_result", self._copy_current_result, "Ctrl+Shift+C")
         self._action(m, "copy_with_results", self._copy_with_results, "Ctrl+Alt+C")
         m.addSeparator()
-        self._action(m, "find", self._focus_search, K.Find)
+        fb = self.find_bar
+        self._action(m, "find_in_sheet", fb.open, K.Find)
+        self._action(m, "find_next", fb.step, K.FindNext)
+        self._action(m, "find_previous", lambda: fb.step(backward=True), K.FindPrevious)
+        self._action(m, "find", self._focus_search, "Ctrl+P")
 
         m = bar.addMenu(self.t("menu_view"))
         sub = m.addMenu(icons.icon("theme"), self.t("theme"))
@@ -319,6 +334,8 @@ class MainWindow(QMainWindow):
         self._load_qt_translation()
         self.sidebar.tr_ = self.t
         self.sidebar.retranslate()
+        self.find_bar.retranslate()
+        self.editor.kind_labels = {k: self.t(f"kind_{k}") for k in KIND_ORDER}
         self._update_rates_label()
         self.setWindowTitle(self._title())
         self.build_menus()
@@ -363,6 +380,7 @@ class MainWindow(QMainWindow):
             else:
                 self.store = store
                 self.sidebar.set_store(store)
+                self._forget_documents(lambda _rel: True)
         self.settings = new
         self.settings.save()
         self.rates.set_sources(new.rates_sources())
@@ -419,11 +437,33 @@ class MainWindow(QMainWindow):
         self.save_current()
         if self.file_watcher.files():
             self.file_watcher.removePaths(self.file_watcher.files())
+        if self.current[0] == SHEET:
+            ed = self.editor
+            self._positions[self.current[1]] = (
+                ed.textCursor().position(),
+                ed.verticalScrollBar().value(),
+            )
         self.current = (kind, key)
+        doc = self._docs.get(key) if kind == SHEET else None
+        if doc is None:
+            doc = self.editor.new_document(text, self)
+            if kind == SHEET:
+                self._docs[key] = doc
+        elif doc.toPlainText() != text:
+            doc.setPlainText(text)  # changed on disk while another sheet was open
+        loose, self._loose_doc = self._loose_doc, (None if kind == SHEET else doc)
         self.editor.blockSignals(True)
-        self.editor.setPlainText(text)
+        self.editor.show_document(doc)
+        position, scroll = self._positions.get(key, (0, 0)) if kind == SHEET else (0, 0)
+        cursor = self.editor.textCursor()
+        cursor.setPosition(min(position, doc.characterCount() - 1))
+        self.editor.setTextCursor(cursor)
         self.editor.blockSignals(False)
+        self.editor.verticalScrollBar().setValue(scroll)
+        if loose is not None and loose is not doc:
+            loose.deleteLater()
         self.editor.recalculate()
+        self.find_bar.sheet_changed()
         self.editor.setReadOnly(read_only)
         self.editor._cursor_moved()
         self._dirty = False
@@ -576,9 +616,13 @@ class MainWindow(QMainWindow):
         except (OSError, StorageError) as exc:
             QMessageBox.warning(self, self.t("rename"), str(exc))
             return
+        for cache in (self._docs, self._positions):
+            for old_key in [k for k in cache if k == rel or k.startswith(rel + "/")]:
+                cache[new_rel + old_key[len(rel) :]] = cache.pop(old_key)
         kind, key = self.current
         if kind == SHEET and (key == rel or key.startswith(rel + "/")):
-            self.open_sheet(new_rel + key[len(rel) :])
+            self.current = (SHEET, new_rel + key[len(rel) :])
+            self.open_sheet(self.current[1])
         else:
             self.sidebar.rebuild()
 
@@ -590,6 +634,7 @@ class MainWindow(QMainWindow):
         except OSError as exc:
             QMessageBox.warning(self, self.t("move_to_trash"), str(exc))
             return
+        self._forget_documents(lambda k: k == rel or k.startswith(rel + "/"))
         if kind == SHEET and (key == rel or key.startswith(rel + "/")):
             self.current = ("", "")
             sheets = self.store.all_sheets()
@@ -638,6 +683,16 @@ class MainWindow(QMainWindow):
         if self.current[0] == TRASHED:
             self.open_help()
         self.sidebar.rebuild()
+
+    def _forget_documents(self, which) -> None:
+        """Drop kept documents (and their undo) for sheets that moved away."""
+        for key in [k for k in self._docs if which(k)]:
+            doc = self._docs.pop(key)
+            self._positions.pop(key, None)
+            if doc is self.editor.document():
+                self._loose_doc = doc  # still on screen; goes when the next sheet opens
+            else:
+                doc.deleteLater()
 
     def show_in_folder(self, rel: str) -> None:
         path = self.store.path(rel) if rel else self.store.root

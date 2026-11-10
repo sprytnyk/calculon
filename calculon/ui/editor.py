@@ -2,7 +2,16 @@
 
 import re
 
-from PySide6.QtCore import QRect, QSize, QStringListModel, Qt, QTimer, Signal
+from PySide6.QtCore import (
+    QModelIndex,
+    QObject,
+    QRect,
+    QRectF,
+    QSize,
+    Qt,
+    QTimer,
+    Signal,
+)
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -10,13 +19,25 @@ from PySide6.QtGui import (
     QKeyEvent,
     QMouseEvent,
     QPainter,
+    QStandardItem,
+    QStandardItemModel,
     QSyntaxHighlighter,
     QTextCharFormat,
     QTextCursor,
     QTextDocument,
     QTextFormat,
 )
-from PySide6.QtWidgets import QCompleter, QPlainTextEdit, QTextEdit, QWidget
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QCompleter,
+    QPlainTextDocumentLayout,
+    QPlainTextEdit,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QTextEdit,
+    QWidget,
+)
 
 from ..engine import Config, FormatOptions, RateTable, SheetResult, evaluate_sheet
 from ..engine import ukrainian as UK
@@ -29,11 +50,17 @@ WORD_RE = re.compile(r"[^\W\d_][\w]*$")
 SYMBOL_RUN = re.compile(r"[-=<>!+*/|&:~.^%]{2,}")
 MIN_RESULTS_WIDTH = 120
 COMMENT_PREFIX = "// "
+DOCUMENT_MARGIN = 14
+MAX_MATCHES = 2000  # find highlights at most this many
+KIND_ROLE = Qt.ItemDataRole.UserRole + 1
+# autocomplete: the order kinds are listed in, and the colour each gets
+KIND_ORDER = ("variable", "function", "currency", "unit", "keyword")
 
 
 class Highlighter(QSyntaxHighlighter):
-    def __init__(self, doc: QTextDocument, theme: Theme):
-        super().__init__(doc)
+    def __init__(self, parent: QObject, theme: Theme):
+        # parented to the editor, not a document: documents come and go with sheets
+        super().__init__(parent)
         self.spans: list[list[tuple[int, int, str]]] = []
         self.set_theme(theme)
 
@@ -248,6 +275,61 @@ class LineNumbers(QWidget):
             block = block.next()
 
 
+class CompletionDelegate(QStyledItemDelegate):
+    """A completion row: the word, with the typed part in the accent colour, and its kind."""
+
+    def __init__(self, editor: SheetEdit):
+        super().__init__(editor)
+        self.editor = editor
+
+    def _fonts(self) -> tuple[QFont, QFont]:
+        font = QFont(self.editor.font())
+        small = QFont(font)
+        small.setPointSizeF(font.pointSizeF() * 0.8)
+        return font, small
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:  # noqa: N802
+        font, small = self._fonts()
+        word = QFontMetrics(font).horizontalAdvance(index.data() or "")
+        label = QFontMetrics(small).horizontalAdvance(self.editor.kind_label(index.data(KIND_ROLE)))
+        return QSize(word + label + 44, QFontMetrics(font).height() + 8)
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+        theme = self.editor.theme
+        font, small = self._fonts()
+        rect = option.rect.adjusted(4, 1, -4, -1)
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if option.state & QStyle.StateFlag.State_Selected:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(theme.selection))
+            painter.drawRoundedRect(QRectF(rect), 5, 5)
+        text_rect = rect.adjusted(8, 0, -8, 0)
+        word = index.data() or ""
+        typed = len(self.editor.completion_prefix())
+        fm = QFontMetrics(font)
+        align = Qt.AlignmentFlag.AlignVCenter
+        painter.setFont(font)
+        painter.setPen(QColor(theme.accent))
+        painter.drawText(text_rect, align | Qt.AlignmentFlag.AlignLeft, word[:typed])
+        painter.setPen(QColor(theme.text))
+        rest = text_rect.adjusted(fm.horizontalAdvance(word[:typed]), 0, 0, 0)
+        painter.drawText(rest, align | Qt.AlignmentFlag.AlignLeft, word[typed:])
+        kind = index.data(KIND_ROLE)
+        painter.setFont(small)
+        colors = {
+            "variable": theme.variable,
+            "function": theme.keyword,
+            "currency": theme.unit,
+            "unit": theme.unit,
+        }
+        painter.setPen(QColor(colors.get(kind or "", theme.muted)))
+        painter.drawText(
+            text_rect, align | Qt.AlignmentFlag.AlignRight, self.editor.kind_label(kind)
+        )
+        painter.restore()
+
+
 class SheetEdit(QPlainTextEdit):
     evaluated = Signal(object)  # SheetResult
     copied = Signal(str)
@@ -266,7 +348,11 @@ class SheetEdit(QPlainTextEdit):
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.setTabChangesFocus(False)
         self.setCenterOnScroll(False)
-        self.highlighter = Highlighter(self.document(), theme)
+        self.highlighter = Highlighter(self, theme)
+        self.highlighter.setDocument(self.document())
+        self.kind_labels: dict[str, str] = {}
+        self._needle = ""
+        self._matches: list[QTextCursor] = []
         self.results = ResultsArea(self)
         self.results.copied.connect(self.copied)
         self.results.resized.connect(self.results_resized)
@@ -277,30 +363,52 @@ class SheetEdit(QPlainTextEdit):
         self._timer.setInterval(0)
         self._timer.timeout.connect(self.recalculate)
         self.textChanged.connect(self._schedule)
+        self.textChanged.connect(self._refresh_matches)
         self.updateRequest.connect(self._update_results)
         self.cursorPositionChanged.connect(self._cursor_moved)
         self._completer = QCompleter(self)
         self._completer.setWidget(self)
         self._completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self._completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
-        self._completer.setModelSorting(QCompleter.ModelSorting.CaseInsensitivelySortedModel)
+        self._completer.setMaxVisibleItems(9)
         self._completer.activated.connect(self._insert_completion)
-        self._words = QStringListModel(self)
+        self._words = QStandardItemModel(self)
         self._completer.setModel(self._words)
-        self._static_words = sorted(
-            set(U.all_words())
-            | KNOWN_CODES
-            | {k for k in KEYWORDS if len(k) > 2}
-            | set(FUNCTIONS)
-            | ROUNDERS
-            | set(AGGREGATES)
-            | set(UK.WORDS)
-            | set(UK.FUNCTIONS),
-            key=str.lower,
-        )
+        popup = self._completer.popup()
+        popup.setObjectName("completer")
+        popup.setItemDelegate(CompletionDelegate(self))
+        popup.setUniformItemSizes(True)
+        popup.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        popup.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        kinds = {w: "keyword" for w in {k for k in KEYWORDS if len(k) > 2} | set(AGGREGATES)}
+        kinds |= {w: "keyword" for w in UK.WORDS}
+        kinds |= dict.fromkeys(U.all_words(), "unit")
+        kinds |= dict.fromkeys(KNOWN_CODES, "currency")
+        kinds |= dict.fromkeys(set(FUNCTIONS) | ROUNDERS | set(UK.FUNCTIONS), "function")
+        self._static_words = kinds
         self._variables: list[str] = []
         self.set_results_width(self.results_width)
         self.apply_theme(theme)
+
+    def new_document(self, text: str, parent: QObject) -> QTextDocument:
+        """A document for one sheet; it keeps that sheet's undo history."""
+        doc = QTextDocument(parent)
+        doc.setDocumentLayout(QPlainTextDocumentLayout(doc))
+        doc.setDefaultFont(self.font())
+        doc.setDocumentMargin(DOCUMENT_MARGIN)
+        doc.setPlainText(text)
+        return doc
+
+    def show_document(self, doc: QTextDocument) -> None:
+        if doc is self.document():
+            return
+        doc.setDefaultFont(self.font())  # the zoom may have changed while it was away
+        self.highlighter.spans = []
+        self._last_text = None
+        self.setDocument(doc)
+        self.highlighter.setDocument(doc)
+        self._update_margins()
+        self._refresh_matches()
 
     def apply_theme(self, theme: Theme) -> None:
         self.theme = theme
@@ -335,7 +443,7 @@ class SheetEdit(QPlainTextEdit):
         super().setFont(font)
         self.document().setDefaultFont(font)
         self.setTabStopDistance(QFontMetrics(font).horizontalAdvance(" ") * 4)
-        self.document().setDocumentMargin(14)
+        self.document().setDocumentMargin(DOCUMENT_MARGIN)
         self._update_margins()
         self.results.update()
 
@@ -410,7 +518,15 @@ class SheetEdit(QPlainTextEdit):
         sel.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
         sel.cursor = self.textCursor()
         sel.cursor.clearSelection()
-        self.setExtraSelections([sel] if not self.isReadOnly() else [])
+        found = []
+        color = QColor(self.theme.accent)
+        color.setAlpha(70)
+        for match in self._matches:
+            f = QTextEdit.ExtraSelection()
+            f.format.setBackground(color)
+            f.cursor = match
+            found.append(f)
+        self.setExtraSelections(([sel] if not self.isReadOnly() else []) + found)
         self.results.update()
         if hasattr(self, "gutter"):
             self.gutter.update()
@@ -448,6 +564,52 @@ class SheetEdit(QPlainTextEdit):
             else:
                 c.insertText(COMMENT_PREFIX)
         edit.endEditBlock()
+
+    def set_find(self, needle: str) -> None:
+        """Highlight every place `needle` appears (any case); empty clears it."""
+        self._needle = needle
+        self._refresh_matches()
+
+    def _refresh_matches(self) -> None:
+        if not self._needle and not self._matches:
+            return
+        self._matches = []
+        doc = self.document()
+        cur = doc.find(self._needle, 0) if self._needle else QTextCursor()
+        while not cur.isNull() and len(self._matches) < MAX_MATCHES:
+            self._matches.append(cur)
+            cur = doc.find(self._needle, cur)
+        self._cursor_moved()
+
+    def match_count(self) -> tuple[int, int]:
+        """(number of the selected match, from 1, or 0; how many there are)."""
+        cur = self.textCursor()
+        for n, m in enumerate(self._matches, 1):
+            if (m.selectionStart(), m.selectionEnd()) == (cur.selectionStart(), cur.selectionEnd()):
+                return n, len(self._matches)
+        return 0, len(self._matches)
+
+    def find_next(self, backward: bool = False, start: int | None = None) -> None:
+        """Select the next match after the cursor (or `start`), going round at the end."""
+        if not self._matches:
+            return
+        cur = self.textCursor()
+        if backward:
+            pos = cur.selectionStart() if start is None else start
+            before = [m for m in self._matches if m.selectionEnd() <= pos]
+            match = before[-1] if before else self._matches[-1]
+        else:
+            pos = cur.selectionEnd() if start is None else start
+            after = [m for m in self._matches if m.selectionStart() >= pos]
+            match = after[0] if after else self._matches[0]
+        self.setTextCursor(QTextCursor(match))
+        self.centerCursor()
+
+    def kind_label(self, kind: str | None) -> str:
+        return self.kind_labels.get(kind or "", "")
+
+    def completion_prefix(self) -> str:
+        return self._completer.completionPrefix()
 
     def _word_before_cursor(self) -> str:
         cur = self.textCursor()
@@ -493,16 +655,23 @@ class SheetEdit(QPlainTextEdit):
         if len(prefix) < 2:
             popup.hide()
             return
-        words = sorted(set(self._variables) | set(self._static_words), key=str.lower)
-        words = [w for w in words if w.lower() != prefix.lower()]
-        self._words.setStringList(words)
+        low = prefix.lower()
+        kinds = self._static_words | dict.fromkeys(self._variables, "variable")
+        words = sorted(
+            (w for w in kinds if w.lower().startswith(low) and w.lower() != low),
+            key=lambda w: (KIND_ORDER.index(kinds[w]), len(w), w.lower()),
+        )
+        self._words.clear()
+        for w in words[:200]:
+            item = QStandardItem(w)
+            item.setData(kinds[w], KIND_ROLE)
+            self._words.appendRow(item)
         self._completer.setCompletionPrefix(prefix)
         if self._completer.completionCount() == 0:
             popup.hide()
             return
         popup.setCurrentIndex(self._completer.completionModel().index(0, 0))
         rect = self.cursorRect()
-        rect.setWidth(
-            popup.sizeHintForColumn(0) + popup.verticalScrollBar().sizeHint().width() + 16
-        )
+        rect.translate(self.viewportMargins().left(), 4)
+        rect.setWidth(popup.sizeHintForColumn(0) + popup.verticalScrollBar().sizeHint().width() + 8)
         self._completer.complete(rect)
