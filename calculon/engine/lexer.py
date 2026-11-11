@@ -22,6 +22,8 @@ class Tok:
 SCALES = {
     "k": Decimal(10) ** 3,
     "K": Decimal(10) ** 3,
+    "к": Decimal(10) ** 3,  # Cyrillic, as in 5к
+    "К": Decimal(10) ** 3,
     "M": Decimal(10) ** 6,
     "G": Decimal(10) ** 9,
     "T": Decimal(10) ** 12,
@@ -33,7 +35,7 @@ SCALES = {
     "t": Decimal(10) ** 12,
     "tn": Decimal(10) ** 12,
 }
-GENERAL_SCALES = {"k", "K", "M", "G", "T"}
+GENERAL_SCALES = {"k", "K", "к", "К", "M", "G", "T"}
 
 _PREFIX_SYMS = sorted(PREFIX_SYMBOLS, key=len, reverse=True)
 _DATE_RE = re.compile(
@@ -104,8 +106,8 @@ def tokenize(line: str, number_style: str = "comma_dot") -> list[Tok]:
                     continue
             tok, i = _number(line, i, thousands, point)
             toks.append(tok)
-            # attached scale suffix: 2.5k, $5m, 7bn
-            m = re.compile(r"(bn|tn|[kKMGTmbBt])(?![\w])").match(line, i)
+            # attached scale suffix: 2.5k, 5к, $5m, 7bn
+            m = re.compile(r"(bn|tn|[kKкКMGTmbBt])(?![\w])").match(line, i)
             if m:
                 tok.scale = m.group(1)
                 tok.end = m.end()

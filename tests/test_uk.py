@@ -41,6 +41,10 @@ def test_time_in_another_city(kyiv_time) -> None:
         ("round(2,345; 2)", "2,35"),
         ("1,5e3", f"1{NB}500"),
         ("5 тис. + 500", f"5{NB}500"),
+        ("5к - 55", f"4{NB}945"),
+        ("2,5К + 1", f"2{NB}501"),
+        ("5к грн", f"5{NB}000,00 ₴"),
+        ("5 км", "5 км"),
         ("2,5 млн", f"2{NB}500{NB}000"),
         ("1 млрд / 1 млн", f"1{NB}000"),
         # money: symbol after the number, Ukrainian names
