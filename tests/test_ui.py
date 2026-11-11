@@ -527,3 +527,38 @@ def test_help_sheet_ignores_the_insert_keys(window, app) -> None:
     ed.insert_line_reference()
     assert not ed.insert_reference(0)
     assert ed.toPlainText() == before
+
+
+def test_blocked_sheets_folder_falls_back_and_explains(app, home, tmp_path, monkeypatch) -> None:
+    """Windows' Controlled folder access can block Documents. Start anyway, in a fallback
+    folder, say why, and keep the chosen folder so the next start tries it again."""
+    from calculon.ui import main_window
+
+    monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
+    blocker = tmp_path / "not-a-folder"
+    blocker.write_text("")
+    blocked = blocker / "Calculon"
+    fallback = tmp_path / "fallback"
+    monkeypatch.setattr(main_window, "fallback_sheets_dir", lambda: str(fallback))
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        main_window.QMessageBox, "warning", lambda _parent, _title, text: warnings.append(text)
+    )
+    qs = QSettings()
+    qs.clear()
+    qs.setValue("sheets_dir", str(blocked))
+    qs.sync()
+    w = MainWindow()
+    w.show()
+    pump(app)
+    try:
+        assert w.store.root == fallback
+        assert (fallback / "Welcome.txt").exists()
+        assert len(warnings) == 1
+        assert str(blocked) in warnings[0]
+        assert "Controlled folder access" in warnings[0]
+        assert str(fallback) in warnings[0]
+        assert w.settings.sheets_dir == str(blocked)
+    finally:
+        w.close()
+        w.deleteLater()

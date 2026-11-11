@@ -121,6 +121,12 @@ T = {
     "tab_numbers": "Numbers",
     "tab_rates": "Exchange Rates",
     "sheets_dir": "Sheets folder:",
+    "folder_blocked": (
+        "Calculon can't create or write to {folder}.\n\n{error}\n\n"
+        "On Windows, Controlled folder access in Windows Security may be blocking it. "
+        "Allow Calculon there, or pick another sheets folder in Settings."
+    ),
+    "folder_fallback": "Until then, your sheets are saved in {fallback}.",
     "browse": "Browse…",
     "font_size": "Text size:",
     "ligatures": "Font ligatures",

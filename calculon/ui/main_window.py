@@ -47,7 +47,7 @@ from ..engine import format_value
 from ..engine.format import MONTHS_UK
 from ..paths import FONTS, HELP_DIR
 from ..rates import RatesService
-from ..settings import Settings
+from ..settings import Settings, fallback_sheets_dir
 from ..storage import SheetStore, StorageError
 from ..translations import LANGUAGES, tr
 from . import icons
@@ -96,7 +96,15 @@ class MainWindow(QMainWindow):
         self.settings = Settings.load()
         self.theme = themes.resolve(self.settings.theme)
         self.font_family = load_fonts()
-        self.store = self._open_store(self.settings.sheets_dir)
+        folder_error = ""
+        try:
+            self.store = self._open_store(self.settings.sheets_dir)
+        except OSError as exc:
+            # keep settings.sheets_dir, so the next start tries the chosen folder again
+            fallback = fallback_sheets_dir()
+            self.store = self._open_store(fallback)
+            folder_error = self._folder_error(self.settings.sheets_dir, exc)
+            folder_error += "\n\n" + self.t("folder_fallback", fallback=fallback)
         self.current: tuple[str, str] = ("", "")  # (kind, key)
         self._saved_mtime = 0.0
         self._dirty = False
@@ -171,9 +179,16 @@ class MainWindow(QMainWindow):
         self._restore_window()
         self._open_initial()
         QTimer.singleShot(0, self.rates.refresh_if_stale)
+        if folder_error:
+            QTimer.singleShot(
+                0, lambda: QMessageBox.warning(self, self.t("settings_title"), folder_error)
+            )
 
     def t(self, key: str, **kw) -> str:
         return tr(self.settings.language, key, **kw)
+
+    def _folder_error(self, folder: str, exc: OSError) -> str:
+        return self.t("folder_blocked", folder=folder, error=exc)
 
     def _open_store(self, folder: str) -> SheetStore:
         store = SheetStore(Path(folder).expanduser())
@@ -411,7 +426,9 @@ class MainWindow(QMainWindow):
             try:
                 store = self._open_store(new.sheets_dir)
             except OSError as exc:
-                QMessageBox.warning(self, self.t("settings_title"), str(exc))
+                QMessageBox.warning(
+                    self, self.t("settings_title"), self._folder_error(new.sheets_dir, exc)
+                )
                 new.sheets_dir = self.settings.sheets_dir
             else:
                 self.store = store

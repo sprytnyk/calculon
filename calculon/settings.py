@@ -19,6 +19,12 @@ def default_sheets_dir() -> str:
     return str(Path(docs or Path.home()) / "Calculon")
 
 
+def fallback_sheets_dir() -> str:
+    """Used when the sheets folder can't be written, e.g. Windows blocks Documents."""
+    data = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)
+    return str(Path(data or Path.home()) / "Sheets")
+
+
 @dataclass
 class Settings:
     sheets_dir: str = ""
