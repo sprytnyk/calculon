@@ -28,6 +28,11 @@ Folders are real folders, so the sheets work with any sync tool, `grep` or backu
 Calculon keeps pins and custom order in a hidden `.calculon.json` in that folder.
 Deleted sheets go to `.trash/` until you empty the trash.
 
+If Calculon can't write to that folder, it starts with a backup folder in its app data
+(`%LOCALAPPDATA%\Calculon\Sheets` on Windows) and says why. On Windows the usual cause
+is Controlled folder access in Windows Security: allow Calculon there, or pick another
+folder in Settings.
+
 ## Exchange rates
 
 Calculon downloads rates once a day from [open.er-api.com](https://open.er-api.com).
