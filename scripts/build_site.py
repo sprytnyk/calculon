@@ -51,12 +51,12 @@ Coffee £4.50 × 6 in EUR
 Run: 10 km in miles
 Oven 180 °C in °F
 1.5 TB at 25 MB/s in hours""",
-        "dates": """# Lisbon trip
-@from 14.11.2026 09:00
-Flight: 3 hours
-Hotel: 2 nights
-Tram tour: 90 minutes
-@to
+        "dates": """# Portugal trip
+@from 14.11.2026
+Lisbon: 3 days
+Porto: 2 days
+// the flight home is on 18 November
+@to 18.11.2026
 14.11.2026 + 3 weeks
 days between 14.11.2026 and 25.12.2026""",
         "spelling": """# Ремонт кухні
@@ -86,12 +86,12 @@ days between 14.11.2026 and 25.12.2026""",
 Пробіжка: 10 км у милях
 Духовка 180 °C у °F
 1,5 ТБ при 25 МБ/с у годинах""",
-        "dates": """# Поїздка до Лісабона
-@from 14.11.2026 09:00
-Переліт: 3 години
-Готель: 2 ночі
-Екскурсія трамваєм: 90 хвилин
-@to
+        "dates": """# Поїздка до Португалії
+@from 14.11.2026
+Лісабон: 3 дні
+Порту: 2 дні
+// літак додому 18 листопада
+@to 18.11.2026
 14.11.2026 + 3 тижні
 днів між 14.11.2026 і 25.12.2026""",
         "spelling": """# Ремонт кухні

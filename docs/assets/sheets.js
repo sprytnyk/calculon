@@ -662,14 +662,14 @@ window.CALCULON = {
     "total": "Total: $219.77"
    },
    "dates": {
-    "name": "Lisbon trip",
+    "name": "Portugal trip",
     "lines": [
      {
-      "text": "# Lisbon trip",
+      "text": "# Portugal trip",
       "spans": [
        [
         0,
-        13,
+        15,
         "heading"
        ]
       ],
@@ -677,7 +677,7 @@ window.CALCULON = {
       "total": false
      },
      {
-      "text": "@from 14.11.2026 09:00",
+      "text": "@from 14.11.2026",
       "spans": [
        [
         0,
@@ -688,18 +688,13 @@ window.CALCULON = {
         6,
         16,
         "number"
-       ],
-       [
-        17,
-        22,
-        "number"
        ]
       ],
-      "answer": "14 November, 09:00",
+      "answer": "14 November",
       "total": false
      },
      {
-      "text": "Flight: 3 hours",
+      "text": "Lisbon: 3 days",
       "spans": [
        [
         0,
@@ -713,15 +708,15 @@ window.CALCULON = {
        ],
        [
         10,
-        15,
+        14,
         "unit"
        ]
       ],
-      "answer": "14 November, 12:00",
+      "answer": "17 November",
       "total": false
      },
      {
-      "text": "Hotel: 2 nights",
+      "text": "Porto: 2 days",
       "spans": [
        [
         0,
@@ -735,45 +730,40 @@ window.CALCULON = {
        ],
        [
         9,
-        15,
+        13,
         "unit"
        ]
       ],
-      "answer": "16 November, 12:00",
+      "answer": "19 November",
       "total": false
      },
      {
-      "text": "Tram tour: 90 minutes",
+      "text": "// the flight home is on 18 November",
       "spans": [
        [
         0,
-        11,
-        "label"
-       ],
-       [
-        11,
-        13,
-        "number"
-       ],
-       [
-        14,
-        21,
-        "unit"
+        36,
+        "comment"
        ]
       ],
-      "answer": "16 November, 13:30",
+      "answer": "",
       "total": false
      },
      {
-      "text": "@to",
+      "text": "@to 18.11.2026",
       "spans": [
        [
         0,
         3,
         "keyword"
+       ],
+       [
+        4,
+        14,
+        "number"
        ]
       ],
-      "answer": "16 November, 13:30",
+      "answer": "1 day over",
       "total": false
      },
      {
@@ -1652,14 +1642,14 @@ window.CALCULON = {
     "total": "Разом: 219,77 $"
    },
    "dates": {
-    "name": "Поїздка до Лісабона",
+    "name": "Поїздка до Португалії",
     "lines": [
      {
-      "text": "# Поїздка до Лісабона",
+      "text": "# Поїздка до Португалії",
       "spans": [
        [
         0,
-        21,
+        23,
         "heading"
        ]
       ],
@@ -1667,7 +1657,7 @@ window.CALCULON = {
       "total": false
      },
      {
-      "text": "@from 14.11.2026 09:00",
+      "text": "@from 14.11.2026",
       "spans": [
        [
         0,
@@ -1678,18 +1668,13 @@ window.CALCULON = {
         6,
         16,
         "number"
-       ],
-       [
-        17,
-        22,
-        "number"
        ]
       ],
-      "answer": "14 листопада, 09:00",
+      "answer": "14 листопада",
       "total": false
      },
      {
-      "text": "Переліт: 3 години",
+      "text": "Лісабон: 3 дні",
       "spans": [
        [
         0,
@@ -1703,67 +1688,62 @@ window.CALCULON = {
        ],
        [
         11,
-        17,
-        "unit"
-       ]
-      ],
-      "answer": "14 листопада, 12:00",
-      "total": false
-     },
-     {
-      "text": "Готель: 2 ночі",
-      "spans": [
-       [
-        0,
-        8,
-        "label"
-       ],
-       [
-        8,
-        9,
-        "number"
-       ],
-       [
-        10,
         14,
         "unit"
        ]
       ],
-      "answer": "16 листопада, 12:00",
+      "answer": "17 листопада",
       "total": false
      },
      {
-      "text": "Екскурсія трамваєм: 90 хвилин",
+      "text": "Порту: 2 дні",
       "spans": [
        [
         0,
-        20,
+        7,
         "label"
        ],
        [
-        20,
-        22,
+        7,
+        8,
         "number"
        ],
        [
-        23,
-        29,
+        9,
+        12,
         "unit"
        ]
       ],
-      "answer": "16 листопада, 13:30",
+      "answer": "19 листопада",
       "total": false
      },
      {
-      "text": "@to",
+      "text": "// літак додому 18 листопада",
+      "spans": [
+       [
+        0,
+        28,
+        "comment"
+       ]
+      ],
+      "answer": "",
+      "total": false
+     },
+     {
+      "text": "@to 18.11.2026",
       "spans": [
        [
         0,
         3,
         "keyword"
+       ],
+       [
+        4,
+        14,
+        "number"
        ]
       ],
-      "answer": "16 листопада, 13:30",
+      "answer": "перевищено: 1 день",
       "total": false
      },
      {
