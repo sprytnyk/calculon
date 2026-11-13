@@ -220,16 +220,40 @@
 
   // ---- the window at the top of the page ----
 
+  // a click on a sheet in the sidebar opens it, like in the app; folders, Help and Trash
+  // are only labels
   function heroWindow() {
     const win = document.querySelector("[data-hero]");
     if (!win) return;
     const menubar = win.querySelector(".menubar");
     DATA.ui.menus.forEach((name) => menubar.append(el("span", "", name)));
     const side = win.querySelector(".side");
-    const row = (name, text, cls) => {
-      const r = el("div", `row ${cls || ""}`);
+    const box = win.querySelector(".sheet");
+    const status = win.querySelector(".total");
+    let current = new Sheet(box, DATA.sheets.hero, status);
+    let picked = false;
+
+    function open(key, button) {
+      picked = true;
+      current.stop();
+      box.querySelector(".ctxmenu")?.remove();
+      box.style.minHeight = "";
+      for (const b of side.querySelectorAll("button.row")) {
+        b.classList.toggle("current", b === button);
+        if (b === button) b.setAttribute("aria-current", "true");
+        else b.removeAttribute("aria-current");
+      }
+      const data = DATA.sheets[key];
+      current = new Sheet(box, data, status);
+      current.showAll();
+      if (data.suggestions) contextMenu(box, data);
+    }
+
+    const row = (name, text, cls, tag = "div") => {
+      const r = el(tag, `row ${cls || ""}`);
       r.append(icon(name), el("span", "", text));
       side.append(r);
+      return r;
     };
     const title = el("div", "row muted", DATA.ui.sheets);
     title.style.fontSize = "12.5px";
@@ -237,16 +261,23 @@
     for (const [folder, keys] of DATA.sidebar) {
       if (folder) row("folder", folder);
       for (const key of keys) {
-        row("sheet", DATA.sheets[key].name, `${folder ? "child" : ""} ${key === "hero" ? "current" : ""}`);
+        const b = row("sheet", DATA.sheets[key].name, folder ? "child" : "", "button");
+        b.type = "button";
+        if (key === "hero") {
+          b.classList.add("current");
+          b.setAttribute("aria-current", "true");
+        }
+        b.addEventListener("click", () => open(key, b));
       }
     }
     side.append(el("div", "gap"));
     row("help", DATA.ui.help);
     row("trash", DATA.ui.trash);
     win.querySelector(".rates").textContent = DATA.ui.rates;
-    const sheet = new Sheet(win.querySelector(".sheet"), DATA.sheets.hero, win.querySelector(".total"));
-    if (calm) return sheet.showAll();
-    whenSeen(win, () => sheet.type().catch(() => {}));
+    if (calm) return current.showAll();
+    whenSeen(win, () => {
+      if (!picked) current.type().catch(() => {});
+    });
   }
 
   // ---- the examples, one tab at a time ----

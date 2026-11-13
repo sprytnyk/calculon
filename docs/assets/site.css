@@ -273,7 +273,24 @@ p {
 .side .row.child {
   padding-left: 26px;
 }
-.side .row.current {
+/* sheets open on a click; folders, Help and Trash are plain labels */
+.side button.row {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.side button.row:hover {
+  background: var(--surface);
+}
+.side button.row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.side .row.current,
+.side button.row.current:hover {
   background: var(--selection);
   color: var(--heading);
 }
@@ -410,7 +427,7 @@ p {
   }
 }
 
-/* The right-click menu in the spell check example */
+/* The right-click menu over the misspelled word in the kitchen sheet */
 .ctxmenu {
   position: absolute;
   z-index: 2;
