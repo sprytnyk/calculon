@@ -1657,16 +1657,16 @@ window.CALCULON = {
       "total": false
      },
      {
-      "text": "@from 14.11.2026",
+      "text": "@від 14.11.2026",
       "spans": [
        [
         0,
-        5,
+        4,
         "keyword"
        ],
        [
-        6,
-        16,
+        5,
+        15,
         "number"
        ]
       ],
@@ -1730,7 +1730,7 @@ window.CALCULON = {
       "total": false
      },
      {
-      "text": "@to 18.11.2026",
+      "text": "@до 18.11.2026",
       "spans": [
        [
         0,
