@@ -1,0 +1,74 @@
+/* Made by scripts/build_site.py from Calculon's Glacier theme. Don't edit by hand. */
+:root {
+  color-scheme: light dark;
+  --bg: #f8fafc;
+  --sidebar: #f1f5f9;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --muted: #64748b;
+  --accent: #2563eb;
+  --focus: #2563eb;
+  --selection: #dbeafe;
+  --current-line: #f1f5f9;
+  --result: #047857;
+  --result-hover: #064e3b;
+  --number: #b45309;
+  --unit: #1d4ed8;
+  --variable: #7c3aed;
+  --keyword: #475569;
+  --operator: #64748b;
+  --comment: #94a3b8;
+  --heading: #0f172a;
+  --label: #334155;
+  --tag: #047857;
+  --misspelled: #e11d48;
+  --icon-neutral: #64748b;
+  --icon-blue: #2563eb;
+  --icon-amber: #d97706;
+  --icon-violet: #7c3aed;
+  --icon-green: #059669;
+  --icon-teal: #0d9488;
+  --icon-cyan: #0891b2;
+  --icon-rose: #e11d48;
+  --icon-red: #dc2626;
+  --icon-yellow: #ca8a04;
+  --icon-indigo: #4f46e5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --sidebar: #1e293b;
+    --surface: #283548;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #60a5fa;
+    --focus: #2563eb;
+    --selection: #1c3767;
+    --current-line: #162032;
+    --result: #7dd3ae;
+    --result-hover: #bbf0d6;
+    --number: #fbbf24;
+    --unit: #93c5fd;
+    --variable: #a78bfa;
+    --keyword: #94a3b8;
+    --operator: #94a3b8;
+    --comment: #64748b;
+    --heading: #ffffff;
+    --label: #cbd5e1;
+    --tag: #34d399;
+    --misspelled: #fb7185;
+    --icon-neutral: #94a3b8;
+    --icon-blue: #60a5fa;
+    --icon-amber: #fbbf24;
+    --icon-violet: #a78bfa;
+    --icon-green: #34d399;
+    --icon-teal: #2dd4bf;
+    --icon-cyan: #22d3ee;
+    --icon-rose: #fb7185;
+    --icon-red: #f87171;
+    --icon-yellow: #facc15;
+    --icon-indigo: #818cf8;
+  }
+}

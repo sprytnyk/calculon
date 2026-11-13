@@ -1,4 +1,4 @@
-.PHONY: all run check lint test format icons build clean
+.PHONY: all run check lint test format icons site build clean
 
 all: check
 
@@ -19,6 +19,10 @@ format:
 
 icons:
 	QT_QPA_PLATFORM=offscreen uv run python scripts/make_icons.py
+
+# the website's example sheets and colours, from the engine and the Glacier theme
+site:
+	QT_QPA_PLATFORM=offscreen uv run python -m scripts.build_site
 
 # make build            -> test build, version 0.0.0.dev0+<git describe>
 # make build TAG=v1.2.3 -> release version 1.2.3

@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Calculon: a natural-language notepad calculator for Linux, Windows and macOS</title>
+    <meta name="description" content="A natural-language notepad calculator for Linux, Windows and macOS. Write lines with money, units and dates, and the answers show up on the right. Free and open source, in English and Ukrainian." />
+    <link rel="icon" href="assets/icon.png" />
+    <link rel="canonical" href="https://sprytnyk.github.io/calculon/" />
+    <link rel="alternate" hreflang="en" href="https://sprytnyk.github.io/calculon/" />
+    <link rel="alternate" hreflang="uk" href="https://sprytnyk.github.io/calculon/uk/" />
+    <link rel="alternate" hreflang="x-default" href="https://sprytnyk.github.io/calculon/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Calculon" />
+    <meta property="og:title" content="Calculon: a natural-language notepad calculator for Linux, Windows and macOS" />
+    <meta property="og:description" content="A natural-language notepad calculator for Linux, Windows and macOS. Write lines with money, units and dates, and the answers show up on the right. Free and open source, in English and Ukrainian." />
+    <meta property="og:url" content="https://sprytnyk.github.io/calculon/" />
+    <meta property="og:image" content="https://sprytnyk.github.io/calculon/screenshot.png" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:locale:alternate" content="uk_UA" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Calculon",
+        "description": "A natural-language notepad calculator for Linux, Windows and macOS. Write lines with money, units and dates, and the answers show up on the right. Free and open source, in English and Ukrainian.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Linux, Windows, macOS",
+        "url": "https://sprytnyk.github.io/calculon/",
+        "downloadUrl": "https://github.com/sprytnyk/calculon/releases/latest",
+        "codeRepository": "https://github.com/sprytnyk/calculon",
+        "license": "https://opensource.org/license/mit",
+        "inLanguage": [
+          "en",
+          "uk"
+        ],
+        "image": "https://sprytnyk.github.io/calculon/assets/icon.png",
+        "screenshot": "https://sprytnyk.github.io/calculon/screenshot.png",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="assets/theme.css" />
+    <link rel="stylesheet" href="assets/site.css" />
+    <script>
+      // a browser set to Ukrainian goes to the Ukrainian page, unless the visitor picked English
+      try {
+        const first = (navigator.languages || [navigator.language])[0] || "";
+        if (!localStorage.getItem("lang") && /^uk\b/i.test(first)) location.replace("uk/");
+      } catch {
+        // no storage: stay on English
+      }
+    </script>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <a class="brand" href="./"><img src="assets/icon.png" alt="" />Calculon</a>
+        <nav>
+          <a class="optional" href="#examples">Examples</a>
+          <a class="optional" href="#features">Features</a>
+          <a class="optional" href="#faq">FAQ</a>
+          <a href="https://github.com/sprytnyk/calculon">GitHub</a>
+          <a href="uk/" data-lang="uk" hreflang="uk" lang="uk">🇺🇦 Українською</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="hero wrap">
+        <h1>A notepad that calculates as&nbsp;you&nbsp;type</h1>
+        <p class="lead">
+          Calculon is a natural-language notepad calculator. Write lines with money, units and
+          dates, and the answers show up on the right. It runs on Linux, Windows and macOS, in
+          English and Ukrainian.
+        </p>
+        <div data-downloads>
+          <div class="downloads">
+            <a class="button primary" href="https://github.com/sprytnyk/calculon/releases/latest"
+              >Download</a
+            >
+          </div>
+          <p class="download-note">It's free and open source, under the MIT licence.</p>
+        </div>
+
+        <div class="window" data-hero aria-label="Calculon's window with a sheet being typed in">
+          <div class="titlebar">
+            <span class="dots"><i></i><i></i><i></i></span>Calculon
+          </div>
+          <div class="menubar"></div>
+          <div class="window-body">
+            <aside class="side"></aside>
+            <div class="sheet"></div>
+          </div>
+          <div class="statusbar"><span class="total"></span><span class="rates"></span></div>
+        </div>
+      </div>
+
+      <section id="examples">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>Examples</h2>
+            <p class="muted">
+              Every line is plain text. Calculon finds the numbers, money, units and dates in it
+              and keeps the answers in a column on the right.
+            </p>
+          </div>
+          <div class="examples" data-examples>
+            <div class="tabs" role="tablist" aria-label="Examples">
+              <button class="tab" role="tab" data-sheet="basics" data-icon="numbers">
+                <strong>Words and maths</strong>
+                <span class="text">Name lines, use variables and percentages, and total the lines above.</span>
+              </button>
+              <button class="tab" role="tab" data-sheet="money" data-icon="rates">
+                <strong>Money and units</strong>
+                <span class="text">Convert about 160 currencies at daily rates, and units like km, °C and TB.</span>
+              </button>
+              <button class="tab" role="tab" data-sheet="dates" data-icon="sheet">
+                <strong>Dates and timelines</strong>
+                <span class="text"
+                  >Add weeks to a date, count the days between two, or plan a trip with @from and
+                  @to.</span
+                >
+              </button>
+              <button class="tab" role="tab" data-sheet="spelling" data-icon="spell_add">
+                <strong>Ukrainian and spell check</strong>
+                <span class="text"
+                  >Write sheets in Ukrainian too. Misspelled words get a wavy line, and a right-click
+                  shows suggestions.</span
+                >
+              </button>
+            </div>
+            <div class="example">
+              <div class="window">
+                <div class="titlebar">
+                  <span class="dots"><i></i><i></i><i></i></span><span class="name"></span>
+                </div>
+                <div class="window-body"><div class="sheet" role="tabpanel"></div></div>
+                <div class="statusbar"><span class="total"></span></div>
+              </div>
+              <p class="rates-note">
+                Currency answers here use the rates from <span data-rates-date></span>, the snapshot
+                that ships with the app. The app updates them once a day.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="alt">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>Features</h2>
+          </div>
+          <div class="features">
+            <div class="card">
+              <span class="icon" style="mask-image: url(assets/icons/colours.svg); -webkit-mask-image: url(assets/icons/colours.svg); background: var(--icon-violet)"></span>
+              <h3>Two themes</h3>
+              <p>
+                Ember, warm greys with orange, and Glacier, the slate blue on this page. Each comes
+                in dark and light, or follows your system.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(assets/icons/open_folder.svg); -webkit-mask-image: url(assets/icons/open_folder.svg); background: var(--icon-amber)"></span>
+              <h3>Sheets are plain files</h3>
+              <p>
+                Every sheet is a .txt file in a folder you pick. Sync it, back it up or grep it
+                with any tool.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(assets/icons/rates.svg); -webkit-mask-image: url(assets/icons/rates.svg); background: var(--icon-green)"></span>
+              <h3>Rates that work offline</h3>
+              <p>
+                Calculon downloads exchange rates once a day and keeps the last ones, so currencies
+                work without a network.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(assets/icons/language.svg); -webkit-mask-image: url(assets/icons/language.svg); background: var(--icon-green)"></span>
+              <h3>English and Ukrainian</h3>
+              <p>
+                Write sheets in either language, or both at once. Numbers follow the interface
+                language: 1,234.56 or 1&nbsp;234,56.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(assets/icons/spell_add.svg); -webkit-mask-image: url(assets/icons/spell_add.svg); background: var(--icon-green)"></span>
+              <h3>Spell check</h3>
+              <p>
+                It checks English and Ukrainian with the dictionaries already on your system, and
+                skips numbers, units and variable names.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(assets/icons/help.svg); -webkit-mask-image: url(assets/icons/help.svg); background: var(--icon-blue)"></span>
+              <h3>Help inside</h3>
+              <p>
+                The Help sheet (F1) shows every feature with live examples you can change.
+                Help → Keyboard Shortcuts lists the keys.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div class="wrap faq">
+          <h2>Questions</h2>
+          <details>
+            <summary>Is it free?</summary>
+            <div>
+              <p>
+                Yes. Calculon is open source under the MIT licence, and the code is
+                <a href="https://github.com/sprytnyk/calculon">on GitHub</a>.
+              </p>
+            </div>
+          </details>
+          <details>
+            <summary>Does it work with Soulver sheets?</summary>
+            <div>
+              <p>
+                Calculon follows the syntax of <a href="https://soulver.app">Soulver</a>, the
+                notepad calculator for Mac and iPhone, so a sheet from one works in the other.
+                Calculon isn't made by Soulver's authors.
+              </p>
+            </div>
+          </details>
+          <details>
+            <summary>Does it work offline? What does it send?</summary>
+            <div>
+              <p>
+                Everything runs on your computer. The only thing Calculon downloads is exchange
+                rates, once a day, from open.er-api.com or Frankfurter. Without a network it uses
+                the last rates it has. There's no account and no tracking.
+              </p>
+            </div>
+          </details>
+          <details>
+            <summary>Where are my sheets?</summary>
+            <div>
+              <p>
+                In <code>~/Documents/Calculon</code>, as plain <code>.txt</code> files, one per
+                sheet. Folders are real folders. You can pick another folder in Settings and sync
+                it with any tool.
+              </p>
+            </div>
+          </details>
+          <details>
+            <summary>How do I turn on spell check?</summary>
+            <div>
+              <p>
+                Calculon uses the Hunspell library and the dictionaries on your system. On Debian
+                and Ubuntu:
+              </p>
+              <pre>sudo apt install libhunspell-1.7-0 hunspell-en-us hunspell-uk</pre>
+              <p>
+                On macOS, install Hunspell with Homebrew and put the en_US and uk_UA dictionaries
+                in <code>~/Library/Spelling</code>. The
+                <a href="https://github.com/sprytnyk/calculon#spell-check">README</a> has the
+                steps. Windows isn't supported yet.
+              </p>
+              <p>Then turn it on with View → Check Spelling (F7).</p>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section class="cta alt">
+        <div class="wrap">
+          <img src="assets/icon.png" alt="" />
+          <h2>Try Calculon</h2>
+          <div data-downloads>
+            <div class="downloads">
+              <a class="button primary" href="https://github.com/sprytnyk/calculon/releases/latest"
+                >Download</a
+              >
+            </div>
+            <p class="download-note">It's free and open source, under the MIT licence.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="links">
+          <a href="https://github.com/sprytnyk/calculon">GitHub</a>
+          <a href="https://github.com/sprytnyk/calculon/releases">Releases</a>
+          <a href="https://github.com/sprytnyk/calculon/blob/main/LICENSE">MIT licence</a>
+          <a href="uk/" data-lang="uk" hreflang="uk" lang="uk">🇺🇦 Українською</a>
+        </div>
+        <p>
+          Calculon is a Futurama character © Matt Groening / Comedy Central. This project isn't
+          affiliated with them. Icons by <a href="https://phosphoricons.com">Phosphor</a> (MIT),
+          font Fira Code (OFL).
+        </p>
+      </div>
+    </footer>
+
+    <script src="assets/sheets.js"></script>
+    <script src="assets/site.js"></script>
+  </body>
+</html>

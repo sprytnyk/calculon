@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Calculon: блокнот-калькулятор природною мовою для Linux, Windows і macOS</title>
+    <meta name="description" content="Блокнот-калькулятор природною мовою для Linux, Windows і macOS. Пишіть рядки з грошима, одиницями й датами, а відповіді з’являються праворуч. Безкоштовний, з відкритим кодом, українською та англійською." />
+    <link rel="icon" href="../assets/icon.png" />
+    <link rel="canonical" href="https://sprytnyk.github.io/calculon/uk/" />
+    <link rel="alternate" hreflang="en" href="https://sprytnyk.github.io/calculon/" />
+    <link rel="alternate" hreflang="uk" href="https://sprytnyk.github.io/calculon/uk/" />
+    <link rel="alternate" hreflang="x-default" href="https://sprytnyk.github.io/calculon/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Calculon" />
+    <meta property="og:title" content="Calculon: блокнот-калькулятор природною мовою для Linux, Windows і macOS" />
+    <meta property="og:description" content="Блокнот-калькулятор природною мовою для Linux, Windows і macOS. Пишіть рядки з грошима, одиницями й датами, а відповіді з’являються праворуч. Безкоштовний, з відкритим кодом, українською та англійською." />
+    <meta property="og:url" content="https://sprytnyk.github.io/calculon/uk/" />
+    <meta property="og:image" content="https://sprytnyk.github.io/calculon/screenshot.png" />
+    <meta property="og:locale" content="uk_UA" />
+    <meta property="og:locale:alternate" content="en_GB" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Calculon",
+        "description": "Блокнот-калькулятор природною мовою для Linux, Windows і macOS. Пишіть рядки з грошима, одиницями й датами, а відповіді з’являються праворуч. Безкоштовний, з відкритим кодом, українською та англійською.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Linux, Windows, macOS",
+        "url": "https://sprytnyk.github.io/calculon/uk/",
+        "downloadUrl": "https://github.com/sprytnyk/calculon/releases/latest",
+        "codeRepository": "https://github.com/sprytnyk/calculon",
+        "license": "https://opensource.org/license/mit",
+        "inLanguage": [
+          "en",
+          "uk"
+        ],
+        "image": "https://sprytnyk.github.io/calculon/assets/icon.png",
+        "screenshot": "https://sprytnyk.github.io/calculon/screenshot.png",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="../assets/theme.css" />
+    <link rel="stylesheet" href="../assets/site.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <a class="brand" href="./"><img src="../assets/icon.png" alt="" />Calculon</a>
+        <nav>
+          <a class="optional" href="#examples">Приклади</a>
+          <a class="optional" href="#features">Можливості</a>
+          <a class="optional" href="#faq">Питання</a>
+          <a href="https://github.com/sprytnyk/calculon">GitHub</a>
+          <a href="../" data-lang="en" hreflang="en" lang="en">🇬🇧 English</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="hero wrap">
+        <h1>Блокнот, який рахує, поки ви&nbsp;пишете</h1>
+        <p class="lead">
+          Calculon є блокнотом-калькулятором природною мовою. Пишіть рядки з грошима, одиницями
+          й датами, а відповіді з’являються праворуч. Він працює на Linux, Windows і macOS,
+          українською та англійською.
+        </p>
+        <div data-downloads>
+          <div class="downloads">
+            <a class="button primary" href="https://github.com/sprytnyk/calculon/releases/latest"
+              >Завантажити</a
+            >
+          </div>
+          <p class="download-note">Він безкоштовний і має відкритий код під ліцензією MIT.</p>
+        </div>
+
+        <div class="window" data-hero aria-label="Вікно Calculon, у якому набирають аркуш">
+          <div class="titlebar">
+            <span class="dots"><i></i><i></i><i></i></span>Calculon
+          </div>
+          <div class="menubar"></div>
+          <div class="window-body">
+            <aside class="side"></aside>
+            <div class="sheet"></div>
+          </div>
+          <div class="statusbar"><span class="total"></span><span class="rates"></span></div>
+        </div>
+      </div>
+
+      <section id="examples">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>Приклади</h2>
+            <p class="muted">
+              Кожен рядок є звичайним текстом. Calculon знаходить у ньому числа, гроші, одиниці й
+              дати та показує відповіді в колонці праворуч.
+            </p>
+          </div>
+          <div class="examples" data-examples>
+            <div class="tabs" role="tablist" aria-label="Приклади">
+              <button class="tab" role="tab" data-sheet="basics" data-icon="numbers">
+                <strong>Слова й обчислення</strong>
+                <span class="text">Підписуйте рядки, вводьте змінні й відсотки та рахуйте суму рядків вище.</span>
+              </button>
+              <button class="tab" role="tab" data-sheet="money" data-icon="rates">
+                <strong>Гроші та одиниці</strong>
+                <span class="text"
+                  >Переводьте близько 160 валют за щоденними курсами й одиниці, як-от км, °C і
+                  ТБ.</span
+                >
+              </button>
+              <button class="tab" role="tab" data-sheet="dates" data-icon="sheet">
+                <strong>Дати й розклад</strong>
+                <span class="text"
+                  >Додавайте тижні до дати, рахуйте дні між датами або плануйте поїздку з @from і
+                  @to.</span
+                >
+              </button>
+              <button class="tab" role="tab" data-sheet="spelling" data-icon="spell_add">
+                <strong>Українська й правопис</strong>
+                <span class="text"
+                  >Calculon підкреслює слова з помилками хвилястою лінією, а клік правою кнопкою
+                  показує варіанти.</span
+                >
+              </button>
+            </div>
+            <div class="example">
+              <div class="window">
+                <div class="titlebar">
+                  <span class="dots"><i></i><i></i><i></i></span><span class="name"></span>
+                </div>
+                <div class="window-body"><div class="sheet" role="tabpanel"></div></div>
+                <div class="statusbar"><span class="total"></span></div>
+              </div>
+              <p class="rates-note">
+                Відповіді у валютах тут рахуються за курсами від <span data-rates-date></span>, зі
+                знімка, що йде разом із застосунком. Застосунок оновлює їх раз на день.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="alt">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>Можливості</h2>
+          </div>
+          <div class="features">
+            <div class="card">
+              <span class="icon" style="mask-image: url(../assets/icons/colours.svg); -webkit-mask-image: url(../assets/icons/colours.svg); background: var(--icon-violet)"></span>
+              <h3>Дві теми</h3>
+              <p>
+                Ember має теплі сірі кольори з помаранчевим, а Glacier синьо-сірий, як ця сторінка.
+                Кожна тема має темний і світлий вигляд або йде за системою.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(../assets/icons/open_folder.svg); -webkit-mask-image: url(../assets/icons/open_folder.svg); background: var(--icon-amber)"></span>
+              <h3>Аркуші як звичайні файли</h3>
+              <p>
+                Кожен аркуш є файлом .txt у теці, яку ви оберете. Синхронізуйте його, робіть
+                резервні копії чи шукайте в ньому чим завгодно.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(../assets/icons/rates.svg); -webkit-mask-image: url(../assets/icons/rates.svg); background: var(--icon-green)"></span>
+              <h3>Курси працюють офлайн</h3>
+              <p>
+                Calculon завантажує курси валют раз на день і зберігає останні, тож валюти
+                працюють без мережі.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(../assets/icons/language.svg); -webkit-mask-image: url(../assets/icons/language.svg); background: var(--icon-green)"></span>
+              <h3>Українська й англійська</h3>
+              <p>
+                Пишіть аркуші будь-якою мовою або обома одразу. Числа йдуть за мовою інтерфейсу:
+                1&nbsp;234,56 або 1,234.56.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(../assets/icons/spell_add.svg); -webkit-mask-image: url(../assets/icons/spell_add.svg); background: var(--icon-green)"></span>
+              <h3>Перевірка правопису</h3>
+              <p>
+                Вона перевіряє українську й англійську за словниками, що вже є у вашій системі, і
+                пропускає числа, одиниці й назви змінних.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(../assets/icons/help.svg); -webkit-mask-image: url(../assets/icons/help.svg); background: var(--icon-blue)"></span>
+              <h3>Довідка всередині</h3>
+              <p>
+                Аркуш довідки (F1) показує всі можливості з живими прикладами, які можна змінювати.
+                Довідка → Комбінації клавіш показує всі клавіші.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div class="wrap faq">
+          <h2>Питання</h2>
+          <details>
+            <summary>Це безкоштовно?</summary>
+            <div>
+              <p>
+                Так. Calculon має відкритий код під ліцензією MIT, а сам код
+                <a href="https://github.com/sprytnyk/calculon">є на GitHub</a>.
+              </p>
+            </div>
+          </details>
+          <details>
+            <summary>Чи відкриває він аркуші Soulver?</summary>
+            <div>
+              <p>
+                Calculon дотримується синтаксису <a href="https://soulver.app">Soulver</a>,
+                блокнота-калькулятора для Mac та iPhone, тож аркуш з одного працює в іншому.
+                Calculon створили не автори Soulver.
+              </p>
+            </div>
+          </details>
+          <details>
+            <summary>Чи працює він офлайн? Що він надсилає?</summary>
+            <div>
+              <p>
+                Усе працює на вашому комп’ютері. Єдине, що Calculon завантажує, це курси валют, раз
+                на день, з open.er-api.com або Frankfurter. Без мережі він бере останні збережені
+                курси. Жодного облікового запису й жодного стеження.
+              </p>
+            </div>
+          </details>
+          <details>
+            <summary>Де мої аркуші?</summary>
+            <div>
+              <p>
+                У <code>~/Documents/Calculon</code>, звичайними файлами <code>.txt</code>, по
+                одному на аркуш. Теки є справжніми теками. У Налаштуваннях можна обрати іншу теку й
+                синхронізувати її чим завгодно.
+              </p>
+            </div>
+          </details>
+          <details>
+            <summary>Як увімкнути перевірку правопису?</summary>
+            <div>
+              <p>Calculon використовує бібліотеку Hunspell і словники вашої системи. У Debian та Ubuntu:</p>
+              <pre>sudo apt install libhunspell-1.7-0 hunspell-en-us hunspell-uk</pre>
+              <p>
+                На macOS встановіть Hunspell через Homebrew і покладіть словники en_US та uk_UA у
+                <code>~/Library/Spelling</code>. Кроки є в
+                <a href="https://github.com/sprytnyk/calculon#spell-check">README</a>. Windows
+                поки не підтримується.
+              </p>
+              <p>Потім увімкніть її: Вигляд → Перевіряти правопис (F7).</p>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section class="cta alt">
+        <div class="wrap">
+          <img src="../assets/icon.png" alt="" />
+          <h2>Спробуйте Calculon</h2>
+          <div data-downloads>
+            <div class="downloads">
+              <a class="button primary" href="https://github.com/sprytnyk/calculon/releases/latest"
+                >Завантажити</a
+              >
+            </div>
+            <p class="download-note">Він безкоштовний і має відкритий код під ліцензією MIT.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="links">
+          <a href="https://github.com/sprytnyk/calculon">GitHub</a>
+          <a href="https://github.com/sprytnyk/calculon/releases">Випуски</a>
+          <a href="https://github.com/sprytnyk/calculon/blob/main/LICENSE">Ліцензія MIT</a>
+          <a href="../" data-lang="en" hreflang="en" lang="en">🇬🇧 English</a>
+        </div>
+        <p>
+          Calculon є персонажем Futurama © Matt Groening / Comedy Central. Цей проєкт з ними не
+          пов’язаний. Іконки від <a href="https://phosphoricons.com">Phosphor</a> (MIT), шрифт
+          Fira Code (OFL).
+        </p>
+      </div>
+    </footer>
+
+    <script src="../assets/sheets.js"></script>
+    <script src="../assets/site.js"></script>
+  </body>
+</html>
