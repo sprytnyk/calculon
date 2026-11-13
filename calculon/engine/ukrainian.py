@@ -109,7 +109,7 @@ CITY_NAMES = {
     "America/Los_Angeles": "Лос-Анджелес", "UTC": "UTC",
 }  # fmt: skip
 
-_CONTEXT = {"на", "за", "по", "до", "від", "з", "із", "зі"}
+_CONTEXT = {"на", "за", "по", "при", "до", "від", "з", "із", "зі"}
 
 
 def _text(it: Item) -> str | None:
@@ -165,7 +165,7 @@ def _context(word: str, items: list[Item], k: int) -> str | None:
         return None  # ₴190 на сніданок
     if word == "за":
         return "per" if nxt is not None and nxt.kind == "unit" and prev is not None else None
-    if word == "по":
+    if word in ("по", "при"):  # 200 км по 80 км/год, 1,5 ТБ при 25 МБ/с
         return "at" if nxt is not None and nxt.kind in ("cur", "num") else None
     if word == "до":
         return "until" if counting else "to"  # з 50 до 75, з 3 березня до 30 травня
