@@ -21,7 +21,7 @@ from calculon import rates
 from calculon.settings import Settings
 from calculon.spelling import SpellChecker, Status, probe
 from calculon.storage import SheetStore
-from calculon.ui import icons
+from calculon.ui import icons, main_window
 from calculon.ui.editor import KIND_ROLE, SheetScrollBar
 from calculon.ui.main_window import MainWindow
 from calculon.ui.settings_dialog import SettingsDialog
@@ -540,8 +540,6 @@ def test_help_sheet_ignores_the_insert_keys(window, app) -> None:
 def test_blocked_sheets_folder_falls_back_and_explains(app, home, tmp_path, monkeypatch) -> None:
     """Windows' Controlled folder access can block Documents. Start anyway, in a fallback
     folder, say why, and keep the chosen folder so the next start tries it again."""
-    from calculon.ui import main_window
-
     monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
     blocker = tmp_path / "not-a-folder"
     blocker.write_text("")

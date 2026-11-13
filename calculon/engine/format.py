@@ -1,6 +1,7 @@
 """Turning values into the text shown in the results column."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
 from fractions import Fraction
 
@@ -153,8 +154,6 @@ def format_date(d: DateVal, opts: FormatOptions) -> str:
     if d.has_date:
         month = MONTHS_UK[dt.month - 1] if opts.lang == "uk" else f"{dt:%B}"
         text = f"{dt.day} {month}"
-        from datetime import datetime
-
         if dt.year != datetime.now().year:
             text += f" {dt.year}"
         parts.append(text)
