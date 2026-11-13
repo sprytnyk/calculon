@@ -35,7 +35,7 @@ T = {
     "find_count": "{n} з {total}",
     "find_none": "Немає збігів",
     "find_close": "Закрити (Esc)",
-    "theme": "Вигляд",
+    "theme": "Оформлення",
     "theme_dark": "Темна",
     "theme_light": "Світла",
     "theme_system": "Як у системі",
