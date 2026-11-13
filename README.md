@@ -2,8 +2,9 @@
 
 A natural-language notepad calculator for Linux, Windows and macOS. Write plain lines
 with numbers, money, units and dates, and the answers show up in a column on the right.
-The syntax follows [Soulver's](https://documentation.soulver.app/), so a sheet from one
-works in the other.
+The syntax follows [Soulver's](https://documentation.soulver.app/), so most sheets work
+in both. Trip timelines are the exception, because Calculon writes them as `@from` and
+`@to` lines, which Soulver doesn't read.
 
 It runs on Linux and Windows x64, and on macOS on Intel and Apple Silicon. It works in
 English and Ukrainian. Built with PySide6.
