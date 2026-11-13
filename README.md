@@ -22,6 +22,25 @@ Runs on Linux, Windows, and macOS on Intel and Apple Silicon. Built with PySide6
 The Help sheet in the sidebar (F1) shows everything with live examples. Help → Keyboard
 Shortcuts lists the keys.
 
+## Install
+
+Download the archive for your system from the
+[releases](https://github.com/sprytnyk/calculon/releases) page and unpack it.
+
+- **Linux.** Run `./calculon`.
+- **Windows.** Run `calculon.exe`. The build isn't code-signed, so SmartScreen may ask
+  you to confirm the first start. Click More info, then Run anyway.
+- **macOS.** Pick `macos_arm64` for Apple Silicon or `macos_x64` for Intel, and drag
+  `Calculon.app` into Applications. The app isn't notarized, so macOS blocks it the first
+  time. Try to open it, then go to System Settings, open Privacy & Security and click Open
+  Anyway. Or run `xattr -dr com.apple.quarantine /Applications/Calculon.app`.
+
+Check a download against the signed checksums:
+
+```bash
+gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum --ignore-missing -c SHA256SUMS
+```
+
 ## Sheets
 
 Each sheet is a plain `.txt` file in `~/Documents/Calculon`. You can pick another folder
@@ -95,25 +114,6 @@ curl -LO $base/uk_UA/uk_UA.aff -LO $base/uk_UA/uk_UA.dic
 Settings → General shows what Calculon found, and the install command for anything
 missing. `calculon --self-test` prints it too.
 
-## Install
-
-Download the archive for your system from the
-[releases](https://github.com/sprytnyk/calculon/releases) page and unpack it.
-
-- **Linux.** Run `./calculon`.
-- **Windows.** Run `calculon.exe`. The build isn't code-signed, so SmartScreen may ask
-  you to confirm the first start. Click More info, then Run anyway.
-- **macOS.** Pick `macos_arm64` for Apple Silicon or `macos_x64` for Intel, and drag
-  `Calculon.app` into Applications. The app isn't notarized, so macOS blocks it the first
-  time. Try to open it, then go to System Settings, open Privacy & Security and click Open
-  Anyway. Or run `xattr -dr com.apple.quarantine /Applications/Calculon.app`.
-
-Check a download against the signed checksums:
-
-```bash
-gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum --ignore-missing -c SHA256SUMS
-```
-
 ## Develop
 
 Needs [uv](https://docs.astral.sh/uv/), which picks Python 3.14 from `.python-version`.
@@ -132,8 +132,7 @@ time zones, help sheets, fonts and the rates snapshot. If the system has Hunspel
 also checks that spell check works. On macOS, run
 `dist/Calculon.app/Contents/MacOS/calculon --self-test`.
 
-The calculator engine in `calculon/engine/` has no Qt in it. `tests/test_engine.py` has
-the examples from Soulver's documentation as tests.
+The calculator engine in `calculon/engine/` has no Qt in it.
 
 ## Release
 
