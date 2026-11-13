@@ -1,14 +1,8 @@
 # Calculon
 
-A natural-language notepad calculator for Linux, Windows and macOS. Write plain lines
-with numbers, money, units and dates, and the answers show up in a column on the right.
-The syntax follows [Soulver's](https://documentation.soulver.app/), so most sheets work
-in both. Trip timelines are the exception, because Calculon writes them as `@from` and
-`@to` lines, which Soulver doesn't read.
-
-It runs on Linux and Windows x64, and on macOS on Intel and Apple Silicon. It works in
-English and Ukrainian. Built with PySide6.
-Website: [sprytnyk.github.io/calculon](https://sprytnyk.github.io/calculon/).
+A natural-language notepad calculator. Write plain lines with numbers, money, units and
+dates, and the answers show up in a column on the right. The syntax follows
+[Soulver's](https://documentation.soulver.app/), so most sheets work in both.
 
 ![Calculon with a trip budget sheet: the lines on the left, their answers on the right](docs/screenshot.png)
 
@@ -18,9 +12,11 @@ Website: [sprytnyk.github.io/calculon](https://sprytnyk.github.io/calculon/).
   `100 EUR in USD`, `10 km in miles`, `today + 3 weeks`
 - Variables, totals of the lines above, and answers from earlier lines
 - Trip plans with `@from` and `@to`: each stay or leg shows the date it reaches, and `@to`
-  says how much time is left before a date
+  says how much time is left before a date. Soulver marks a trip's start and end in its
+  window instead, so these lines don't carry over to it
 - About 160 currencies, with new rates every day
 - English and Ukrainian, in sheets and in the interface
+- Linux and Windows x64, and macOS on Intel and Apple Silicon
 - Sheets in folders, with search, pins and a trash
 - Two themes, Ember and Glacier, each dark, light or following the system
 - Spell check for English and Ukrainian on Linux, and on macOS after a manual setup
@@ -104,8 +100,8 @@ Other distros have the same packages under similar names. Calculon looks for
 dictionaries in `/usr/share/hunspell`, `/usr/share/myspell`, `~/.local/share/hunspell`
 and any folder in `$DICPATH`.
 
-**macOS.** It should work, but I haven't tried it on a Mac yet. Install Hunspell with
-[Homebrew](https://brew.sh), then put the dictionaries in `~/Library/Spelling`:
+**macOS.** Install Hunspell with [Homebrew](https://brew.sh), then put the dictionaries
+in `~/Library/Spelling`:
 
 ```bash
 brew install hunspell
@@ -122,7 +118,8 @@ missing. `calculon --self-test` prints it too.
 
 ## Develop
 
-Needs [uv](https://docs.astral.sh/uv/), which picks Python 3.14 from `.python-version`.
+Built with PySide6. Needs [uv](https://docs.astral.sh/uv/), which picks Python 3.14 from
+`.python-version`.
 
 ```bash
 uv sync                 # install dependencies
