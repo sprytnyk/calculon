@@ -207,6 +207,8 @@ def one(text: str, **opts) -> str:
         ("2 nights in hours", "48 hours"),
         ("€95/night * 2 nights", "€190.00"),
         ("€95/night * 3 days", "€285.00"),
+        ("Meeting March 5, 10:00 - 11:30", "1 hour 30 minutes"),
+        ("March 5 10:00 to 12:30", "2 hours 30 minutes"),
         ("10 June + 2 nights", "12 June"),
         # a date followed by a time
         ("11.11.2026 15:00", "11 November, 15:00"),

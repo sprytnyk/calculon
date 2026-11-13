@@ -312,6 +312,11 @@ def _date_add(a: Value, b: Value, sign: int) -> Value:
 def date_diff(start: DateVal, end: DateVal, absolute: bool = False) -> Q:
     """Duration from start to end, as parts like '3 weeks 5 days'."""
     a, b = start.dt, end.dt
+    # March 5, 10:00 - 11:30: a time on its own is on the same day as the date
+    if start.has_date and not end.has_date:
+        b = b.replace(year=a.year, month=a.month, day=a.day)
+    elif end.has_date and not start.has_date:
+        a = a.replace(year=b.year, month=b.month, day=b.day)
     if (a.tzinfo is None) != (b.tzinfo is None):
         a, b = a.astimezone(), b.astimezone()
     if (not start.has_date or not end.has_date or absolute) and b < a:
