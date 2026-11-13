@@ -61,6 +61,23 @@ def self_test() -> int:
             failed.append(f"icons: {', '.join(bad)}")
     except ImportError as exc:
         failed.append(f"icons: {exc}")
+    # spell check uses the system's Hunspell, so a missing one is news, not a failure
+    from calculon.spelling import SpellChecker, probe
+
+    spell = probe()
+    if spell.available:
+        found = ", ".join(f"{lang} ({path.name})" for lang, path in spell.dictionaries.items())
+        say(f"spell check: {found}")
+        # a build carries its own libraries; make sure the system's Hunspell still works
+        checker = SpellChecker.load(spell)
+        samples = {"en": ("hotel", "hotell"), "uk": ("оренда", "оредна")}
+        for lang in checker.languages:
+            good, typo = samples[lang]
+            if not checker.check(good) or checker.check(typo):
+                failed.append(f"spell check: {lang} dictionary gives wrong answers")
+        checker.close()
+    else:
+        say(f"spell check: off ({spell.install_command() or 'see the README'})")
     for item in failed:
         say(f"FAIL {item}")
     say(f"calculon {__version__} self-test: {'ok' if not failed else 'failed'}")

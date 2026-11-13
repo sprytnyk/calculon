@@ -42,6 +42,7 @@ class Theme:
     heading: str
     label: str
     tag: str
+    misspelled: str  # the wavy line under a misspelled word
 
     @property
     def is_dark(self) -> bool:
@@ -71,6 +72,7 @@ DARK = Theme(
     heading="#ffffff",
     label="#cfd1d8",
     tag="#6fcf97",
+    misspelled="#ff6b6b",
 )
 
 LIGHT = Theme(
@@ -96,6 +98,7 @@ LIGHT = Theme(
     heading="#111827",
     label="#374151",
     tag="#15803d",
+    misspelled="#dc2626",
 )
 
 

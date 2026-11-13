@@ -45,6 +45,7 @@ T = {
     "zoom_reset": "Звичайний розмір тексту",
     "toggle_sidebar": "Показати бічну панель",
     "toggle_line_numbers": "Номери рядків",
+    "toggle_spelling": "Перевіряти правопис",
     "help_sheet": "Аркуш довідки",
     "shortcuts": "Комбінації клавіш",
     "shortcuts_action": "Дія",
@@ -92,6 +93,9 @@ T = {
     ),
     "read_only_trash": "Цей аркуш у кошику. Відновіть його, щоб редагувати.",
     "copied": "Скопійовано {text}",
+    "spell_add": "Додати до словника",
+    "spell_ignore": "Ігнорувати",
+    "spell_none": "Немає варіантів",
     "total": "Разом: {text}",
     "external_change": "Файл «{name}» змінився на диску, тож Calculon його перезавантажив.",
     # rates status
@@ -107,6 +111,7 @@ T = {
     "save": "Зберегти",
     "section_sheets": "Аркуші",
     "section_appearance": "Вигляд",
+    "section_spelling": "Правопис",
     "section_format": "Формат",
     "section_decimals": "Знаки після коми",
     "section_source": "Джерело",
@@ -133,6 +138,17 @@ T = {
     "browse": "Огляд…",
     "font_size": "Розмір тексту:",
     "ligatures": "Лігатури шрифту",
+    "spell_check": "Підкреслювати слова з помилками (F7)",
+    "spell_lang_en": "англійська",
+    "spell_lang_uk": "українська",
+    "hint_spell_ok": "Мови: {languages}. Словники Hunspell із системи.",
+    "hint_spell_missing": "Немає словника для мов: {languages}. Щоб додати: {command}",
+    "hint_spell_linux": "Потрібен Hunspell. Щоб встановити: {command}",
+    "hint_spell_macos": (
+        "Потрібен Hunspell: виконайте brew install hunspell і покладіть файли словників "
+        ".aff і .dic у ~/Library/Spelling. Кроки є в README."
+    ),
+    "hint_spell_other": "На цій системі поки недоступно.",
     "number_style": "Формат чисел:",
     "number_style_auto": "Як у мові інтерфейсу",
     "date_order": "Дати на кшталт 01/02/2026:",

@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 from ..engine import RatesError, RateTable
 from ..engine.currency import KNOWN_CODES
 from ..settings import Settings
+from ..spelling import Status, platform_key, probe
 from ..translations import LANGUAGES
 from . import icons
 from .theme import DARK, Theme
@@ -71,6 +72,30 @@ def stylesheet(t: Theme) -> str:
         border: 1px solid {t.border}; border-radius: 6px; padding: 3px 10px; }}
     QFrame#footer {{ background: {t.sidebar}; border-top: 1px solid {t.border}; }}
     """
+
+
+def spell_hint(status: Status, tr) -> str:
+    """What spell check uses here, or what it still needs."""
+
+    def names(langs) -> str:
+        return ", ".join(tr(f"spell_lang_{lang}") for lang in langs)
+
+    if not status.supported:
+        return tr("hint_spell_other")
+    if not status.library:
+        if platform_key() == "darwin":
+            return tr("hint_spell_macos")
+        return tr("hint_spell_linux", command=status.install_command())
+    parts = []
+    if status.dictionaries:
+        parts.append(tr("hint_spell_ok", languages=names(status.dictionaries)))
+    if status.missing:
+        if platform_key() == "darwin":
+            parts.append(tr("hint_spell_macos"))
+        else:
+            command = status.install_command()
+            parts.append(tr("hint_spell_missing", languages=names(status.missing), command=command))
+    return " ".join(parts)
 
 
 class Card(QFrame):
@@ -245,7 +270,23 @@ class SettingsDialog(QDialog):
         row.addWidget(sample)
         row.addStretch()
         look.add("", row)
-        return [(tr("section_sheets"), sheets), (tr("section_appearance"), look)]
+
+        spelling = Card()
+        status = getattr(self.parent(), "spell_status", None) or probe()
+        self.spell_check = QCheckBox(tr("spell_check"))
+        self.spell_check.setChecked(s.spell_check and status.available)
+        self.spell_check.setEnabled(status.available)
+        spelling.add("", self.spell_check)
+        self.spell_hint = QLabel(spell_hint(status, tr))
+        self.spell_hint.setObjectName("hint")
+        self.spell_hint.setWordWrap(True)
+        self.spell_hint.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        spelling.add("", self.spell_hint)
+        return [
+            (tr("section_sheets"), sheets),
+            (tr("section_appearance"), look),
+            (tr("section_spelling"), spelling),
+        ]
 
     def _numbers(self, s: Settings) -> list[tuple[str, QWidget]]:
         tr = self.t
@@ -356,6 +397,12 @@ class SettingsDialog(QDialog):
             language=self.language.currentData(),
             font_size=self.font_size.value(),
             ligatures=self.ligatures.isChecked(),
+            # a greyed-out box keeps what was saved, for when Hunspell turns up
+            spell_check=(
+                self.spell_check.isChecked()
+                if self.spell_check.isEnabled()
+                else self.original.spell_check
+            ),
             number_style=self.number_style.currentData(),
             date_order=self.date_order.currentData(),
             dollar=dollar if dollar in KNOWN_CODES else self.original.dollar,

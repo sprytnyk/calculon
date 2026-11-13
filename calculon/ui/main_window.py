@@ -1,6 +1,7 @@
 """Main window."""
 
 import logging
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -47,7 +48,8 @@ from ..engine import format_value
 from ..engine.format import MONTHS_UK
 from ..paths import FONTS, HELP_DIR
 from ..rates import RatesService
-from ..settings import Settings, fallback_sheets_dir
+from ..settings import Settings, fallback_sheets_dir, own_words_file
+from ..spelling import SpellChecker, probe
 from ..storage import SheetStore, StorageError
 from ..translations import LANGUAGES, tr
 from . import icons
@@ -91,6 +93,8 @@ def load_fonts() -> str:
 
 
 class MainWindow(QMainWindow):
+    spelling_loaded = Signal(object)  # a SpellChecker, from the thread that loads it
+
     def __init__(self) -> None:
         super().__init__()
         self.settings = Settings.load()
@@ -173,6 +177,12 @@ class MainWindow(QMainWindow):
         s.empty_trash.connect(self.empty_trash)
         s.show_in_folder.connect(self.show_in_folder)
         s.changed.connect(self._sidebar_changed)
+
+        # what spell check can use here; dictionaries load only once it's turned on
+        self.spell_status = probe()
+        self._spell: SpellChecker | None = None
+        self._spell_loading = False
+        self.spelling_loaded.connect(self._spelling_loaded)
 
         QGuiApplication.styleHints().colorSchemeChanged.connect(self._system_theme_changed)
         self.apply_settings()  # sets the theme first, then builds the menus with its icons
@@ -317,6 +327,9 @@ class MainWindow(QMainWindow):
             m, "toggle_line_numbers", self._toggle_line_numbers, "Ctrl+Shift+L", checkable=True
         )
         act.setChecked(self.settings.line_numbers)
+        act = self._action(m, "toggle_spelling", self._toggle_spelling, "F7", checkable=True)
+        act.setChecked(self.settings.spell_check and self.spell_status.available)
+        act.setEnabled(self.spell_status.available)
 
         m = bar.addMenu(self.t("menu_help"))
         self._action(m, "help_sheet", self.open_help, K.HelpContents)
@@ -387,6 +400,8 @@ class MainWindow(QMainWindow):
         self.find_bar.retranslate()
         self.editor.kind_labels = {k: self.t(f"kind_{k}") for k in KIND_ORDER}
         self.editor.words = {k: self.t(f"word_{k}") for k in ("total", "prev", "line")}
+        self.editor.spell_texts = {k: self.t(f"spell_{k}") for k in ("add", "ignore", "none")}
+        self._apply_spelling()
         self._update_rates_label()
         self.setWindowTitle(self._title())
         self.build_menus()
@@ -474,6 +489,39 @@ class MainWindow(QMainWindow):
         self.settings.line_numbers = not self.settings.line_numbers
         self.settings.save()
         self.editor.set_line_numbers(self.settings.line_numbers)
+
+    def _toggle_spelling(self) -> None:
+        self.settings.spell_check = not self.settings.spell_check
+        self.settings.save()
+        self._apply_spelling()
+
+    def _apply_spelling(self) -> None:
+        if not (self.settings.spell_check and self.spell_status.available):
+            self.editor.set_spell_checker(None)
+            return
+        if self._spell is not None:
+            self.editor.set_spell_checker(self._spell)
+            return
+        if self._spell_loading:
+            return
+        # Ukrainian takes ~0.2 s to load: do it off the main thread, so the window opens
+        # straight away. Hunspell runs in C, so the UI keeps going meanwhile.
+        self._spell_loading = True
+        status, own, vocabulary = self.spell_status, own_words_file(), self.editor.vocabulary
+
+        def load() -> None:
+            checker = SpellChecker.load(status, own, vocabulary)
+            try:
+                self.spelling_loaded.emit(checker)
+            except RuntimeError:  # the window closed meanwhile
+                checker.close()
+
+        threading.Thread(target=load, name="spelling", daemon=True).start()
+
+    def _spelling_loaded(self, checker: SpellChecker) -> None:
+        self._spell_loading = False
+        self._spell = checker
+        self._apply_spelling()
 
     def _title(self) -> str:
         kind, key = self.current

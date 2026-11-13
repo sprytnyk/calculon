@@ -45,6 +45,7 @@ T = {
     "zoom_reset": "Default Text Size",
     "toggle_sidebar": "Show Sidebar",
     "toggle_line_numbers": "Line Numbers",
+    "toggle_spelling": "Check Spelling",
     "help_sheet": "Help Sheet",
     "shortcuts": "Keyboard Shortcuts",
     "shortcuts_action": "Action",
@@ -92,6 +93,9 @@ T = {
     ),
     "read_only_trash": "This sheet is in the trash. Restore it to edit.",
     "copied": "Copied {text}",
+    "spell_add": "Add to Dictionary",
+    "spell_ignore": "Ignore",
+    "spell_none": "No suggestions",
     "total": "Total: {text}",
     "external_change": '"{name}" changed on disk, so Calculon reloaded it.',
     # rates status
@@ -107,6 +111,7 @@ T = {
     "save": "Save",
     "section_sheets": "Sheets",
     "section_appearance": "Appearance",
+    "section_spelling": "Spelling",
     "section_format": "Format",
     "section_decimals": "Decimal places",
     "section_source": "Source",
@@ -130,6 +135,17 @@ T = {
     "browse": "Browse…",
     "font_size": "Text size:",
     "ligatures": "Font ligatures",
+    "spell_check": "Underline misspelled words (F7)",
+    "spell_lang_en": "English",
+    "spell_lang_uk": "Ukrainian",
+    "hint_spell_ok": "{languages}, with the system's Hunspell dictionaries.",
+    "hint_spell_missing": "No dictionary for {languages}. To add it: {command}",
+    "hint_spell_linux": "Needs Hunspell. To install it: {command}",
+    "hint_spell_macos": (
+        "Needs Hunspell: run brew install hunspell, then put the .aff and .dic "
+        "dictionary files in ~/Library/Spelling. The README has the steps."
+    ),
+    "hint_spell_other": "Not available on this system yet.",
     "number_style": "Number format:",
     "number_style_auto": "Same as the language",
     "date_order": "Dates like 01/02/2026:",

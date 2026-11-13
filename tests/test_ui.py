@@ -6,12 +6,20 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QCoreApplication, QPoint, QSettings, Qt
-from PySide6.QtGui import QColor, QFont, QGuiApplication, QKeySequence, QTextCursor
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QGuiApplication,
+    QKeySequence,
+    QTextCharFormat,
+    QTextCursor,
+)
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMenu, QStyle
 
 from calculon import rates
 from calculon.settings import Settings
+from calculon.spelling import SpellChecker, Status, probe
 from calculon.storage import SheetStore
 from calculon.ui import icons
 from calculon.ui.editor import KIND_ROLE, SheetScrollBar
@@ -562,3 +570,162 @@ def test_blocked_sheets_folder_falls_back_and_explains(app, home, tmp_path, monk
     finally:
         w.close()
         w.deleteLater()
+
+
+class FakeSpell(SpellChecker):
+    """Knows a few typos; no Hunspell needed."""
+
+    TYPOS = {"teh": ["the", "tech"], "rnet": ["rent"], "оредна": ["оренда"]}
+
+    def _check(self, word: str) -> bool:
+        if word in self.own or word in self.ignored:
+            return True
+        return word.lower() not in self.TYPOS
+
+    def suggest(self, word: str, limit: int = 7) -> list[str]:
+        return self.TYPOS.get(word.lower(), [])[:limit]
+
+
+def underlined(editor, line: int) -> list[str]:
+    block = editor.document().findBlockByNumber(line)
+    return [
+        block.text()[r.start : r.start + r.length]
+        for r in block.layout().formats()
+        if r.format.underlineStyle() == QTextCharFormat.UnderlineStyle.SpellCheckUnderline
+    ]
+
+
+def spell_window(window, app, text: str, tmp_path: Path) -> FakeSpell:
+    window.new_sheet("")
+    spell = FakeSpell(tmp_path / "words.txt")
+    window.editor.set_spell_checker(spell)
+    window.editor.setPlainText(text)
+    window.editor.moveCursor(QTextCursor.MoveOperation.Start)
+    pump(app)
+    return spell
+
+
+def test_spelling_underlines_prose_only(window, app, tmp_path: Path) -> None:
+    text = "teh = 5\nrnet: teh + 2 // оредна\n# teh plan\nteh"
+    spell_window(window, app, text, tmp_path)
+    ed = window.editor
+    assert underlined(ed, 0) == []  # a variable name is the user's to choose
+    assert underlined(ed, 1) == ["rnet", "оредна"]  # label and comment; teh is the variable
+    assert underlined(ed, 2) == ["teh"]  # heading
+    ed.set_spell_checker(None)
+    assert all(underlined(ed, n) == [] for n in range(4))
+
+
+def test_spelling_waits_until_the_word_is_typed(window, app, tmp_path: Path) -> None:
+    spell_window(window, app, "", tmp_path)
+    ed = window.editor
+    QTest.keyClicks(ed, "rent teh")
+    pump(app)
+    assert underlined(ed, 0) == []  # the cursor is still on it
+    QTest.keyClicks(ed, " ")
+    pump(app)
+    assert underlined(ed, 0) == ["teh"]
+
+
+def test_spelling_menu_replaces_adds_and_ignores(window, app, tmp_path: Path) -> None:
+    spell = spell_window(window, app, "pay teh rnet // оредна", tmp_path)
+    ed = window.editor
+    ed.moveCursor(QTextCursor.MoveOperation.End)
+    pump(app)
+
+    def menu_at(word: str) -> list:
+        block = ed.document().firstBlock()
+        cur = QTextCursor(block)
+        cur.setPosition(block.text().index(word) + 1)
+        found = ed.misspelled_at(ed.cursorRect(cur).center())
+        assert found is not None and found.selectedText() == word
+        return ed.spelling_actions(found, ed)
+
+    actions = menu_at("teh")
+    assert [a.text() for a in actions] == ["the", "tech", "Add to Dictionary", "Ignore"]
+    actions[0].trigger()
+    assert ed.toPlainText() == "pay the rnet // оредна"
+
+    menu_at("rnet")[-2].trigger()  # Add to Dictionary
+    assert (tmp_path / "words.txt").read_text(encoding="utf-8") == "rnet\n"
+    menu_at("оредна")[-1].trigger()  # Ignore
+    assert "оредна" in spell.ignored
+    pump(app)
+    assert underlined(ed, 0) == []
+    ed.undo()
+    assert ed.toPlainText() == "pay teh rnet // оредна"
+
+
+def test_spelling_menu_without_suggestions(window, app, tmp_path: Path) -> None:
+    spell_window(window, app, "", tmp_path)
+    cur = QTextCursor(window.editor.document())
+    cur.insertText("zzz")
+    cur.select(QTextCursor.SelectionType.WordUnderCursor)
+    actions = window.editor.spelling_actions(cur, window.editor)
+    assert [a.text() for a in actions] == ["No suggestions", "Add to Dictionary", "Ignore"]
+    assert not actions[0].isEnabled()
+
+
+def test_no_spelling_in_read_only_sheets(window, app, tmp_path: Path) -> None:
+    spell_window(window, app, "teh rnet", tmp_path)
+    window.editor.moveCursor(QTextCursor.MoveOperation.End)
+    QTest.keyClicks(window.editor, " ")
+    pump(app)
+    assert underlined(window.editor, 0) == ["teh", "rnet"]
+    window.editor.setReadOnly(True)
+    assert underlined(window.editor, 0) == []
+    window.editor.setReadOnly(False)
+    assert underlined(window.editor, 0) == ["teh", "rnet"]
+
+
+def test_spelling_toggle_and_settings(window, app, monkeypatch: pytest.MonkeyPatch) -> None:
+    status = Status(supported=True, library=True, dictionaries={"en": Path("/x/en_US")})
+    window.spell_status = status
+    window._spell = FakeSpell()
+    window.build_menus()
+    view = window.menuBar().actions()[2].menu()
+    act = next(a for a in view.actions() if a.text() == "Check Spelling")
+    assert act.isEnabled() and not act.isChecked()
+    assert act.shortcut() == QKeySequence("F7")
+
+    window._toggle_spelling()
+    assert window.settings.spell_check and window.editor.spell is window._spell
+    assert Settings.load().spell_check
+    dlg = SettingsDialog(window.settings, window.t, window)
+    assert dlg.spell_check.isEnabled() and dlg.spell_check.isChecked()
+    assert dlg.spell_hint.text() == "English, with the system's Hunspell dictionaries. " + (
+        "No dictionary for Ukrainian. To add it: sudo apt install hunspell-uk"
+    )
+    dlg.spell_check.setChecked(False)
+    assert not dlg.result_settings().spell_check
+    window._toggle_spelling()
+    assert window.editor.spell is None
+
+
+def test_spelling_greyed_out_without_hunspell(window) -> None:
+    window.spell_status = Status(supported=True, library=False)
+    window.settings.spell_check = True
+    window.build_menus()
+    window.apply_settings()
+    view = window.menuBar().actions()[2].menu()
+    act = next(a for a in view.actions() if a.text() == "Check Spelling")
+    assert not act.isEnabled() and not act.isChecked()
+    assert window.editor.spell is None
+    dlg = SettingsDialog(window.settings, window.t, window)
+    assert not dlg.spell_check.isEnabled()
+    assert "sudo apt install libhunspell-1.7-0" in dlg.spell_hint.text()
+    assert dlg.result_settings().spell_check  # kept for when Hunspell turns up
+
+
+@pytest.mark.skipif(not probe().available, reason="needs the system's Hunspell")
+def test_spelling_loads_real_dictionaries_in_background(window, app) -> None:
+    window.new_sheet("")
+    window.editor.setPlainText("Taxi to airprot\n")
+    window._toggle_spelling()
+    deadline = time.monotonic() + 10
+    while window.editor.spell is None and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
+    assert window.editor.spell is not None
+    pump(app)
+    assert underlined(window.editor, 0) == ["airprot"]

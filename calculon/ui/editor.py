@@ -1,6 +1,7 @@
 """The sheet editor: text on the left, results in a column on the right."""
 
 import re
+from collections.abc import Callable
 
 from PySide6.QtCore import (
     QEasingCurve,
@@ -17,7 +18,9 @@ from PySide6.QtCore import (
     Signal,
 )
 from PySide6.QtGui import (
+    QAction,
     QColor,
+    QContextMenuEvent,
     QFont,
     QFontMetrics,
     QKeyEvent,
@@ -51,6 +54,7 @@ from ..engine import ukrainian as UK
 from ..engine import units as U
 from ..engine.currency import KNOWN_CODES
 from ..engine.interpreter import AGGREGATES, FUNCTIONS, KEYWORDS, ROUNDERS
+from ..spelling import SpellChecker, misspelled, words
 from .theme import Theme
 
 WORD_RE = re.compile(r"[^\W\d_][\w]*$")
@@ -63,6 +67,9 @@ MAX_MATCHES = 2000  # find highlights at most this many
 KIND_ROLE = Qt.ItemDataRole.UserRole + 1
 # autocomplete: the order kinds are listed in, and the colour each gets
 KIND_ORDER = ("variable", "function", "currency", "unit", "keyword")
+# what the engine understood, so not prose to spell check
+NOT_PROSE = frozenset({"number", "unit", "variable", "keyword", "operator", "tag"})
+NO_WORD = (-1, -1)
 
 
 class Highlighter(QSyntaxHighlighter):
@@ -70,6 +77,8 @@ class Highlighter(QSyntaxHighlighter):
         # parented to the editor, not a document: documents come and go with sheets
         super().__init__(parent)
         self.spans: list[list[tuple[int, int, str]]] = []
+        self.check: Callable[[str], bool] | None = None  # set while spell check is on
+        self.typing: tuple[int, int] = NO_WORD  # (block, start) of the word being typed
         self.set_theme(theme)
 
     def set_theme(self, theme: Theme) -> None:
@@ -93,6 +102,15 @@ class Highlighter(QSyntaxHighlighter):
             "label": fmt(theme.label, bold=True),
             "tag": fmt(theme.tag),
         }
+        self.misspelled_color = QColor(theme.misspelled)
+
+    def misspelled(self, n: int, text: str) -> list[tuple[int, int]]:
+        """Misspelled words in block `n`, the word being typed included."""
+        if self.check is None:
+            return []
+        spans = self.spans[n] if n < len(self.spans) else []
+        skip = [(a, b) for a, b, cls in spans if cls in NOT_PROSE]
+        return misspelled(text, self.check, skip)
 
     def highlightBlock(self, text: str) -> None:  # noqa: N802 - Qt name
         n = self.currentBlock().blockNumber()
@@ -109,6 +127,15 @@ class Highlighter(QSyntaxHighlighter):
         for m in SYMBOL_RUN.finditer(text):
             if not any(a <= m.start() < b for a, b in comments):
                 self.setFormat(m.start(), m.end() - m.start(), self.formats["operator"])
+        # a wavy line under misspelled words, on top of their colour; not under the word
+        # still being typed
+        for start, end in self.misspelled(n, text):
+            if (n, start) == self.typing:
+                continue
+            f = self.format(start)
+            f.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SpellCheckUnderline)
+            f.setUnderlineColor(self.misspelled_color)
+            self.setFormat(start, end - start, f)
 
 
 class ResultsArea(QWidget):
@@ -504,6 +531,13 @@ class SheetEdit(QPlainTextEdit):
         kinds |= dict.fromkeys(set(FUNCTIONS) | ROUNDERS | set(UK.FUNCTIONS), "function")
         self._static_words = kinds
         self._variables: list[str] = []
+        self.spell: SpellChecker | None = None
+        # the spell check items in the right-click menu, in the interface language
+        self.spell_texts = {
+            "add": "Add to Dictionary",
+            "ignore": "Ignore",
+            "none": "No suggestions",
+        }
         self.set_results_width(self.results_width)
         self.apply_theme(theme)
 
@@ -521,6 +555,7 @@ class SheetEdit(QPlainTextEdit):
             return
         doc.setDefaultFont(self.font())  # the zoom may have changed while it was away
         self.highlighter.spans = []
+        self.highlighter.typing = NO_WORD
         self._last_text = None
         self.setDocument(doc)
         self.highlighter.setDocument(doc)
@@ -535,6 +570,56 @@ class SheetEdit(QPlainTextEdit):
         self._cursor_moved()
         self.results.update()
         self.gutter.update()
+
+    @property
+    def vocabulary(self) -> list[str]:
+        """Words Calculon itself understands: units, currencies, keywords, functions."""
+        return list(self._static_words)
+
+    def set_spell_checker(self, checker: SpellChecker | None) -> None:
+        """Underline misspelled words with `checker`; None turns spell check off."""
+        self.spell = checker
+        self._refresh_spelling()
+
+    def _refresh_spelling(self) -> None:
+        on = self.spell is not None and not self.isReadOnly()
+        check = self.spell.check if on and self.spell is not None else None
+        if check is None and self.highlighter.check is None:
+            return
+        self.highlighter.check = check
+        self.highlighter.typing = self._typing_word() if on else NO_WORD
+        self.blockSignals(True)
+        try:
+            self.highlighter.rehighlight()
+        finally:
+            self.blockSignals(False)
+
+    def setReadOnly(self, read_only: bool) -> None:  # noqa: N802
+        # the help sheet and the trash are read-only: nothing there to fix
+        changed = read_only != self.isReadOnly()
+        super().setReadOnly(read_only)
+        if changed:
+            self._refresh_spelling()
+
+    def _typing_word(self) -> tuple[int, int]:
+        """(block, start) of the word the cursor touches, or NO_WORD."""
+        cur = self.textCursor()
+        at = cur.positionInBlock()
+        for start, end, _word in words(cur.block().text()):
+            if start <= at <= end:
+                return cur.blockNumber(), start
+        return NO_WORD
+
+    def _rehighlight_blocks(self, *numbers: int) -> None:
+        doc = self.document()
+        self.blockSignals(True)
+        try:
+            for n in set(numbers):
+                block = doc.findBlockByNumber(n)
+                if n >= 0 and block.isValid():
+                    self.highlighter.rehighlightBlock(block)
+        finally:
+            self.blockSignals(False)
 
     def set_engine(self, rates: RateTable, config: Config, opts: FormatOptions) -> None:
         self.rates, self.config, self.opts = rates, config, opts
@@ -630,6 +715,12 @@ class SheetEdit(QPlainTextEdit):
             self.gutter.update(0, rect.y(), self.gutter.width(), rect.height())
 
     def _cursor_moved(self) -> None:
+        if self.highlighter.check is not None:
+            # leaving a word shows whether it's misspelled
+            old, new = self.highlighter.typing, self._typing_word()
+            if new != old:
+                self.highlighter.typing = new
+                self._rehighlight_blocks(old[0], new[0])
         sel = QTextEdit.ExtraSelection()
         sel.format.setBackground(QColor(self.theme.current_line))
         sel.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
@@ -813,6 +904,71 @@ class SheetEdit(QPlainTextEdit):
             if a.left() <= pos.x() <= b.right() and a.top() <= pos.y() <= a.bottom():
                 return text
         return ""
+
+    def misspelled_at(self, pos: QPoint) -> QTextCursor | None:
+        """The misspelled word under `pos` (viewport coordinates), selected, or None."""
+        if self.highlighter.check is None:
+            return None
+        cur = self.cursorForPosition(pos)
+        block, at = cur.block(), cur.positionInBlock()
+        for start, end in self.highlighter.misspelled(block.blockNumber(), block.text()):
+            if start <= at <= end:
+                word = QTextCursor(block)
+                word.setPosition(block.position() + start)
+                word.setPosition(block.position() + end, QTextCursor.MoveMode.KeepAnchor)
+                return word
+        return None
+
+    def spelling_actions(self, word: QTextCursor, parent: QObject) -> list[QAction]:
+        """Suggestions for the misspelled `word`, then Add to Dictionary and Ignore."""
+        spell = self.spell
+        if spell is None:
+            return []
+        text = word.selectedText()
+        actions = []
+        for suggestion in spell.suggest(text):
+            act = QAction(suggestion, parent)
+            font = act.font()
+            font.setBold(True)
+            act.setFont(font)
+            act.triggered.connect(lambda _=False, s=suggestion: self._replace_word(word, s))
+            actions.append(act)
+        if not actions:
+            act = QAction(self.spell_texts["none"], parent)
+            act.setEnabled(False)
+            actions.append(act)
+        add = QAction(self.spell_texts["add"], parent)
+        add.triggered.connect(lambda: self._accept_word(text, keep=True))
+        ignore = QAction(self.spell_texts["ignore"], parent)
+        ignore.triggered.connect(lambda: self._accept_word(text, keep=False))
+        return [*actions, add, ignore]
+
+    def _replace_word(self, word: QTextCursor, text: str) -> None:
+        word.insertText(text)
+        self.setTextCursor(word)
+
+    def _accept_word(self, text: str, keep: bool) -> None:
+        if self.spell is None:
+            return
+        if keep:
+            self.spell.add(text)
+        else:
+            self.spell.ignore(text)
+        self._refresh_spelling()  # the same word may be underlined elsewhere
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:  # noqa: N802
+        menu = self.createStandardContextMenu(event.pos())
+        word = self.misspelled_at(event.pos())
+        if word is not None:
+            first = menu.actions()[0] if menu.actions() else None
+            actions = self.spelling_actions(word, menu)
+            # suggestions on top, then a line, Add and Ignore, a line, Qt's own items
+            menu.insertActions(first, actions[:-2])
+            menu.insertSeparator(first)
+            menu.insertActions(first, actions[-2:])
+            menu.insertSeparator(first)
+        menu.exec(event.globalPos())
+        menu.deleteLater()
 
     def viewportEvent(self, event: QEvent) -> bool:  # noqa: N802
         if event.type() == QEvent.Type.ToolTip:

@@ -19,6 +19,12 @@ def default_sheets_dir() -> str:
     return str(Path(docs or Path.home()) / "Calculon")
 
 
+def own_words_file() -> Path:
+    """The words added with "Add to Dictionary", one per line."""
+    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppDataLocation)
+    return Path(base) / "words.txt"
+
+
 def fallback_sheets_dir() -> str:
     """Used when the sheets folder can't be written, e.g. Windows blocks Documents."""
     data = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)
@@ -39,6 +45,7 @@ class Settings:
     font_size: int = 14
     ligatures: bool = True
     line_numbers: bool = True
+    spell_check: bool = False  # needs the system's Hunspell, see calculon/spelling.py
     results_width: int = 260
     last_sheet: str = ""
 
