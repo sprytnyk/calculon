@@ -191,7 +191,7 @@ def _evaluate_line(
     offset = 0
     labelled = False
     m = LABEL_RE.match(line)
-    if m and not re.search(r"\d$", m.group("label")):
+    if m:
         labelled = True
         res.spans.append((0, m.end() + 1, "label"))
         offset = m.end() + 1

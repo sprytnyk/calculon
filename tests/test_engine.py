@@ -352,6 +352,9 @@ def test_timeline_hotel_nights() -> None:
     assert one(nye) == "0 days left"
     assert one(nye.replace("2 nights", "3 nights")) == "1 day over"
     assert one(nye.replace("2 nights", "1 night")) == "1 day left"
+    # a label ending in a digit is still a label, so it moves the timeline
+    two = "@from 28.02.2028 at 15:00\nHotel: 1 night\nHotel 2: 1 night\n@to 1.3.2028 12:00"
+    assert calc(two)[2:] == ["1 March 2028, 12:00", "0 hours left"]
 
 
 def test_timeline_boundary() -> None:
