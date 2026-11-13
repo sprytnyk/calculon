@@ -17,6 +17,8 @@ Website: [sprytnyk.github.io/calculon](https://sprytnyk.github.io/calculon/).
 - Lines mix words and maths: `$19 for breakfast + $22 for the uber`, `20% off $80`,
   `100 EUR in USD`, `10 km in miles`, `today + 3 weeks`
 - Variables, totals of the lines above, and answers from earlier lines
+- Trip plans with `@from` and `@to`: each stay or leg shows the date it reaches, and `@to`
+  says how much time is left before a date
 - About 160 currencies, with new rates every day
 - English and Ukrainian, in sheets and in the interface
 - Sheets in folders, with search, pins and a trash
