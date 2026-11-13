@@ -570,7 +570,7 @@ class Parser:
                 if key == "mod":
                     return modulo(left, right)
                 if key in MUL_OPS or key == "multiplied":
-                    return mul(left, right, r)
+                    return mul(left, self._money_rate(right), r)
                 return div(left, right, r)
             if key == "%" and self._percent_is_mod():
                 if min_bp > 20:
@@ -941,6 +941,20 @@ class Parser:
                     value = Q(value.mag, unit, fmt=None)
                     continue
             break
+        return value
+
+    def _money_rate(self, value: Value) -> Value:
+        """2 nights × $95/night, 2 nights × $95 per night: the rate after × is one value."""
+        if not (isinstance(value, Q) and value.units and U.currency_code(value.units)):
+            return value
+        save = self.pos
+        it = self.peek()
+        if it is not None and (it.kind == "op" and it.key in DIV_OPS or self.at("per")):
+            self.pos += 1
+            unit = self.unit_expr()
+            if unit is not None and not self._starts_value():
+                return div(value, Q(ONE, unit), self.rates)
+        self.rewind(save)
         return value
 
     def _date_time(self, value: DateVal) -> DateVal:
