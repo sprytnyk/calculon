@@ -131,6 +131,7 @@ def test_real_hunspell_suggests(real: SpellChecker) -> None:
     assert "receive" in real.suggest("recieve")
     assert "оренда" in real.suggest("оредна")
     assert "мобільний" in real.suggest("мобілний")
+    assert len(real.suggest("teh")) <= 5  # a long list made the right-click menu too tall
 
 
 @needs_hunspell

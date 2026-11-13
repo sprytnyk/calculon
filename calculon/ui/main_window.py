@@ -54,7 +54,7 @@ from ..storage import SheetStore, StorageError
 from ..translations import LANGUAGES, tr
 from . import icons
 from . import theme as themes
-from .editor import KIND_ORDER, SheetEdit
+from .editor import EDIT_MENU, KIND_ORDER, SheetEdit
 from .find_bar import FindBar
 from .settings_dialog import SettingsDialog
 from .shortcuts_dialog import ShortcutsDialog
@@ -256,11 +256,13 @@ class MainWindow(QMainWindow):
         act.setCheckable(checkable)
         act.triggered.connect(slot)
         menu.addAction(act)
+        self._actions[key] = act
         return act
 
     def build_menus(self) -> None:
         bar = self.menuBar()
         bar.clear()
+        self._actions: dict[str, QAction] = {}
         K = QKeySequence.StandardKey
         m = bar.addMenu(self.t("menu_file"))
         self._action(m, "new_sheet", lambda: self.new_sheet(self.sidebar.current_folder()), K.New)
@@ -330,6 +332,7 @@ class MainWindow(QMainWindow):
         act = self._action(m, "toggle_spelling", self._toggle_spelling, "F7", checkable=True)
         act.setChecked(self.settings.spell_check and self.spell_status.available)
         act.setEnabled(self.spell_status.available)
+        self.editor.menu_actions = {key: self._actions[key] for group in EDIT_MENU for key in group}
 
         m = bar.addMenu(self.t("menu_help"))
         self._action(m, "help_sheet", self.open_help, K.HelpContents)

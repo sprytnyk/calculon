@@ -60,6 +60,8 @@ SOURCES = {
     "caret_down": "caret-down (bold)",
     "caret_up": "caret-up (bold)",
     "close": "x (bold)",
+    "spell_add": "book-open-text",
+    "spell_ignore": "eye-slash",
 }
 NAMES = frozenset(SOURCES)
 
@@ -77,6 +79,7 @@ GROUPS = {
     "pin": "rose", "unpin": "rose",
     "trash": "red", "empty_trash": "red", "delete_forever": "red", "quit": "red",
     "rename": "yellow", "theme_light": "yellow",
+    "spell_add": "green",
     "theme": "indigo", "theme_dark": "indigo", "shortcuts": "indigo",
 }  # fmt: skip
 ICON_SIZE = 20  # menus and the sidebar

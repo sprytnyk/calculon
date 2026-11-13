@@ -23,7 +23,9 @@ from PySide6.QtGui import (
     QContextMenuEvent,
     QFont,
     QFontMetrics,
+    QGuiApplication,
     QKeyEvent,
+    QKeySequence,
     QMouseEvent,
     QPainter,
     QStandardItem,
@@ -37,6 +39,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCompleter,
+    QMenu,
     QPlainTextDocumentLayout,
     QPlainTextEdit,
     QScrollBar,
@@ -55,6 +58,7 @@ from ..engine import units as U
 from ..engine.currency import KNOWN_CODES
 from ..engine.interpreter import AGGREGATES, FUNCTIONS, KEYWORDS, ROUNDERS
 from ..spelling import SpellChecker, misspelled, words
+from . import icons
 from .theme import Theme
 
 WORD_RE = re.compile(r"[^\W\d_][\w]*$")
@@ -70,6 +74,29 @@ KIND_ORDER = ("variable", "function", "currency", "unit", "keyword")
 # what the engine understood, so not prose to spell check
 NOT_PROSE = frozenset({"number", "unit", "variable", "keyword", "operator", "tag"})
 NO_WORD = (-1, -1)
+# the right-click menu: the Edit menu's items in groups, by their names in main_window
+EDIT_MENU = (
+    ("undo", "redo"),
+    ("cut", "copy", "paste", "select_all"),
+    ("toggle_comment", "copy_result", "insert_reference"),
+)
+READ_ONLY_MENU = frozenset({"copy", "select_all", "copy_result"})
+
+
+def fit_menu(click: QPoint, size: QSize, screen: QRect) -> QPoint:
+    """Where a menu opened at `click` goes so all of it stays on `screen`.
+
+    Below the click if it fits, above it if that fits, else as low as fits. Left to
+    itself, Qt puts a menu that fits neither below nor above at the top of the screen.
+    """
+    bottom = screen.y() + screen.height()
+    if click.y() + size.height() <= bottom:
+        y = click.y()
+    elif click.y() - size.height() >= screen.y():
+        y = click.y() - size.height()
+    else:
+        y = max(screen.y(), bottom - size.height())
+    return QPoint(click.x(), y)
 
 
 class Highlighter(QSyntaxHighlighter):
@@ -532,6 +559,8 @@ class SheetEdit(QPlainTextEdit):
         self._static_words = kinds
         self._variables: list[str] = []
         self.spell: SpellChecker | None = None
+        # the Edit menu's actions, so the right-click menu has the same text, icons and keys
+        self.menu_actions: dict[str, QAction] = {}
         # the spell check items in the right-click menu, in the interface language
         self.spell_texts = {
             "add": "Add to Dictionary",
@@ -937,9 +966,9 @@ class SheetEdit(QPlainTextEdit):
             act = QAction(self.spell_texts["none"], parent)
             act.setEnabled(False)
             actions.append(act)
-        add = QAction(self.spell_texts["add"], parent)
+        add = QAction(icons.icon("spell_add"), self.spell_texts["add"], parent)
         add.triggered.connect(lambda: self._accept_word(text, keep=True))
-        ignore = QAction(self.spell_texts["ignore"], parent)
+        ignore = QAction(icons.icon("spell_ignore"), self.spell_texts["ignore"], parent)
         ignore.triggered.connect(lambda: self._accept_word(text, keep=False))
         return [*actions, add, ignore]
 
@@ -956,18 +985,68 @@ class SheetEdit(QPlainTextEdit):
             self.spell.ignore(text)
         self._refresh_spelling()  # the same word may be underlined elsewhere
 
-    def contextMenuEvent(self, event: QContextMenuEvent) -> None:  # noqa: N802
-        menu = self.createStandardContextMenu(event.pos())
-        word = self.misspelled_at(event.pos())
+    def _menu_state(self) -> dict[str, bool]:
+        """Which right-click items can do something right now."""
+        doc, cur, writable = self.document(), self.textCursor(), not self.isReadOnly()
+        return {
+            "undo": writable and doc.isUndoAvailable(),
+            "redo": writable and doc.isRedoAvailable(),
+            "cut": writable and cur.hasSelection(),
+            "copy": cur.hasSelection(),
+            "paste": writable and self.canPaste(),
+            "select_all": not doc.isEmpty(),
+            "copy_result": bool(self.current_result()),
+        }
+
+    def context_menu(self, pos: QPoint) -> QMenu:
+        """The right-click menu for `pos` (viewport coordinates).
+
+        Spelling suggestions come first when `pos` is on a misspelled word. The rest
+        copies the Edit menu's items, so it has the same text, icons and keys.
+        """
+        menu = QMenu(self)
+        word = self.misspelled_at(pos)
         if word is not None:
-            first = menu.actions()[0] if menu.actions() else None
             actions = self.spelling_actions(word, menu)
-            # suggestions on top, then a line, Add and Ignore, a line, Qt's own items
-            menu.insertActions(first, actions[:-2])
-            menu.insertSeparator(first)
-            menu.insertActions(first, actions[-2:])
-            menu.insertSeparator(first)
-        menu.exec(event.globalPos())
+            menu.addActions(actions[:-2])
+            menu.addSeparator()
+            menu.addActions(actions[-2:])
+        state = self._menu_state()
+        for group in EDIT_MENU:
+            keys = [
+                k
+                for k in group
+                if k in self.menu_actions and (not self.isReadOnly() or k in READ_ONLY_MENU)
+            ]
+            if keys and not menu.isEmpty():
+                menu.addSeparator()
+            for key in keys:
+                source = self.menu_actions[key]
+                # the text after a tab shows as the shortcut, without claiming the key
+                shortcut = source.shortcut().toString(QKeySequence.SequenceFormat.NativeText)
+                text = f"{source.text()}\t{shortcut}" if shortcut else source.text()
+                act = menu.addAction(source.icon(), text)
+                act.setEnabled(state.get(key, True))
+                act.triggered.connect(lambda _=False, a=source: a.trigger())
+        return menu
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:  # noqa: N802
+        if event.reason() == QContextMenuEvent.Reason.Keyboard:
+            pos = self.cursorRect().center()
+            where = self.viewport().mapToGlobal(pos)
+        else:
+            pos, where = event.pos(), event.globalPos()
+            # like most editors: a click outside the selection moves the cursor there, so
+            # Comment Line and Copy Line Result act on the line you clicked
+            cur, at = self.textCursor(), self.cursorForPosition(pos).position()
+            if not (cur.hasSelection() and cur.selectionStart() <= at <= cur.selectionEnd()):
+                self.setTextCursor(self.cursorForPosition(pos))
+        self.show_menu(self.context_menu(pos), where)
+
+    def show_menu(self, menu: QMenu, where: QPoint) -> None:
+        """Open `menu` at `where` (screen coordinates) and wait for a pick."""
+        screen = QGuiApplication.screenAt(where) or self.screen()
+        menu.exec(fit_menu(where, menu.sizeHint(), screen.availableGeometry()))
         menu.deleteLater()
 
     def viewportEvent(self, event: QEvent) -> bool:  # noqa: N802

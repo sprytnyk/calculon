@@ -5,9 +5,10 @@ import time
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QCoreApplication, QPoint, QSettings, Qt
+from PySide6.QtCore import QCoreApplication, QPoint, QRect, QSettings, QSize, Qt
 from PySide6.QtGui import (
     QColor,
+    QContextMenuEvent,
     QFont,
     QGuiApplication,
     QKeySequence,
@@ -22,7 +23,7 @@ from calculon.settings import Settings
 from calculon.spelling import SpellChecker, Status, probe
 from calculon.storage import SheetStore
 from calculon.ui import icons, main_window
-from calculon.ui.editor import KIND_ROLE, SheetScrollBar
+from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu
 from calculon.ui.main_window import MainWindow
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog, key_text
@@ -580,7 +581,7 @@ class FakeSpell(SpellChecker):
             return True
         return word.lower() not in self.TYPOS
 
-    def suggest(self, word: str, limit: int = 7) -> list[str]:
+    def suggest(self, word: str, limit: int = 5) -> list[str]:
         return self.TYPOS.get(word.lower(), [])[:limit]
 
 
@@ -727,3 +728,127 @@ def test_spelling_loads_real_dictionaries_in_background(window, app) -> None:
     assert window.editor.spell is not None
     pump(app)
     assert underlined(window.editor, 0) == ["airprot"]
+
+
+def menu_rows(menu: QMenu) -> list[str]:
+    """The menu as text: each item's name without its shortcut, "---" for a line."""
+    return ["---" if a.isSeparator() else a.text().split("\t")[0] for a in menu.actions()]
+
+
+def line_pos(editor, line: int, column: int = 0) -> QPoint:
+    block = editor.document().findBlockByNumber(line)
+    cur = QTextCursor(block)
+    cur.setPosition(block.position() + column)
+    return editor.cursorRect(cur).center()
+
+
+def test_right_click_menu_copies_the_edit_menu(window, app) -> None:
+    window.new_sheet("")
+    ed = window.editor
+    QTest.keyClicks(ed, "a = 5")
+    QTest.keyClick(ed, Qt.Key.Key_Return)
+    QTest.keyClicks(ed, "a * 2")
+    QGuiApplication.clipboard().setText("7")
+    pump(app)
+    menu = ed.context_menu(line_pos(ed, 1))
+    assert menu_rows(menu) == [
+        "Undo", "Redo", "---",
+        "Cut", "Copy", "Paste", "Select All", "---",
+        "Comment Line", "Copy Line Result", "Insert Line Reference",
+    ]  # fmt: skip
+    edit_menu = window.menuBar().actions()[1].menu()
+    keys = {
+        a.text(): a.shortcut().toString(QKeySequence.SequenceFormat.NativeText)
+        for a in edit_menu.actions()
+    }
+    for act in menu.actions():
+        if act.isSeparator():
+            continue
+        name, _, shortcut = act.text().partition("\t")
+        assert shortcut == keys[name], name  # the same keys as the Edit menu
+        assert not act.icon().isNull(), name
+    enabled = {a.text().split("\t")[0]: a.isEnabled() for a in menu.actions()}
+    assert enabled["Undo"] and not enabled["Redo"]
+    assert not enabled["Cut"] and not enabled["Copy"]  # nothing selected
+    assert enabled["Paste"] and enabled["Copy Line Result"]
+
+    next(a for a in menu.actions() if a.text().startswith("Comment Line")).trigger()
+    assert ed.toPlainText() == "a = 5\n// a * 2"
+
+
+def test_right_click_menu_follows_the_language(window) -> None:
+    window.set_language("uk")
+    rows = menu_rows(window.editor.context_menu(QPoint(5, 5)))
+    window.set_language("en")
+    assert rows[0] == "Скасувати" and "Закоментувати рядок" in rows
+
+
+def test_right_click_menu_in_read_only_sheets(window, app) -> None:
+    window.open_help()
+    pump(app)
+    ed = window.editor
+    assert ed.isReadOnly()
+    ed.moveCursor(QTextCursor.MoveOperation.Start)
+    assert menu_rows(ed.context_menu(line_pos(ed, 0))) == [
+        "Copy", "Select All", "---", "Copy Line Result",
+    ]  # fmt: skip
+
+
+def test_right_click_menu_puts_spelling_first(window, app, tmp_path: Path) -> None:
+    spell_window(window, app, "pay teh rent", tmp_path)
+    ed = window.editor
+    ed.moveCursor(QTextCursor.MoveOperation.End)
+    pump(app)
+    menu = ed.context_menu(line_pos(ed, 0, 5))
+    rows = menu_rows(menu)
+    assert rows[:5] == ["the", "tech", "---", "Add to Dictionary", "Ignore"]
+    assert rows[5:7] == ["---", "Undo"]
+    assert not menu.actions()[3].icon().isNull() and not menu.actions()[4].icon().isNull()
+    assert menu_rows(ed.context_menu(line_pos(ed, 0, 9)))[0] == "Undo"  # "rent" is fine
+
+
+def test_right_click_moves_the_cursor_unless_on_the_selection(
+    window, app, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    shown = []
+    window.new_sheet("")
+    ed = window.editor
+    # Qt's own exec would wait for a click
+    monkeypatch.setattr(ed, "show_menu", lambda menu, where: shown.append(menu_rows(menu)))
+    ed.setPlainText("first line\nsecond line\nthird line")
+    pump(app)
+
+    def right_click(line: int, column: int) -> None:
+        pos = line_pos(ed, line, column)
+        event = QContextMenuEvent(
+            QContextMenuEvent.Reason.Mouse, pos, ed.viewport().mapToGlobal(pos)
+        )
+        QApplication.sendEvent(ed.viewport(), event)
+
+    ed.moveCursor(QTextCursor.MoveOperation.Start)
+    right_click(2, 3)
+    assert ed.textCursor().blockNumber() == 2  # Comment Line now acts on the clicked line
+    assert shown and shown[-1][0] == "Undo"
+
+    cur = ed.textCursor()
+    cur.setPosition(0)
+    cur.setPosition(5, QTextCursor.MoveMode.KeepAnchor)  # "first"
+    ed.setTextCursor(cur)
+    right_click(0, 2)
+    assert ed.textCursor().selectedText() == "first"  # Cut and Copy keep the selection
+
+    origin = QPoint(0, 0)
+    event = QContextMenuEvent(QContextMenuEvent.Reason.Keyboard, origin, origin)
+    QApplication.sendEvent(ed.viewport(), event)  # the Menu key: stays where it is
+    assert ed.textCursor().selectedText() == "first"
+    assert len(shown) == 3
+
+
+def test_menu_stays_whole_on_screen() -> None:
+    """The numbers from a 1603x868 laptop screen where Qt put the menu at the very top."""
+    screen = QRect(0, 0, 1603, 868)
+    menu = QSize(281, 502)
+    assert fit_menu(QPoint(495, 100), menu, screen) == QPoint(495, 100)  # fits below
+    assert fit_menu(QPoint(495, 800), menu, screen) == QPoint(495, 298)  # fits above
+    assert fit_menu(QPoint(495, 417), menu, screen) == QPoint(495, 366)  # neither: low
+    assert fit_menu(QPoint(5, 50), QSize(100, 2000), screen) == QPoint(5, 0)  # too tall

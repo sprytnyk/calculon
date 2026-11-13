@@ -277,7 +277,7 @@ class SpellChecker:
         plain = word.replace("’", "'").replace("ʼ", "'")
         return plain != word and d.check(plain)
 
-    def suggest(self, word: str, limit: int = 7) -> list[str]:
+    def suggest(self, word: str, limit: int = 5) -> list[str]:
         d = self.dictionaries.get(language_of(word))
         return d.suggest(word)[:limit] if d else []
 
