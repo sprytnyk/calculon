@@ -4,7 +4,9 @@ A natural-language notepad calculator. Write plain lines with numbers, money, un
 dates, and the answers show up in a column on the right. The syntax follows
 [Soulver's](https://documentation.soulver.app/), so most sheets work in both.
 
-![Calculon with a trip budget sheet: the lines on the left, their answers on the right](docs/screenshot.png)
+![Calculon in the Ember theme with a trip budget sheet: the lines on the left, their answers on the right](docs/screenshot.png)
+
+![The same sheet in the Glacier theme](docs/screenshot-glacier.png)
 
 ## Features
 
