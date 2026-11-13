@@ -944,10 +944,10 @@ class Parser:
         return value
 
     def _date_time(self, value: DateVal) -> DateVal:
-        """A time right after a date joins it: 11.11.2026 15:00, Nov 11 at 3pm."""
+        """A time right after a date joins it: 11.11.2026 15:00, Nov 11 at 3pm, 12 Nov, 17:00."""
         if not value.has_date or value.has_time:
             return value
-        offset = 1 if self.at("at", "@") else 0
+        offset = 1 if self.at("at", "@", ",") else 0
         it = self.peek(offset)
         if it is None or it.kind != "time":
             return value

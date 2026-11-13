@@ -213,6 +213,8 @@ def one(text: str, **opts) -> str:
         ("11.11.2026 at 15:00 + 1 day", "12 November, 15:00"),
         ("Nov 11, 2026 3pm + 26 hours", "12 November, 17:00"),
         ("2026-11-11 15:00", "11 November, 15:00"),
+        ("12 November, 17:00", "12 November, 17:00"),  # an answer pasted back
+        ("Nov 11, 2026, 3pm", "11 November, 15:00"),
         ("12 June 2027 @ 9:00", "12 June 2027, 09:00"),
         ("tomorrow 9am", "11 November, 09:00"),
         ("13.11.2026 15:00 - 12.11.2026 15:00", "1 day"),
