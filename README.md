@@ -22,8 +22,8 @@ Website: [sprytnyk.github.io/calculon](https://sprytnyk.github.io/calculon/).
 - Two themes, Ember and Glacier, each dark, light or following the system
 - Spell check for English and Ukrainian on Linux, and on macOS after a manual setup
 
-The Help sheet in the sidebar (F1) shows everything with live examples. Help → Keyboard
-Shortcuts lists the keys.
+The Help sheet in the sidebar (F1) shows everything with live examples. Keyboard
+Shortcuts in the Help menu lists the keys.
 
 ## Install
 
@@ -63,7 +63,7 @@ If that fails, it uses [Frankfurter](https://frankfurter.dev), which publishes t
 European Central Bank's rates. It keeps the last rates for offline use. A snapshot ships
 with the app, so currencies work on the first start without a network.
 
-You can point Calculon at your own source in Settings → Exchange Rates. The URL must
+You can point Calculon at your own source on the Exchange Rates page of Settings. The URL must
 return JSON like this:
 
 ```json
@@ -81,7 +81,7 @@ for exchange rates.
 
 ## Spell check
 
-Turn it on with View → Check Spelling (F7) or in Settings. Calculon draws a wavy line
+Turn it on with Check Spelling in the View menu (F7), or in Settings. Calculon draws a wavy line
 under misspelled words. Right-click one for suggestions, Add to Dictionary or Ignore.
 It skips numbers, units, currencies and variable names, and checks only the words
 around them. Words you add go to `words.txt` in Calculon's app data folder, one per
@@ -114,7 +114,7 @@ curl -LO $base/uk_UA/uk_UA.aff -LO $base/uk_UA/uk_UA.dic
 
 **Windows.** Not yet.
 
-Settings → General shows what Calculon found, and the install command for anything
+The General page of Settings shows what Calculon found, and the install command for anything
 missing. `calculon --self-test` prints it too.
 
 ## Develop
