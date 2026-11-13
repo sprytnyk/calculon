@@ -32,7 +32,7 @@ from ..settings import Settings
 from ..spelling import Status, platform_key, probe
 from ..translations import LANGUAGES
 from . import icons
-from .theme import DARK, Theme
+from .theme import DARK, PALETTES, Theme
 
 NUMBER_STYLES = [
     ("auto", ""),
@@ -229,6 +229,11 @@ class SettingsDialog(QDialog):
         sheets.add(tr("sheets_dir"), row, tr("hint_sheets_dir"))
 
         look = Card()
+        self.colours = QComboBox()
+        for key in PALETTES:
+            self.colours.addItem(tr(f"colours_{key}"), key)
+        self.colours.setCurrentIndex(max(0, self.colours.findData(s.colours)))
+        look.add(tr("colours"), self.colours)
         self.theme = QComboBox()
         for key in ("dark", "light", "system"):
             self.theme.addItem(icons.icon(f"theme_{key}"), tr(f"theme_{key}"), key)
@@ -394,6 +399,7 @@ class SettingsDialog(QDialog):
             self.original,
             sheets_dir=self.sheets_dir.text().strip() or self.original.sheets_dir,
             theme=self.theme.currentData(),
+            colours=self.colours.currentData(),
             language=self.language.currentData(),
             font_size=self.font_size.value(),
             ligatures=self.ligatures.isChecked(),

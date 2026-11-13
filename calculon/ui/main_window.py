@@ -98,7 +98,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.settings = Settings.load()
-        self.theme = themes.resolve(self.settings.theme)
+        self.theme = themes.resolve(self.settings.theme, self.settings.colours)
         self.font_family = load_fonts()
         folder_error = ""
         try:
@@ -308,6 +308,14 @@ class MainWindow(QMainWindow):
             )
             act.setChecked(self.settings.theme == key)
             group.addAction(act)
+        sub = m.addMenu(icons.icon("colours"), self.t("colours"))
+        group = QActionGroup(self)
+        for key in themes.PALETTES:
+            act = self._action(
+                sub, f"colours_{key}", lambda _=False, k=key: self.set_colours(k), checkable=True
+            )
+            act.setChecked(self.settings.colours == key)
+            group.addAction(act)
         sub = m.addMenu(icons.icon("language"), self.t("language"))
         group = QActionGroup(self)
         for key, name in LANGUAGES.items():
@@ -380,7 +388,7 @@ class MainWindow(QMainWindow):
     def apply_settings(self) -> None:
         s = self.settings
         app = QApplication.instance()
-        self.theme = themes.resolve(s.theme)
+        self.theme = themes.resolve(s.theme, s.colours)
         if isinstance(app, QApplication):
             themes.apply(app, self.theme)
         font = QFont(self.font_family)
@@ -461,6 +469,11 @@ class MainWindow(QMainWindow):
 
     def set_theme(self, key: str) -> None:
         self.settings.theme = key
+        self.settings.save()
+        self.apply_settings()
+
+    def set_colours(self, key: str) -> None:
+        self.settings.colours = key
         self.settings.save()
         self.apply_settings()
 

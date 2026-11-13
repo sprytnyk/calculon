@@ -35,6 +35,7 @@ def fallback_sheets_dir() -> str:
 class Settings:
     sheets_dir: str = ""
     theme: str = "dark"  # dark, light, system
+    colours: str = "ember"  # ember, glacier
     language: str = "en"  # en, uk
     number_style: str = "auto"  # auto follows the language: 1,234.56 or 1 234,56
     date_order: str = "DMY"
@@ -71,6 +72,7 @@ class Settings:
         # a hand-edited or newer config can hold values this version doesn't know
         choices = {
             "theme": ("dark", "light", "system"),
+            "colours": ("ember", "glacier"),
             "language": tuple(LANGUAGES),
             "number_style": ("auto", *NUMBER_STYLES),
             "date_order": ("DMY", "MDY"),

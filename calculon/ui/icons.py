@@ -41,6 +41,7 @@ SOURCES = {
     "theme_dark": "moon",
     "theme_light": "sun",
     "theme_system": "monitor",
+    "colours": "palette",
     "language": "globe",
     "sidebar": "sidebar-simple",
     "line_numbers": "list-numbers",
@@ -80,7 +81,7 @@ GROUPS = {
     "trash": "red", "empty_trash": "red", "delete_forever": "red", "quit": "red",
     "rename": "yellow", "theme_light": "yellow",
     "spell_add": "green",
-    "theme": "indigo", "theme_dark": "indigo", "shortcuts": "indigo",
+    "theme": "indigo", "colours": "violet", "theme_dark": "indigo", "shortcuts": "indigo",
 }  # fmt: skip
 ICON_SIZE = 20  # menus and the sidebar
 FILL_OPACITY = "0.3"  # the soft second tone of the duotone icons

@@ -137,6 +137,16 @@ def test_theme_switch(window, app) -> None:
     assert QApplication.palette().base().color().name() == "#1a1b20"
 
 
+def test_colours_switch(window, app) -> None:
+    window.set_colours("glacier")
+    assert QApplication.palette().base().color().name() == "#0f172a"
+    window.set_theme("light")
+    assert QApplication.palette().base().color().name() == "#f8fafc"
+    window.set_theme("dark")
+    window.set_colours("ember")
+    assert QApplication.palette().base().color().name() == "#1a1b20"
+
+
 def test_ukrainian_numbers_follow_language(window, app) -> None:
     window.new_sheet("")
     window.editor.setPlainText("1 234,5 + 10\n5 кг у г")
@@ -312,6 +322,7 @@ def test_unknown_settings_fall_back_to_defaults(app) -> None:
     for key, value in {
         "language": "xx",
         "theme": "zzz",
+        "colours": "zzz",
         "number_style": "bogus",
         "date_order": "YDM",
         "dollar": "XYZ",
@@ -330,6 +341,7 @@ def test_unknown_settings_fall_back_to_defaults(app) -> None:
         "USD",
     )
     assert (s.font_size, s.max_decimals) == (14, 20)
+    assert s.colours == "ember"
 
 
 def test_undo_survives_switching_sheets(window, app) -> None:

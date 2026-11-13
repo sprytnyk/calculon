@@ -1,6 +1,6 @@
 """Dark and light themes."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from PySide6.QtCore import QEvent, QObject, Qt
 from PySide6.QtGui import QColor, QFont, QGuiApplication, QPalette
@@ -43,10 +43,25 @@ class Theme:
     label: str
     tag: str
     misspelled: str  # the wavy line under a misspelled word
+    icons: dict[str, str] = field(default_factory=dict, compare=False)  # menu and sidebar
 
     @property
     def is_dark(self) -> bool:
         return self.name == "dark"
+
+
+# Ember: warm greys with orange highlights, the default
+# icon colours: bright shades on dark, deeper ones on light
+ICONS_DARK = {
+    "neutral": "#a3a7b1", "blue": "#6cb6ff", "amber": "#f2b35e", "violet": "#b794f6",
+    "green": "#68d391", "teal": "#4fd1c5", "cyan": "#63c5ea", "rose": "#ff7b93",
+    "red": "#ff6b6b", "yellow": "#f6d365", "indigo": "#8c9eff",
+}  # fmt: skip
+ICONS_LIGHT = {
+    "neutral": "#64748b", "blue": "#2563eb", "amber": "#d97706", "violet": "#7c3aed",
+    "green": "#16a34a", "teal": "#0d9488", "cyan": "#0891b2", "rose": "#e11d48",
+    "red": "#dc2626", "yellow": "#ca8a04", "indigo": "#4f46e5",
+}  # fmt: skip
 
 
 DARK = Theme(
@@ -73,6 +88,7 @@ DARK = Theme(
     label="#cfd1d8",
     tag="#6fcf97",
     misspelled="#ff6b6b",
+    icons=ICONS_DARK,
 )
 
 LIGHT = Theme(
@@ -99,20 +115,79 @@ LIGHT = Theme(
     label="#374151",
     tag="#15803d",
     misspelled="#dc2626",
+    icons=ICONS_LIGHT,
 )
 
 
-# icon colours: bright shades on dark, deeper ones on light
-ICONS_DARK = {
-    "neutral": "#a3a7b1", "blue": "#6cb6ff", "amber": "#f2b35e", "violet": "#b794f6",
-    "green": "#68d391", "teal": "#4fd1c5", "cyan": "#63c5ea", "rose": "#ff7b93",
-    "red": "#ff6b6b", "yellow": "#f6d365", "indigo": "#8c9eff",
+# Glacier: Tailwind's slate greys and accents, like the sprytnyk/ip page
+GLACIER_ICONS_DARK = {
+    "neutral": "#94a3b8", "blue": "#60a5fa", "amber": "#fbbf24", "violet": "#a78bfa",
+    "green": "#34d399", "teal": "#2dd4bf", "cyan": "#22d3ee", "rose": "#fb7185",
+    "red": "#f87171", "yellow": "#facc15", "indigo": "#818cf8",
 }  # fmt: skip
-ICONS_LIGHT = {
+GLACIER_ICONS_LIGHT = {
     "neutral": "#64748b", "blue": "#2563eb", "amber": "#d97706", "violet": "#7c3aed",
-    "green": "#16a34a", "teal": "#0d9488", "cyan": "#0891b2", "rose": "#e11d48",
+    "green": "#059669", "teal": "#0d9488", "cyan": "#0891b2", "rose": "#e11d48",
     "red": "#dc2626", "yellow": "#ca8a04", "indigo": "#4f46e5",
 }  # fmt: skip
+
+GLACIER_DARK = Theme(
+    name="dark",
+    bg="#0f172a",
+    sidebar="#1e293b",
+    surface="#283548",
+    border="#334155",
+    text="#e2e8f0",
+    muted="#94a3b8",
+    accent="#60a5fa",
+    focus="#2563eb",
+    selection="#1c3767",
+    current_line="#162032",
+    result="#7dd3ae",
+    result_hover="#bbf0d6",
+    number="#fbbf24",
+    unit="#93c5fd",
+    variable="#a78bfa",
+    keyword="#94a3b8",
+    operator="#94a3b8",
+    comment="#64748b",
+    heading="#ffffff",
+    label="#cbd5e1",
+    tag="#34d399",
+    misspelled="#fb7185",
+    icons=GLACIER_ICONS_DARK,
+)
+
+GLACIER_LIGHT = Theme(
+    name="light",
+    bg="#f8fafc",
+    sidebar="#f1f5f9",
+    surface="#ffffff",
+    border="#e2e8f0",
+    text="#1e293b",
+    muted="#64748b",
+    accent="#2563eb",
+    focus="#2563eb",
+    selection="#dbeafe",
+    current_line="#f1f5f9",
+    result="#047857",
+    result_hover="#064e3b",
+    number="#b45309",
+    unit="#1d4ed8",
+    variable="#7c3aed",
+    keyword="#475569",
+    operator="#64748b",
+    comment="#94a3b8",
+    heading="#0f172a",
+    label="#334155",
+    tag="#047857",
+    misspelled="#e11d48",
+    icons=GLACIER_ICONS_LIGHT,
+)
+
+# Settings → Colours: (dark, light) for each
+PALETTES = {"ember": (DARK, LIGHT), "glacier": (GLACIER_DARK, GLACIER_LIGHT)}
+
 UI_FONT_SCALE = 1.15  # menus, sidebar and dialogs a bit larger than the system default
 _base_font: list[QFont] = []
 _style: list[QStyle] = []
@@ -138,16 +213,17 @@ def system_is_dark() -> bool:
     return hints.colorScheme() == Qt.ColorScheme.Dark
 
 
-def resolve(setting: str) -> Theme:
+def resolve(setting: str, colours: str = "ember") -> Theme:
+    dark, light = PALETTES.get(colours, PALETTES["ember"])
     if setting == "light":
-        return LIGHT
+        return light
     if setting == "system":
-        return DARK if system_is_dark() else LIGHT
-    return DARK
+        return dark if system_is_dark() else light
+    return dark
 
 
 def apply(app: QApplication, theme: Theme) -> None:
-    icons.set_palette(ICONS_DARK if theme.is_dark else ICONS_LIGHT)
+    icons.set_palette(theme.icons)
     if not _style:
         _style.append(_Style(QStyleFactory.create("Fusion")))
         app.setStyle(_style[0])
