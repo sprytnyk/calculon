@@ -3,12 +3,16 @@
 @from 11.11.2026 15:00
 London: 1 night          -> 12 November, 15:00
 Driving: 2 hours         -> 12 November, 17:00
-@to 13.11.2026 15:00     -> 22 hours left · 1 day 2 hours
+@to 14.11.2026 15:00     -> 1 day 22 hours left
+
+Hovering over @to shows the exact time left and how long it lasts.
 """
 
 import re
 from dataclasses import dataclass
+from decimal import Decimal
 
+from . import units as U
 from .currency import RateTable
 from .values import CalcError, DateVal, Q, Value, add, date_diff
 
@@ -16,8 +20,8 @@ DIRECTIVE_RE = re.compile(r"^\s*@(?P<word>from|to|від|до)(?=\s|$)", re.IGNO
 STARTS = {"from", "від"}
 
 WORDS = {
-    "en": {"left": "{} left", "over": "{} over"},
-    "uk": {"left": "залишилось: {}", "over": "перевищено: {}"},
+    "en": {"left": "{} left", "over": "{} over", "lasts": "lasts {}"},
+    "uk": {"left": "залишилось: {}", "over": "перевищено: {}", "lasts": "триває: {}"},
 }
 
 
@@ -58,13 +62,42 @@ def is_start(word: str) -> bool:
 
 
 def time_left(cursor: DateVal, boundary: DateVal) -> tuple[Q, Q, bool]:
-    """(signed value, amount to show, is over) for boundary minus cursor."""
+    """(signed value, amount to show, is over) for boundary minus cursor.
+
+    A boundary with no time compares whole days: ending at 12:00 on 1 Jan is on time
+    for @to 1 Jan.
+    """
+    if not boundary.has_time:
+        days = (boundary.dt.date() - cursor.dt.date()).days
+        return Q(Decimal(days), (("day", 1),)), Q(Decimal(abs(days)), (("day", 1),)), days < 0
     left = date_diff(cursor, boundary)
     if left.mag < 0:
         return left, date_diff(boundary, cursor), True
     return left, left, False
 
 
+def short_time(q: Q) -> Q:
+    """Short enough for the answers: 3 days 18 hours, or 18 hours 40 minutes under a day."""
+    seconds = round(abs(q.mag) * U.factor(q.units[0][0], "second"))  # 83999.99 is 84000
+    days, rest = divmod(seconds, 86400)
+    hours, minutes = divmod(rest // 60, 60)
+    if days:
+        big, small = ("day", days), ("hour", hours)
+    else:
+        big, small = ("hour", hours), ("minute", minutes)
+    if not small[1]:
+        return Q(Decimal(big[1]), ((big[0], 1),))
+    if not big[1]:
+        return Q(Decimal(small[1]), ((small[0], 1),))
+    parts = ((big[0], Decimal(big[1])), (small[0], Decimal(small[1])))
+    per = 24 if days else 60
+    return Q(Decimal(big[1]) + Decimal(small[1]) / per, ((big[0], 1),), parts=parts)
+
+
 def left_text(amount: str, over: bool, lang: str) -> str:
     words = WORDS.get(lang, WORDS["en"])
     return words["over" if over else "left"].format(amount)
+
+
+def lasts_text(amount: str, lang: str) -> str:
+    return WORDS.get(lang, WORDS["en"])["lasts"].format(amount)

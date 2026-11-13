@@ -18,7 +18,15 @@ from .interpreter import (
     evaluate_tokens,
     tokenize_line,
 )
-from .timeline import DIRECTIVE_RE, Timeline, is_start, left_text, time_left
+from .timeline import (
+    DIRECTIVE_RE,
+    Timeline,
+    is_start,
+    lasts_text,
+    left_text,
+    short_time,
+    time_left,
+)
 from .values import CalcError, DateVal, Q, Value, add
 
 log = logging.getLogger(__name__)
@@ -132,11 +140,16 @@ def _evaluate_directive(
     elif res.kind in ("empty", "comment"):
         res.kind = "value"
         res.value = timeline.cursor
-        res.text = f"{_format(timeline.cursor, opts)} · {_format(elapsed, opts)}"
+        res.text = _format(timeline.cursor, opts)
+        res.hints.append((at, m.end(), lasts_text(_format(elapsed, opts), opts.lang)))
     elif isinstance(given, DateVal) and given.has_date:
         value, shown, over = time_left(timeline.cursor, given)
         res.value = value
-        res.text = f"{left_text(_format(shown, opts), over, opts.lang)} · {_format(elapsed, opts)}"
+        # days and hours keep the answer short; hovering over @to shows it exactly
+        short = shown if not given.has_time else short_time(shown)
+        res.text = left_text(_format(short, opts), over, opts.lang)
+        full = left_text(_format(shown if shown.mag else short, opts), over, opts.lang)
+        res.hints.append((at, m.end(), f"{full}\n{lasts_text(_format(elapsed, opts), opts.lang)}"))
     else:
         _no_answer(res, res.error or f"@{m.group('word')} needs a date")
     return res, None

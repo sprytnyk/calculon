@@ -133,7 +133,7 @@ def test_ukrainian_timeline() -> None:
     assert [(line.text, line.error) for line in res.lines] == [
         ("11 листопада, 15:00", ""),
         ("13 листопада, 15:00", ""),
-        ("залишилось: 1 день · 2 дні", ""),
+        ("залишилось: 1 день", ""),
         ("", "no @від above"),
     ]
 

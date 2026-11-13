@@ -330,14 +330,27 @@ Time zone shift: -1 hour
         "2 nights",
         "",
         "12 November, 16:00",
-        "12 November, 16:00 · 1 day 1 hour",
+        "12 November, 16:00",
     ]
 
 
 def test_timeline_boundary() -> None:
-    start = "@from 11.11.2026 15:00\nLondon: 1 night\n"
-    assert one(start + "@to 13.11.2026 15:00") == "1 day left · 1 day"
-    assert one(start + "@to 12.11.2026 12:00") == "3 hours over · 1 day"
+    start = "@from 11.11.2026 15:00\nLondon: 1 day\n"
+    # days and hours keep it short; hovering over @to shows it exactly
+    assert one(start + "@to 14.11.2026 18:40") == "2 days 3 hours left"
+    assert one(start + "@to 13.11.2026 15:40") == "1 day left"
+    assert one(start + "@to 13.11.2026 14:20") == "23 hours 20 minutes left"
+    assert one(start + "@to 12.11.2026 15:20") == "20 minutes left"
+    assert one(start + "@to 12.11.2026 12:00") == "3 hours over"
+    assert one(start + "@to 13.11.2026") == "1 day left"  # no time: whole days
+    # how long the timeline lasts shows when hovering over @to
+    res = evaluate_sheet(start + "  @to 13.11.2026 15:00", RATES, CONFIG, FormatOptions())
+    assert res.lines[-1].hints == [(2, 5, "1 day left\nlasts 1 day")]
+    res = evaluate_sheet(start + "@to", RATES, CONFIG, FormatOptions())
+    assert res.lines[-1].hints == [(0, 3, "lasts 1 day")]
+    # an answer pasted back into a sheet gives the same answer
+    assert one("1 day left") == "1 day"
+    assert one("12 November, 15:00") == "12 November, 15:00"
     res = evaluate_sheet(
         start + "@to 12.11.2026 12:00\nprev in hours", RATES, CONFIG, FormatOptions()
     )
@@ -362,13 +375,11 @@ def test_timeline_edges() -> None:
     assert calc("@from 11.11.2026\nA: 1 day\n@to\nB: 1 day") == [
         "11 November",
         "12 November",
-        "12 November · 1 day",
+        "12 November",
         "1 day",
     ]
     assert one("@from 11.11.2026\n---\nB: 1 day") == "1 day"
-    assert one("@from 11.11.2026\nA: 1 day\n@from 1.12.2026\nB: 1 day\n@to") == (
-        "2 December · 1 day"
-    )
+    assert one("@from 11.11.2026\nA: 1 day\n@from 1.12.2026\nB: 1 day\n@to") == ("2 December")
     res = evaluate_sheet("@to", RATES, CONFIG, FormatOptions())
     assert res.lines[0].error == "no @from above"
     # outside a block nothing moves, and @ still means "at"
