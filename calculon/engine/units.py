@@ -14,6 +14,7 @@ UREG = pint.UnitRegistry(autoconvert_offset_to_baseunit=True)
 for _prefix in ("", "kilo", "mega", "giga", "tera"):
     UREG.define(f"{_prefix}bit_per_second = {_prefix}bit / second")
     UREG.define(f"{_prefix}byte_per_second = {_prefix}byte / second")
+UREG.define("night = day")
 
 # A unit expression is a tuple of (atom, power). An atom is a pint unit name
 # ("kilometer") or a currency code prefixed with CUR ("¤USD").
@@ -90,6 +91,7 @@ _DEFS: list[tuple[str, tuple[str, str], list[str], list[str]]] = [
     ("minute", ("minute", "minutes"), [], ["minute", "minutes", "min", "mins"]),
     ("hour", ("hour", "hours"), ["h"], ["hour", "hours", "hr", "hrs"]),
     ("day", ("day", "days"), ["d"], ["day", "days"]),
+    ("night", ("night", "nights"), [], ["night", "nights"]),
     ("week", ("week", "weeks"), [], ["week", "weeks", "wk", "wks"]),
     ("fortnight", ("fortnight", "fortnights"), [], ["fortnight", "fortnights"]),
     ("month", ("month", "months"), [], ["month", "months", "mo", "mos"]),
@@ -223,6 +225,7 @@ _UK_DEFS: list[tuple[str, tuple[str, str, str], list[str], list[str]]] = [
         ["година", "години", "годин", "годину"],
     ),
     ("day", ("день", "дні", "днів"), ["дн"], ["день", "дні", "днів", "дня", "доба", "доби", "діб"]),
+    ("night", ("ніч", "ночі", "ночей"), [], ["ніч", "ночі", "ночей"]),
     ("week", ("тиждень", "тижні", "тижнів"), ["тиж"], ["тиждень", "тижні", "тижнів", "тижня"]),
     (
         "month",
@@ -298,7 +301,7 @@ for _word, _name in {
     "милях": "mile", "грамах": "gram", "кілограмах": "kilogram", "тоннах": "metric_ton",
     "фунтах": "pound", "унціях": "ounce", "літрах": "liter", "мілілітрах": "milliliter",
     "галонах": "gallon", "гектарах": "hectare", "акрах": "acre", "секундах": "second",
-    "хвилинах": "minute", "годинах": "hour", "днях": "day", "добах": "day",
+    "хвилинах": "minute", "годинах": "hour", "днях": "day", "добах": "day", "ночах": "night",
     "тижнях": "week", "місяцях": "month", "роках": "year", "байтах": "byte",
     "кілобайтах": "kilobyte", "мегабайтах": "megabyte", "гігабайтах": "gigabyte",
     "терабайтах": "terabyte", "бітах": "bit", "градусах": "degree", "радіанах": "radian",
@@ -344,6 +347,7 @@ TIME_UNITS = (
     "fortnight",
     "week",
     "day",
+    "night",
     "hour",
     "minute",
     "second",

@@ -202,6 +202,12 @@ def one(text: str, **opts) -> str:
         ("January 31 2020 + 1 month", "29 February 2020"),
         ("7:45am - 4:20pm", "8 hours 35 minutes"),
         ("9:00 + 90 minutes", "10:30"),
+        # a night is one day
+        ("2 nights", "2 nights"),
+        ("2 nights in hours", "48 hours"),
+        ("€95/night * 2 nights", "€190.00"),
+        ("€95/night * 3 days", "€285.00"),
+        ("10 June + 2 nights", "12 June"),
         # a date followed by a time
         ("11.11.2026 15:00", "11 November, 15:00"),
         ("11.11.2026 at 15:00 + 1 day", "12 November, 15:00"),

@@ -269,6 +269,7 @@ _REL_FIELDS = {
     "fortnight": ("weeks", 2),
     "week": ("weeks", 1),
     "day": ("days", 1),
+    "night": ("days", 1),
     "hour": ("hours", 1),
     "minute": ("minutes", 1),
     "second": ("seconds", 1),
