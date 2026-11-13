@@ -1,10 +1,13 @@
 # Calculon
 
-A notepad that calculates as you type. Write plain lines with numbers, money, units and
-dates, and the answers show up in a column on the right. The syntax follows
-[Soulver's](https://documentation.soulver.app/), so a sheet from one works in the other.
+A natural-language notepad calculator for Linux, Windows and macOS. Write plain lines
+with numbers, money, units and dates, and the answers show up in a column on the right.
+The syntax follows [Soulver's](https://documentation.soulver.app/), so a sheet from one
+works in the other.
 
-Runs on Linux, Windows, and macOS on Intel and Apple Silicon. Built with PySide6.
+It runs on Linux and Windows x64, and on macOS on Intel and Apple Silicon. It works in
+English and Ukrainian. Built with PySide6.
+Website: [sprytnyk.github.io/calculon](https://sprytnyk.github.io/calculon/).
 
 ![Calculon with a trip budget sheet: the lines on the left, their answers on the right](docs/screenshot.png)
 
@@ -16,7 +19,7 @@ Runs on Linux, Windows, and macOS on Intel and Apple Silicon. Built with PySide6
 - About 160 currencies, with new rates every day
 - English and Ukrainian, in sheets and in the interface
 - Sheets in folders, with search, pins and a trash
-- Dark, light or system theme
+- Two themes, Ember and Glacier, each dark, light or following the system
 - Spell check for English and Ukrainian on Linux, and on macOS after a manual setup
 
 The Help sheet in the sidebar (F1) shows everything with live examples. Help → Keyboard
@@ -125,6 +128,7 @@ make run                # start the app
 make check              # ruff and pytest
 make build              # dist/calculon, or dist/Calculon.app on macOS (test version)
 make icons              # remake assets/icon.png, .ico and .icns from icon-source.png
+make site               # remake the website's example sheets and colours in docs/
 ```
 
 `dist/calculon --self-test` checks that a build has everything it needs: unit data,
@@ -133,6 +137,9 @@ also checks that spell check works. On macOS, run
 `dist/Calculon.app/Contents/MacOS/calculon --self-test`.
 
 The calculator engine in `calculon/engine/` has no Qt in it.
+
+The website is plain HTML in `docs/`, served by GitHub Pages from `main`. Its example
+sheets get their answers from the engine, and a test fails when they're out of date.
 
 ## Release
 
