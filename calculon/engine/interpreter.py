@@ -916,7 +916,9 @@ class Parser:
         raise ParseError("expected a number")
 
     def postfix(self, value: Value) -> Value:
-        """Things that stick to a value: %, units, currency codes, scale words."""
+        """Things that stick to a value: %, units, currency codes, scale words, a date's time."""
+        if isinstance(value, DateVal):
+            return self._date_time(value)
         while isinstance(value, Q):
             it = self.peek()
             if it is None:
@@ -940,6 +942,18 @@ class Parser:
                     continue
             break
         return value
+
+    def _date_time(self, value: DateVal) -> DateVal:
+        """A time right after a date joins it: 11.11.2026 15:00, Nov 11 at 3pm."""
+        if not value.has_date or value.has_time:
+            return value
+        offset = 1 if self.at("at", "@") else 0
+        it = self.peek(offset)
+        if it is None or it.kind != "time":
+            return value
+        self.pos += offset + 1
+        h, m, s = it.tok.value  # type: ignore[misc]
+        return DateVal(value.dt.replace(hour=h, minute=m, second=s), True, True)
 
     def unit_expr(self, allow_currency_code: bool = False, attach: bool = False) -> U.Units | None:
         """Parse 'km', 'km/h', 'm²', 'sq ft', '€/month', 'USD'. None if no unit here."""
