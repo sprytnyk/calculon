@@ -14,7 +14,7 @@ from decimal import Decimal
 
 from . import units as U
 from .currency import RateTable
-from .values import CalcError, DateVal, Q, Value, add, date_diff
+from .values import CalcError, DateVal, Q, Value, add, add_nights, date_diff
 
 DIRECTIVE_RE = re.compile(r"^\s*@(?P<word>from|to|від|до)(?=\s|$)", re.IGNORECASE)
 STARTS = {"from", "від"}
@@ -36,7 +36,12 @@ class Timeline:
         """Move by a duration and return the date reached; other values pass through."""
         if self.cursor is None or not is_duration(value):
             return value
-        moved = add(self.cursor, value, rates)
+        moved = None
+        if self.start is not None and not self.start.has_time:
+            # @from had no time, so 02:00 after "Walk: 2 hours" isn't a late arrival
+            moved = add_nights(self.cursor, value, night_before=False)  # type: ignore[arg-type]
+        if moved is None:
+            moved = add(self.cursor, value, rates)
         assert isinstance(moved, DateVal)
         self.cursor = moved
         return moved

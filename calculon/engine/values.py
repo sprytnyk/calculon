@@ -1,7 +1,7 @@
 """Values and arithmetic."""
 
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal, InvalidOperation, localcontext
 
 from dateutil.relativedelta import relativedelta
@@ -296,8 +296,33 @@ def to_relativedelta(q: Q) -> relativedelta:
     return relativedelta(**ints) + relativedelta(seconds=timedelta(**rest).total_seconds())
 
 
+CHECK_OUT = time(12)  # a night ends at check-out time the next day
+NIGHT_STARTS = time(6)  # arriving at 01:00 still counts as the night before
+
+
+def add_nights(a: DateVal, b: Q, night_before: bool = True) -> DateVal | None:
+    """11 Nov 14:00 + 2 nights = 13 Nov 12:00: hotel nights end at check-out, not 24 h later.
+
+    night_before: arriving before 06:00 counts as the night before. Off when the time
+    isn't a real arrival (a timeline that started at an implied midnight).
+    """
+    parts = b.time_parts()
+    nights = sum((amount for unit, amount in parts if unit == "night"), ZERO)
+    if not (a.has_date and a.has_time) or nights <= 0 or nights != int(nights):
+        return None
+    early = night_before and a.dt.time() < NIGHT_STARTS
+    day = a.dt.date() - timedelta(days=1 if early else 0)
+    end = datetime.combine(day + timedelta(days=int(nights)), CHECK_OUT, a.dt.tzinfo)
+    rest = tuple((unit, amount) for unit, amount in parts if unit != "night")
+    if rest:
+        end += to_relativedelta(Q(ONE, ((rest[0][0], 1),), parts=rest))
+    return DateVal(end, True, True)
+
+
 def _date_add(a: Value, b: Value, sign: int) -> Value:
     if isinstance(a, DateVal) and isinstance(b, Q):
+        if sign > 0 and (moved := add_nights(a, b)) is not None:
+            return moved
         delta = to_relativedelta(b)
         dt = a.dt + delta if sign > 0 else a.dt - delta
         has_time = a.has_time or any(u in ("hour", "minute", "second") for u, _ in b.time_parts())

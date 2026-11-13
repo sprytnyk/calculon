@@ -132,8 +132,8 @@ def test_ukrainian_timeline() -> None:
     res = evaluate_sheet(sheet, RATES, UK_CONFIG, UK)
     assert [(line.text, line.error) for line in res.lines] == [
         ("11 листопада, 15:00", ""),
-        ("13 листопада, 15:00", ""),
-        ("залишилось: 1 день", ""),
+        ("13 листопада, 12:00", ""),
+        ("залишилось: 1 день 3 години", ""),
         ("", "no @від above"),
     ]
 

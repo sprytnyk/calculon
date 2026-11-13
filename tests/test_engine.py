@@ -215,6 +215,12 @@ def one(text: str, **opts) -> str:
         ("Meeting March 5, 10:00 - 11:30", "1 hour 30 minutes"),
         ("March 5 10:00 to 12:30", "2 hours 30 minutes"),
         ("10 June + 2 nights", "12 June"),
+        # nights with a time end at 12:00 check-out; before 06:00 is still the night before
+        ("11.11.2026 14:00 + 2 nights", "13 November, 12:00"),
+        ("11.11.2026 23:30 + 1 night", "12 November, 12:00"),
+        ("12.11.2026 01:00 + 1 night", "12 November, 12:00"),
+        ("11.11.2026 14:00 + 1 night 2 hours", "12 November, 14:00"),
+        ("11.11.2026 14:00 + 2 days", "13 November, 14:00"),
         # a date followed by a time
         ("11.11.2026 15:00", "11 November, 15:00"),
         ("11.11.2026 at 15:00 + 1 day", "12 November, 15:00"),
@@ -323,15 +329,29 @@ Time zone shift: -1 hour
 @to"""
     assert calc(sheet) == [
         "11 November, 15:00",
-        "12 November, 15:00",
-        "12 November, 17:00",
+        "12 November, 12:00",
+        "12 November, 14:00",
         "$200.00",
         "6 hours",
         "2 nights",
         "",
-        "12 November, 16:00",
-        "12 November, 16:00",
+        "12 November, 13:00",
+        "12 November, 13:00",
     ]
+
+
+def test_timeline_hotel_nights() -> None:
+    sheet = "@from 11 Nov 2026 at 14:00\nHotel: 2 nights\n@to 13.11.2026 12:00"
+    assert one(sheet) == "0 hours left"
+    assert one(sheet.replace("nights", "days")) == "2 hours over"
+    # @from without a time: 02:00 after a walk isn't a late arrival
+    walk = "@from 11.11.2026\nWalk: 2 hours\nHotel: 1 night"
+    assert one(walk) == "12 November, 12:00"
+    # @to without a time compares whole days
+    nye = "@from 30.12.2026 at 15:00\nNYE: 2 nights\n@to 1.1.2027"
+    assert one(nye) == "0 days left"
+    assert one(nye.replace("2 nights", "3 nights")) == "1 day over"
+    assert one(nye.replace("2 nights", "1 night")) == "1 day left"
 
 
 def test_timeline_boundary() -> None:
