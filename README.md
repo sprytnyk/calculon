@@ -139,7 +139,9 @@ the examples from Soulver's documentation as tests.
 
 Pushing a `vX.Y.Z` tag runs the *Release builds* workflow. It runs the checks, then
 builds Linux x64 and Windows x64 binaries and a `Calculon.app` for macOS x64 and arm64.
-It keeps them as a run artifact with `SHA256SUMS`. The version comes from the tag, and
+On macOS it installs Hunspell and the dictionaries as described under Spell check, and
+the self-test fails if spell check doesn't find both languages. It keeps the builds as
+a run artifact with `SHA256SUMS`. The version comes from the tag, and
 there is no version file. The `release` skill in `.claude/skills/release/` does the
 rest: the signed tag, the signed checksums, the release notes and the GitHub release.
 

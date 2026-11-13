@@ -99,6 +99,19 @@ jobs:
           # PyInstaller leaves libEGL and libGL out on purpose: they come with the GPU driver
           sudo apt-get update -q
           sudo apt-get install -y -q libegl1 libgl1
+      - name: Hunspell and dictionaries, as the README tells Mac users (macOS)
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          # LibreOffice/dictionaries, pinned so every build tests the same files
+          DICTS: https://raw.githubusercontent.com/LibreOffice/dictionaries/c0865a85eb67dc377f2cf8e8fe2c4fa9e53f0dcb
+        run: |
+          brew install hunspell
+          mkdir -p ~/Library/Spelling
+          cd ~/Library/Spelling
+          curl -fsSLO "$DICTS/en/en_US.aff" -fsSLO "$DICTS/en/en_US.dic"
+          curl -fsSLO "$DICTS/uk_UA/uk_UA.aff" -fsSLO "$DICTS/uk_UA/uk_UA.dic"
+          ls -l
       - name: Self-test the build
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
@@ -109,7 +122,10 @@ jobs:
             plutil -p dist/Calculon.app/Contents/Info.plist
             test -f dist/Calculon.app/Contents/Resources/icon.icns
             ./dist/Calculon.app/Contents/MacOS/calculon --version
-            ./dist/Calculon.app/Contents/MacOS/calculon --self-test
+            out=$(./dist/Calculon.app/Contents/MacOS/calculon --self-test)
+            echo "$out"
+            # the self-test checks a word in each language; this makes sure it found both
+            grep -qx "spell check: en (en_US), uk (uk_UA)" <<< "$out"
           else
             ./dist/calculon --version
             ./dist/calculon --self-test
