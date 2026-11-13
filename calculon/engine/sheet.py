@@ -18,7 +18,8 @@ from .interpreter import (
     evaluate_tokens,
     tokenize_line,
 )
-from .values import CalcError, Q, Value, add
+from .timeline import DIRECTIVE_RE, Timeline, is_start, left_text, time_left
+from .values import CalcError, DateVal, Q, Value, add
 
 log = logging.getLogger(__name__)
 
@@ -77,9 +78,16 @@ def evaluate_sheet(
     ctx = Context(rates=rates, config=config)
     results: list[LineResult] = []
     all_values: list[Value] = []
+    timeline: Timeline | None = None
     for raw in text.split("\n"):
+        directive = DIRECTIVE_RE.match(raw)
         try:
-            res = _evaluate_line(raw, ctx, opts)
+            if directive:
+                res, timeline = _evaluate_directive(raw, directive, timeline, ctx, opts)
+            else:
+                res = _evaluate_line(raw, ctx, opts, timeline)
+                if res.kind == "divider":
+                    timeline = None
         except Exception as exc:  # noqa: BLE001 - one bad line must never break the sheet
             log.debug("line failed: %r", raw, exc_info=True)
             res = LineResult(kind="text", error=f"internal error: {type(exc).__name__}")
@@ -87,7 +95,7 @@ def evaluate_sheet(
         ctx.line_values.append(res.value)
         if res.value is not None:
             ctx.prev = res.value
-            if not res.is_total:
+            if not res.is_total and not directive:
                 all_values.append(res.value)
     total = None
     if any(isinstance(v, Q) for v in all_values):
@@ -99,7 +107,51 @@ def evaluate_sheet(
     return SheetResult(results, total, names)
 
 
-def _evaluate_line(raw: str, ctx: Context, opts: FormatOptions) -> LineResult:
+def _evaluate_directive(
+    raw: str, m: re.Match[str], timeline: Timeline | None, ctx: Context, opts: FormatOptions
+) -> tuple[LineResult, Timeline | None]:
+    """@from <date> starts a timeline; @to [<date>] ends it."""
+    at = m.start("word") - 1
+    # blank out the directive so the rest keeps its columns for highlighting
+    rest = raw[:at] + " " * (m.end() - at) + raw[m.end() :]
+    block = len(ctx.block)
+    res = _evaluate_line(rest, ctx, opts, None)
+    del ctx.block[block:]  # @from/@to answers don't count in totals
+    res.spans.insert(0, (at, m.end(), "keyword"))
+    given = res.value if res.kind == "value" else None
+    if is_start(m.group("word")):
+        if isinstance(given, DateVal) and given.has_date:
+            return res, Timeline(given, given)
+        _no_answer(res, res.error or f"@{m.group('word')} needs a date")
+        return res, Timeline(None, None)
+    elapsed = timeline.elapsed() if timeline else None
+    if timeline is None:
+        _no_answer(res, f"no @{'від' if m.group('word').lower() == 'до' else 'from'} above")
+    elif timeline.cursor is None or elapsed is None:
+        _no_answer(res, "")  # @from already shows the error
+    elif res.kind in ("empty", "comment"):
+        res.kind = "value"
+        res.value = timeline.cursor
+        res.text = f"{_format(timeline.cursor, opts)} · {_format(elapsed, opts)}"
+    elif isinstance(given, DateVal) and given.has_date:
+        value, shown, over = time_left(timeline.cursor, given)
+        res.value = value
+        res.text = f"{left_text(_format(shown, opts), over, opts.lang)} · {_format(elapsed, opts)}"
+    else:
+        _no_answer(res, res.error or f"@{m.group('word')} needs a date")
+    return res, None
+
+
+def _no_answer(res: LineResult, error: str) -> None:
+    res.kind = "text"
+    res.value = None
+    res.text = ""
+    res.error = error
+
+
+def _evaluate_line(
+    raw: str, ctx: Context, opts: FormatOptions, timeline: Timeline | None = None
+) -> LineResult:
     res = LineResult()
     line = raw
     comment_at = line.find("//")
@@ -124,8 +176,10 @@ def _evaluate_line(raw: str, ctx: Context, opts: FormatOptions) -> LineResult:
         ctx.custom_units = set()
         return res
     offset = 0
+    labelled = False
     m = LABEL_RE.match(line)
     if m and not re.search(r"\d$", m.group("label")):
+        labelled = True
         res.spans.append((0, m.end() + 1, "label"))
         offset = m.end() + 1
     body = line[offset:]
@@ -148,7 +202,8 @@ def _evaluate_line(raw: str, ctx: Context, opts: FormatOptions) -> LineResult:
     # each variable's value as the line sees it, before an assignment changes it
     seen = {id(it): ctx.variables.get(it.key) for it in items if it.kind == "var"}
     plain: set[int] = set()  # "if", "to", "in" in prose: not coloured as keywords
-    _evaluate_items(res, items, body, var_name, op, ctx, opts, plain)
+    moves = timeline if labelled and not var_name else None
+    _evaluate_items(res, items, body, var_name, op, ctx, opts, plain, moves)
     if res.kind != "value":
         plain = {id(it) for it in items if it.kind == "kw" and it.key in SOFT}
     for it in items:
@@ -178,6 +233,7 @@ def _evaluate_items(
     ctx: Context,
     opts: FormatOptions,
     plain: set[int],
+    timeline: Timeline | None = None,
 ) -> None:
     meaningful = [it for it in items if it.kind != "noise"]
     res.is_total = _is_total_line(meaningful)
@@ -198,6 +254,8 @@ def _evaluate_items(
             )
         else:
             value = evaluate_tokens(meaningful, ctx, plain)
+        if timeline is not None and not res.is_total:
+            value = timeline.advance(value, ctx.rates)  # a labelled duration moves it
     except (ParseError, CalcError, ArithmeticError, ValueError, OverflowError) as exc:
         res.kind = "text"
         res.error = str(exc)

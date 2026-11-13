@@ -81,6 +81,16 @@ days between 3 March and 30 May
 time in Tokyo
 3pm in London
 
+# Timelines
+// @from starts a timeline. Each labelled length of time below it moves it on.
+// @to shows where it ends, or how much time is left before a date.
+@from Nov 11 at 3pm
+London: 2 nights
+Train to Paris: 2 hours 20 min
+Hotel: €95/night × 3 nights
+Paris: 3 nights
+@to Nov 17 at 12:00
+
 # Functions and numbers
 sqrt 16
 square root of 81
@@ -106,7 +116,7 @@ average of 36, 42, 19 and 81
 
 # Earlier lines
 100
-line108 * 2 // the line number is shown on the left; or double-click an answer
+line118 * 2 // the line number is shown on the left; or double-click an answer
 prev + 1 // the answer just above; Ctrl+L types it
 + 10 // a line starting with an operator continues the previous answer
 

@@ -127,6 +127,17 @@ def test_ukrainian(line: str, expected: str) -> None:
     assert uk(line) == expected
 
 
+def test_ukrainian_timeline() -> None:
+    sheet = "@від 11.11.2026 15:00\nЛондон: 2 ночі\n@до 14.11.2026 15:00\n@до 12.11.2026"
+    res = evaluate_sheet(sheet, RATES, UK_CONFIG, UK)
+    assert [(line.text, line.error) for line in res.lines] == [
+        ("11 листопада, 15:00", ""),
+        ("13 листопада, 15:00", ""),
+        ("залишилось: 1 день · 2 дні", ""),
+        ("", "no @від above"),
+    ]
+
+
 def test_ukrainian_totals_and_variables() -> None:
     sheet = "оренда = 12 000 грн\nоренда / 3\n₴200 обід #їжа\n₴350 вечеря #їжа\nразом від #їжа"
     res = evaluate_sheet(sheet, RATES, UK_CONFIG, UK)

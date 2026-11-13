@@ -302,6 +302,82 @@ def test_decimal_settings() -> None:
     assert one("$10/3", money_decimals=3) == "$3.333"
 
 
+def test_timeline() -> None:
+    sheet = """@from 11.11.2026 at 15:00
+London: 1 night
+Driving: 2 hours
+Hotel: $100 * 2
+2 hours * 3
+stay = 2 nights
+# Day 2
+Time zone shift: -1 hour
+@to"""
+    assert calc(sheet) == [
+        "11 November, 15:00",
+        "12 November, 15:00",
+        "12 November, 17:00",
+        "$200.00",
+        "6 hours",
+        "2 nights",
+        "",
+        "12 November, 16:00",
+        "12 November, 16:00 · 1 day 1 hour",
+    ]
+
+
+def test_timeline_boundary() -> None:
+    start = "@from 11.11.2026 15:00\nLondon: 1 night\n"
+    assert one(start + "@to 13.11.2026 15:00") == "1 day left · 1 day"
+    assert one(start + "@to 12.11.2026 12:00") == "3 hours over · 1 day"
+    res = evaluate_sheet(
+        start + "@to 12.11.2026 12:00\nprev in hours", RATES, CONFIG, FormatOptions()
+    )
+    assert res.lines[-1].text == "-3 hours"
+
+
+def test_timeline_edges() -> None:
+    # a date alone starts at midnight; months and leap days come from date maths
+    assert calc("@from 28.02.2028\nLeap: 1 day 2 hours\nNext: 1 month") == [
+        "28 February 2028",
+        "29 February 2028, 02:00",
+        "29 March 2028, 02:00",
+    ]
+    # a bad @from shows the error; lines below just show durations
+    res = evaluate_sheet("@from soon\nRome: 2 days\n@to", RATES, CONFIG, FormatOptions())
+    assert [(r.text, r.error) for r in res.lines] == [
+        ("", "@from needs a date"),
+        ("2 days", ""),
+        ("", ""),
+    ]
+    # a block ends at @to, at ---, and at the next @from
+    assert calc("@from 11.11.2026\nA: 1 day\n@to\nB: 1 day") == [
+        "11 November",
+        "12 November",
+        "12 November · 1 day",
+        "1 day",
+    ]
+    assert one("@from 11.11.2026\n---\nB: 1 day") == "1 day"
+    assert one("@from 11.11.2026\nA: 1 day\n@from 1.12.2026\nB: 1 day\n@to") == (
+        "2 December · 1 day"
+    )
+    res = evaluate_sheet("@to", RATES, CONFIG, FormatOptions())
+    assert res.lines[0].error == "no @from above"
+    # outside a block nothing moves, and @ still means "at"
+    assert one("London: 2 nights") == "2 nights"
+    assert one("$5 @ 3") == "3"
+
+
+def test_timeline_answers_stay_out_of_totals() -> None:
+    res = evaluate_sheet(
+        "@from 11.11.2026\nHotel: $100\nTaxi: $20\nStay: 2 nights\n@to 20.11.2026",
+        RATES,
+        CONFIG,
+        FormatOptions(),
+    )
+    assert res.lines[3].text == "13 November"
+    assert res.total is not None and res.total.mag == 120
+
+
 def test_date_order_setting() -> None:
     cfg = Config(now=lambda: NOW, date_order="MDY")
     res = evaluate_sheet("02/12/2020", RATES, cfg)
