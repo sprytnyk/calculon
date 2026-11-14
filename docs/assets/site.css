@@ -297,9 +297,10 @@ p {
 .side .gap {
   height: 10px;
 }
+/* as in the app: the total in the middle, in the answers' colour */
 .statusbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   gap: 16px;
   padding: 5px 14px;
   background: var(--sidebar);
@@ -308,6 +309,10 @@ p {
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
+}
+.statusbar .total {
+  color: var(--result);
+  font-weight: 600;
 }
 /* keeps the bar one line high while the total is still empty */
 .statusbar .total::after {
