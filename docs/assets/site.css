@@ -309,17 +309,12 @@ p {
   white-space: nowrap;
   overflow: hidden;
 }
-.statusbar .rates {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 @media (max-width: 760px) {
   .window-body {
     grid-template-columns: 1fr;
   }
   .side,
-  .menubar,
-  .statusbar .rates {
+  .menubar {
     display: none;
   }
 }

@@ -273,7 +273,6 @@
     side.append(el("div", "gap"));
     row("help", DATA.ui.help);
     row("trash", DATA.ui.trash);
-    win.querySelector(".rates").textContent = DATA.ui.rates;
     if (calm) return current.showAll();
     whenSeen(win, () => {
       if (!picked) current.type().catch(() => {});

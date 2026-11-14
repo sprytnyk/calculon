@@ -12,7 +12,6 @@ window.CALCULON = {
    "sheets": "Sheets",
    "help": "Help",
    "trash": "Trash",
-   "rates": "Rates: 10 November 2026 · bundled snapshot",
    "menu": [
     [
      [
@@ -989,7 +988,6 @@ window.CALCULON = {
    "sheets": "Аркуші",
    "help": "Довідка",
    "trash": "Кошик",
-   "rates": "Курси: 10 листопада 2026 · вбудований знімок",
    "menu": [
     [
      [

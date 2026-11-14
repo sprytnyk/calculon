@@ -186,7 +186,6 @@ def page_data(lang: str, table: RateTable) -> dict[str, Any]:
             "sheets": t("sheets"),
             "help": t("help"),
             "trash": t("trash"),
-            "rates": t("rates_ok", when=rates_date(table, lang), source=t("rates_bundled")),
             "menu": [[[t(key), keys, icon] for key, keys, icon in group] for group in MENU],
             "spell_add": t("spell_add"),
             "spell_ignore": t("spell_ignore"),
