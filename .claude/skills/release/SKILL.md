@@ -1,6 +1,6 @@
 ---
 name: release
-description: Ship a new version of Calculon. Commits pending work, runs the checks, makes a signed tag on main and pushes it, so CI builds the four binaries. Builds the Linux binary on this machine as a smoke test, downloads CI's builds, checks them against CI's SHA256SUMS, signs SHA256SUMS, writes the release notes and publishes the GitHub release. Use when the user asks to release, ship, or "ship it as usual".
+description: Ship a new version of Calculon. Commits pending work, runs the checks, makes a signed release commit and tag on main and pushes them, so CI builds the four binaries. Builds the Linux binary on this machine as a smoke test, downloads CI's builds, checks them against CI's SHA256SUMS, signs SHA256SUMS, writes the release notes and publishes the GitHub release. Use when the user asks to release, ship, or "ship it as usual".
 argument-hint: '[version, e.g. 1.0.1; derived from commits if omitted]'
 disable-model-invocation: true
 ---
@@ -14,7 +14,7 @@ of the release notes.
 
 If a step fails, stop and tell the user. Don't work around it.
 
-There is no version file and no release commit. The version comes from the tag:
+There is no version file, so the release commit is empty. The version comes from the tag:
 `scripts/write_version.py vX.Y.Z` writes the gitignored `calculon/_version.py`, in CI and
 locally.
 
@@ -66,18 +66,21 @@ publish the release.
   else means patch. Say in one line which version you picked and why.
 - `git status --porcelain --untracked-files=no` must print nothing.
 
-## 3. Signed tag
+## 3. Release commit and signed tag
 
-The tag goes on `main`'s HEAD. It is annotated and signed. Its message is the version, a
-blank line, and a short summary of the release in plain words, wrapped at 72 columns. Write
-the message to a file in the scratchpad:
+Make an empty signed commit on `main`'s HEAD and put the tag on it. The tag is annotated
+and signed. Its message is the version, a blank line, and a short summary of the release
+in plain words, wrapped at 72 columns. Write the message to a file in the scratchpad,
+then run:
 
 ```bash
+git commit --allow-empty -S -m "chore(release): X.Y.Z"
 git tag -s vX.Y.Z -F <scratchpad>/tag-message
-git tag -v vX.Y.Z
+git verify-commit HEAD && git tag -v vX.Y.Z
 ```
 
-The signature must be Good, from `0xC00C0F0D647BD3C6`. If gpg pinentry times out, ask the
+The commit message is just `chore(release): X.Y.Z`, with no body and no trailers. Both
+signatures must be Good, from `0xC00C0F0D647BD3C6`. If gpg pinentry times out, ask the
 user to run the command themselves with a `!` prefix.
 
 ## 4. Push
