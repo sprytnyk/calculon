@@ -44,6 +44,8 @@ LIST_MARK_RE = re.compile(
 # an operator at the very start continues the answer on the line just above, as typing does
 # in Soulver; "-200" too, so a plain negative number under an answer needs a label
 CONTINUE_RE = re.compile(r"^\s*(\+|-|−|\*|/|×|÷|\^)")
+# how Soulver writes a reference into exported text: "[$1 000,00](line2) − 200"
+SOULVER_REF_RE = re.compile(r"\[[^\]\n]*\]\((line\d+)\)")
 
 # highlight classes
 SPAN_CLASSES = {
@@ -175,6 +177,10 @@ def _evaluate_line(
 ) -> LineResult:
     res = LineResult()
     line = raw
+    for m in SOULVER_REF_RE.finditer(raw):  # read as "line2", keeping every column in place
+        start, end = m.span(1)
+        line = line[: m.start()] + " " * (start - m.start()) + m[1] + " " + line[m.end() :]
+        res.spans += [(m.start(), start, "comment"), (end, m.end(), "comment")]
     comment_at = line.find("//")
     if comment_at != -1:
         res.spans.append((comment_at, len(raw), "comment"))

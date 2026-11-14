@@ -374,6 +374,11 @@ def test_a_note_starting_with_an_operator_does_not_repeat_the_answer_above() -> 
     assert calc(text) == ["$10.00", "", "", "", "$10.00"]
 
 
+def test_soulver_references_in_exported_text() -> None:
+    text = "$1000\n[$1 000,00](line1) − 200\n[$800,00](line2) × fuel $50"
+    assert calc(text) == ["$1,000.00", "$800.00", "$40,000.00"]
+
+
 def test_empty_add_assignment_stays_empty() -> None:
     assert calc("x = 5\nx +=\nx") == ["5", "", "5"]
 
