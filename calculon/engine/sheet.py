@@ -18,6 +18,7 @@ from .interpreter import (
     evaluate_tokens,
     tokenize_line,
 )
+from .lexer import Tok
 from .timeline import (
     DIRECTIVE_RE,
     Timeline,
@@ -207,11 +208,16 @@ def _evaluate_line(
         res.spans.append((*name_span, "variable"))
         offset += m.end()
         body = line[offset:]
-    toks = tokenize_line(body, ctx)
-    for t in toks:
-        t.start += offset
-        t.end += offset
-    items = classify(toks, ctx)
+    if op == "=" and not body.strip():
+        # "food =" with nothing after it names the subtotal, as in Soulver
+        tok = Tok("WORD", "subtotal", len(line), len(line))
+        items = [Item("kw", "subtotal", tok, tok)]
+    else:
+        toks = tokenize_line(body, ctx)
+        for t in toks:
+            t.start += offset
+            t.end += offset
+        items = classify(toks, ctx)
     # each variable's value as the line sees it, before an assignment changes it
     seen = {id(it): ctx.variables.get(it.key) for it in items if it.kind == "var"}
     plain: set[int] = set()  # "if", "to", "in" in prose: not coloured as keywords
@@ -221,7 +227,7 @@ def _evaluate_line(
         plain = {id(it) for it in items if it.kind == "kw" and it.key in SOFT}
     for it in items:
         cls = SPAN_CLASSES.get(it.kind)
-        if cls and id(it) not in plain:
+        if cls and id(it) not in plain and it.end > it.start:
             res.spans.append((it.start, it.end, cls))
         if (value := seen.get(id(it))) is not None and (text := _format(value, opts)):
             res.hints.append((it.start, it.end, text))

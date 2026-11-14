@@ -286,6 +286,16 @@ def test_total_assigned_to_variable() -> None:
     assert calc("$10\n$15\nfood = total\nfood * 2") == ["$10.00", "$15.00", "$25.00", "$50.00"]
 
 
+def test_empty_assignment_names_the_subtotal() -> None:
+    """As in Soulver: "food =" with nothing after it is a subtotal line named food."""
+    text = "$10\n$15\nfood =\n$5\nfuel = // car\nfood + fuel"
+    assert calc(text) == ["$10.00", "$15.00", "$25.00", "$5.00", "$5.00", "$30.00"]
+
+
+def test_empty_add_assignment_stays_empty() -> None:
+    assert calc("x = 5\nx +=\nx") == ["5", "", "5"]
+
+
 def test_average_of_lines() -> None:
     assert calc("10\n20\n30\naverage") == ["10", "20", "30", "20"]
 
