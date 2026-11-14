@@ -309,6 +309,10 @@ p {
   white-space: nowrap;
   overflow: hidden;
 }
+/* keeps the bar one line high while the total is still empty */
+.statusbar .total::after {
+  content: "\200b";
+}
 @media (max-width: 760px) {
   .window-body {
     grid-template-columns: 1fr;

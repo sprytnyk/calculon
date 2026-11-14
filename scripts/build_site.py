@@ -153,7 +153,8 @@ def rates_date(table: RateTable, lang: str) -> str:
 def sheet(text: str, lang: str, table: RateTable) -> dict[str, Any]:
     style = STYLE[lang]
     opts = FormatOptions(number_style=style, lang=lang)
-    result = evaluate_sheet(text, table, Config(number_style=style, now=lambda: NOW), opts)
+    config = Config(number_style=style, now=lambda: NOW)
+    result = evaluate_sheet(text, table, config, opts)
     lines: list[dict[str, Any]] = []
     for src, line in zip(text.splitlines(), result.lines, strict=True):
         if line.error:
@@ -166,9 +167,18 @@ def sheet(text: str, lang: str, table: RateTable) -> dict[str, Any]:
                 "total": line.is_total,
             }
         )
-    name = text.splitlines()[0].lstrip("# ")
-    total = format_value(result.total, opts) if result.total is not None else ""
-    return {"name": name, "lines": lines, "total": tr(lang, "total", text=total) if total else ""}
+    # the status bar while the hero sheet types itself: the total of the lines so far,
+    # as the app shows it after each line
+    rows = text.splitlines()
+    for n, line in enumerate(lines):
+        part = evaluate_sheet("\n".join(rows[: n + 1]), table, config, opts)
+        line["status"] = status_total(part.total, lang, opts)
+    name = rows[0].lstrip("# ")
+    return {"name": name, "lines": lines, "total": status_total(result.total, lang, opts)}
+
+
+def status_total(total: Any, lang: str, opts: FormatOptions) -> str:
+    return tr(lang, "total", text=format_value(total, opts)) if total is not None else ""
 
 
 def page_data(lang: str, table: RateTable) -> dict[str, Any]:

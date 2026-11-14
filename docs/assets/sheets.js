@@ -119,7 +119,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "Train: 2 × 850 UAH",
@@ -151,7 +152,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "₴1,700.00",
-      "total": false
+      "total": false,
+      "status": "Total: ₴1,700.00"
      },
      {
       "text": "Hotel: 2 nights × 1,900 UAH",
@@ -188,7 +190,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "₴3,800.00",
-      "total": false
+      "total": false,
+      "status": "Total: ₴5,500.00"
      },
      {
       "text": "Coffee and cake: 4 × 180 UAH",
@@ -220,7 +223,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "₴720.00",
-      "total": false
+      "total": false,
+      "status": "Total: ₴6,220.00"
      },
      {
       "text": "Museum 2 × 250 UAH",
@@ -247,7 +251,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "₴500.00",
-      "total": false
+      "total": false,
+      "status": "Total: ₴6,720.00"
      },
      {
       "text": "total in EUR",
@@ -269,7 +274,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "€131.99",
-      "total": true
+      "total": true,
+      "status": "Total: ₴6,720.00"
      }
     ],
     "total": "Total: ₴6,720.00"
@@ -287,7 +293,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "rent = $1,450",
@@ -309,7 +316,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "$1,450.00",
-      "total": false
+      "total": false,
+      "status": "Total: $1,450.00"
      },
      {
       "text": "deposit = rent × 2",
@@ -336,7 +344,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "$2,900.00",
-      "total": false
+      "total": false,
+      "status": "Total: $4,350.00"
      },
      {
       "text": "Movers: $380 for the truck + $45 tip",
@@ -373,7 +382,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "$425.00",
-      "total": false
+      "total": false,
+      "status": "Total: $4,775.00"
      },
      {
       "text": "Sofa $1,200 - 15%",
@@ -405,7 +415,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "$1,020.00",
-      "total": false
+      "total": false,
+      "status": "Total: $5,795.00"
      },
      {
       "text": "total",
@@ -417,7 +428,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "$5,795.00",
-      "total": true
+      "total": true,
+      "status": "Total: $5,795.00"
      }
     ],
     "total": "Total: $5,795.00"
@@ -435,7 +447,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "Jacket: £89 in USD",
@@ -467,7 +480,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "$119.51",
-      "total": false
+      "total": false,
+      "status": "Total: $119.51"
      },
      {
       "text": "Coffee £4.50 × 6 in EUR",
@@ -504,7 +518,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "€32.36",
-      "total": false
+      "total": false,
+      "status": "Total: €139.02"
      },
      {
       "text": "20% off $80",
@@ -536,7 +551,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "$64.00",
-      "total": false
+      "total": false,
+      "status": "Total: $219.77"
      },
      {
       "text": "Run: 10 km in miles",
@@ -568,7 +584,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "6.214 mi",
-      "total": false
+      "total": false,
+      "status": "Total: $219.77"
      },
      {
       "text": "Oven 180 °C in °F",
@@ -595,7 +612,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "356 °F",
-      "total": false
+      "total": false,
+      "status": "Total: $219.77"
      },
      {
       "text": "1.5 TB at 25 MB/s in hours",
@@ -647,7 +665,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "16.667 hours",
-      "total": false
+      "total": false,
+      "status": "Total: $219.77"
      }
     ],
     "total": "Total: $219.77"
@@ -665,7 +684,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "@from 14.11.2026",
@@ -682,7 +702,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "14 November",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "Lisbon: 3 days",
@@ -704,7 +725,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "17 November",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "Porto: 2 days",
@@ -726,7 +748,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "19 November",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "// the flight home is on 18 November",
@@ -738,7 +761,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "@to 18.11.2026",
@@ -755,7 +779,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "1 day over",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "14.11.2026 + 3 weeks",
@@ -782,7 +807,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "5 December",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "days between 14.11.2026 and 25.12.2026",
@@ -814,7 +840,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "41 days",
-      "total": false
+      "total": false,
+      "status": "Total: 41 days"
      }
     ],
     "total": "Total: 41 days"
@@ -832,7 +859,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "Плитка: 650 грн × 12",
@@ -864,7 +892,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "₴7,800.00",
-      "total": false
+      "total": false,
+      "status": "Total: ₴7,800.00"
      },
      {
       "text": "Шпаклівкаа: 4 × 380 грн",
@@ -896,7 +925,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "₴1,520.00",
-      "total": false
+      "total": false,
+      "status": "Total: ₴9,320.00"
      },
      {
       "text": "Робота 15,000 грн",
@@ -913,7 +943,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "₴15,000.00",
-      "total": false
+      "total": false,
+      "status": "Total: ₴24,320.00"
      },
      {
       "text": "Кухонні меблі 48,000 грн − 10%",
@@ -945,7 +976,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "₴43,200.00",
-      "total": false
+      "total": false,
+      "status": "Total: ₴67,520.00"
      },
      {
       "text": "разом",
@@ -957,7 +989,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "₴67,520.00",
-      "total": true
+      "total": true,
+      "status": "Total: ₴67,520.00"
      }
     ],
     "total": "Total: ₴67,520.00",
@@ -1095,7 +1128,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "Потяг: 2 × 850 грн",
@@ -1127,7 +1161,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "1 700,00 ₴",
-      "total": false
+      "total": false,
+      "status": "Разом: 1 700,00 ₴"
      },
      {
       "text": "Готель: 2 × 1 900 грн",
@@ -1159,7 +1194,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "3 800,00 ₴",
-      "total": false
+      "total": false,
+      "status": "Разом: 5 500,00 ₴"
      },
      {
       "text": "Кава з тістечком: 4 × 180 грн",
@@ -1191,7 +1227,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "720,00 ₴",
-      "total": false
+      "total": false,
+      "status": "Разом: 6 220,00 ₴"
      },
      {
       "text": "Музей 2 × 250 грн",
@@ -1218,7 +1255,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "500,00 ₴",
-      "total": false
+      "total": false,
+      "status": "Разом: 6 720,00 ₴"
      },
      {
       "text": "разом у EUR",
@@ -1240,7 +1278,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "131,99 €",
-      "total": true
+      "total": true,
+      "status": "Разом: 6 720,00 ₴"
      }
     ],
     "total": "Разом: 6 720,00 ₴"
@@ -1258,7 +1297,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "оренда = 1 450 $",
@@ -1280,7 +1320,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "1 450,00 $",
-      "total": false
+      "total": false,
+      "status": "Разом: 1 450,00 $"
      },
      {
       "text": "застава = оренда × 2",
@@ -1307,7 +1348,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "2 900,00 $",
-      "total": false
+      "total": false,
+      "status": "Разом: 4 350,00 $"
      },
      {
       "text": "Вантажники: 380 $ за машину + 45 $ на чай",
@@ -1344,7 +1386,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "425,00 $",
-      "total": false
+      "total": false,
+      "status": "Разом: 4 775,00 $"
      },
      {
       "text": "Диван 1 200 $ − 15%",
@@ -1376,7 +1419,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "1 020,00 $",
-      "total": false
+      "total": false,
+      "status": "Разом: 5 795,00 $"
      },
      {
       "text": "разом",
@@ -1388,7 +1432,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "5 795,00 $",
-      "total": true
+      "total": true,
+      "status": "Разом: 5 795,00 $"
      }
     ],
     "total": "Разом: 5 795,00 $"
@@ -1406,7 +1451,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "Куртка: 89 £ у USD",
@@ -1438,7 +1484,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "119,51 $",
-      "total": false
+      "total": false,
+      "status": "Разом: 119,51 $"
      },
      {
       "text": "Кава 4,50 £ × 6 у EUR",
@@ -1475,7 +1522,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "32,36 €",
-      "total": false
+      "total": false,
+      "status": "Разом: 139,02 €"
      },
      {
       "text": "20% знижки від 80 $",
@@ -1507,7 +1555,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "64,00 $",
-      "total": false
+      "total": false,
+      "status": "Разом: 219,77 $"
      },
      {
       "text": "Пробіжка: 10 км у милях",
@@ -1539,7 +1588,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "6,214 милі",
-      "total": false
+      "total": false,
+      "status": "Разом: 219,77 $"
      },
      {
       "text": "Духовка 180 °C у °F",
@@ -1566,7 +1616,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "356 °F",
-      "total": false
+      "total": false,
+      "status": "Разом: 219,77 $"
      },
      {
       "text": "1,5 ТБ при 25 МБ/с у годинах",
@@ -1618,7 +1669,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "16,667 години",
-      "total": false
+      "total": false,
+      "status": "Разом: 219,77 $"
      }
     ],
     "total": "Разом: 219,77 $"
@@ -1636,7 +1688,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "@від 14.11.2026",
@@ -1653,7 +1706,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "14 листопада",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "Лісабон: 3 дні",
@@ -1675,7 +1729,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "17 листопада",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "Порту: 2 дні",
@@ -1697,7 +1752,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "19 листопада",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "// літак додому 18 листопада",
@@ -1709,7 +1765,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "@до 18.11.2026",
@@ -1726,7 +1783,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "перевищено: 1 день",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "14.11.2026 + 3 тижні",
@@ -1753,7 +1811,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "5 грудня",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "днів між 14.11.2026 і 25.12.2026",
@@ -1785,7 +1844,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "41 день",
-      "total": false
+      "total": false,
+      "status": "Разом: 41 день"
      }
     ],
     "total": "Разом: 41 день"
@@ -1803,7 +1863,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "",
-      "total": false
+      "total": false,
+      "status": ""
      },
      {
       "text": "Плитка: 650 грн × 12",
@@ -1835,7 +1896,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "7 800,00 ₴",
-      "total": false
+      "total": false,
+      "status": "Разом: 7 800,00 ₴"
      },
      {
       "text": "Шпаклівкаа: 4 × 380 грн",
@@ -1867,7 +1929,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "1 520,00 ₴",
-      "total": false
+      "total": false,
+      "status": "Разом: 9 320,00 ₴"
      },
      {
       "text": "Робота 15 000 грн",
@@ -1884,7 +1947,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "15 000,00 ₴",
-      "total": false
+      "total": false,
+      "status": "Разом: 24 320,00 ₴"
      },
      {
       "text": "Кухонні меблі 48 000 грн − 10%",
@@ -1916,7 +1980,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "43 200,00 ₴",
-      "total": false
+      "total": false,
+      "status": "Разом: 67 520,00 ₴"
      },
      {
       "text": "разом",
@@ -1928,7 +1993,8 @@ window.CALCULON = {
        ]
       ],
       "answer": "67 520,00 ₴",
-      "total": true
+      "total": true,
+      "status": "Разом: 67 520,00 ₴"
      }
     ],
     "total": "Разом: 67 520,00 ₴",

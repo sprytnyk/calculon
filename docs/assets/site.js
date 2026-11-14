@@ -172,7 +172,7 @@
         }
         this.draw(n, Infinity, n === lines.length - 1);
         this.answer(n);
-        if (this.status && lines[n].total) this.status.textContent = this.sheet.total;
+        if (this.status) this.status.textContent = lines[n].status;
         await sleep(n === 0 ? 300 : 420, run);
       }
       if (this.status) this.status.textContent = this.sheet.total;
