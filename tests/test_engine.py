@@ -319,6 +319,22 @@ def test_a_leading_number_left_out_of_the_maths_looks_like_a_list_number() -> No
     assert look("4 people × $20") == "number"
 
 
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("$5 * $5", "$25.00"),
+        ("€5 * $5", "$25.00"),
+        ("$5 * €5", "€25.00"),
+        ("$5^2", "$25.00"),
+        ("$30/hour * $2", "$60.00"),
+        ("(1/$5)^2", "0.04/USD"),
+    ],
+)
+def test_money_times_money_keeps_the_right_hand_currency(line: str, expected: str) -> None:
+    """As in Soulver: no "25 USD²"."""
+    assert one(line) == expected
+
+
 def test_empty_add_assignment_stays_empty() -> None:
     assert calc("x = 5\nx +=\nx") == ["5", "", "5"]
 

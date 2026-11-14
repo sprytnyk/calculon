@@ -192,8 +192,11 @@ def mul(a: Value, b: Value, rates: RateTable) -> Q:
     for m, t in ((a, b), (b, a)):
         if _is_money(m) and t.is_time() and not t.parts:
             return Q(m.mag * t.mag, m.units)
-    q = Q(a.mag * b.mag, a.units + b.units, fmt=a.fmt or b.fmt)
-    return simplify(q, rates)
+    q = simplify(Q(a.mag * b.mag, a.units + b.units, fmt=a.fmt or b.fmt), rates)
+    if _money_squared(q):  # as in Soulver: $5 × €5 = €25, the right-hand currency wins
+        money = ((_currency(b) or _currency(a), _money_side(q.units)),)
+        return Q(a.mag * b.mag, money, fmt=a.fmt or b.fmt)
+    return q
 
 
 def div(a: Value, b: Value, rates: RateTable) -> Q:
@@ -220,6 +223,8 @@ def power(a: Value, b: Value) -> Q:
         if exp != exp.to_integral_value():
             raise CalcError("unit powers must be whole numbers")
         units = tuple((u, p * int(exp)) for u, p in a.units)
+        if _money_squared(Q(a.mag, units)):  # as in Soulver: $5^2 = $25
+            units = ((_currency(a), _money_side(units)),)
     else:
         units = ()
     try:
@@ -249,6 +254,21 @@ def modulo(a: Value, b: Value) -> Q:
 def negate(a: Value) -> Q:
     a = _need_q(a)
     return replace(a, mag=-a.mag, parts=None)
+
+
+def _money_squared(q: Q) -> bool:
+    """USD² and the like: money times money, which means nothing as a unit."""
+    powers = [p for u, p in q.units if U.is_currency(u)]
+    return sum(p for p in powers if p > 0) > 1 or sum(p for p in powers if p < 0) < -1
+
+
+def _money_side(units: U.Units) -> int:
+    """1 for money on top ($25), -1 for money underneath (0.04/USD)."""
+    return 1 if sum(p for u, p in units if U.is_currency(u)) > 0 else -1
+
+
+def _currency(q: Q) -> str | None:
+    return next((u for u, _ in q.units if U.is_currency(u)), None)
 
 
 def _is_money(q: Q) -> bool:
