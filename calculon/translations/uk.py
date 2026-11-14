@@ -47,6 +47,7 @@ T = {
     "zoom_out": "Менший текст",
     "zoom_reset": "Звичайний розмір тексту",
     "toggle_sidebar": "Показати бічну панель",
+    "always_on_top": "Завжди поверх інших вікон",
     "toggle_line_numbers": "Номери рядків",
     "toggle_spelling": "Перевіряти правопис",
     "help_sheet": "Аркуш довідки",

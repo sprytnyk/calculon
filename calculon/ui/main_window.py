@@ -98,6 +98,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.settings = Settings.load()
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, self.settings.always_on_top)
         self.theme = themes.resolve(self.settings.theme, self.settings.colours)
         self.font_family = load_fonts()
         folder_error = ""
@@ -314,6 +315,9 @@ class MainWindow(QMainWindow):
         self._action(m, "find", self._focus_search, "Ctrl+P")
 
         m = bar.addMenu(self.t("menu_view"))
+        act = self._action(m, "always_on_top", self._toggle_always_on_top, checkable=True)
+        act.setChecked(self.settings.always_on_top)
+        m.addSeparator()
         sub = m.addMenu(icons.icon("theme"), self.t("theme"))
         group = QActionGroup(self)
         for key in ("dark", "light", "system"):
@@ -520,6 +524,31 @@ class MainWindow(QMainWindow):
 
     def _toggle_sidebar(self) -> None:
         self.sidebar.setVisible(not self.sidebar.isVisible())
+
+    def _toggle_always_on_top(self) -> None:
+        self.settings.always_on_top = not self.settings.always_on_top
+        self.settings.save()
+        visible = self.isVisible()
+        active = self.isActiveWindow()
+        geometry = self.normalGeometry()
+        state = self.windowState()
+        focus = self.focusWidget()
+        # Changing window flags can hide the widget; preserve its placement and state.
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, self.settings.always_on_top)
+        self.setWindowState(Qt.WindowState.WindowNoState)
+        self.setGeometry(geometry)
+        self.setWindowState(state)
+        if visible:
+            attribute = Qt.WidgetAttribute.WA_ShowWithoutActivating
+            without_activating = self.testAttribute(attribute)
+            self.setAttribute(attribute, without_activating or not active)
+            self.show()
+            self.setAttribute(attribute, without_activating)
+            if active:
+                self.activateWindow()
+            if focus is not None:
+                focus.setFocus(Qt.FocusReason.OtherFocusReason)
+        self._actions["always_on_top"].setChecked(self.settings.always_on_top)
 
     def _toggle_line_numbers(self) -> None:
         self.settings.line_numbers = not self.settings.line_numbers

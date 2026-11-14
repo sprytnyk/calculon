@@ -46,6 +46,7 @@ class Settings:
     font_size: int = 14
     ligatures: bool = True
     line_numbers: bool = True
+    always_on_top: bool = False
     spell_check: bool = False  # needs the system's Hunspell, see calculon/spelling.py
     vim_mode: bool = False  # needs side-vim, see calculon/ui/vim.py
     results_width: int = 260

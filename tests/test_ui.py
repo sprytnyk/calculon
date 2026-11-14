@@ -15,7 +15,7 @@ from PySide6.QtGui import (
     QTextCursor,
 )
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMenu, QStyle
+from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMenu, QStyle, QWidget
 
 from calculon import rates
 from calculon.settings import Settings
@@ -840,3 +840,159 @@ def test_menu_stays_whole_on_screen() -> None:
     assert fit_menu(QPoint(495, 800), menu, screen) == QPoint(495, 298)  # fits above
     assert fit_menu(QPoint(495, 417), menu, screen) == QPoint(495, 366)  # neither: low
     assert fit_menu(QPoint(5, 50), QSize(100, 2000), screen) == QPoint(5, 0)  # too tall
+
+
+TOP = Qt.WindowType.WindowStaysOnTopHint
+
+
+def test_always_on_top_off_by_default(window) -> None:
+    action = window._actions["always_on_top"]
+    assert action.isCheckable()
+    assert not action.isChecked()
+    assert not window.settings.always_on_top
+    assert not window.windowFlags() & TOP
+
+
+def test_always_on_top_menu_toggles_without_losing_placement_or_edits(
+    window, app, monkeypatch
+) -> None:
+    window.setGeometry(70, 80, 700, 500)
+    window.editor.setPlainText("2 + 2")
+    window.editor.moveCursor(QTextCursor.MoveOperation.End)
+    window.editor.insertPlainText(" + 1")
+    window.activateWindow()
+    window.editor.setFocus()
+    pump(app)
+    geometry = window.geometry()
+    document = window.editor.document()
+    cursor = window.editor.textCursor().position()
+    activation_requests = []
+    activate = window.activateWindow
+
+    def request_activation() -> None:
+        activation_requests.append(True)
+        activate()
+
+    monkeypatch.setattr(window, "activateWindow", request_activation)
+
+    for enabled in (True, False):
+        was_active = window.isActiveWindow()
+        requests_before = len(activation_requests)
+        window._actions["always_on_top"].trigger()
+        pump(app)
+        assert bool(window.windowFlags() & TOP) is enabled
+        assert bool(window.windowHandle().flags() & TOP) is enabled
+        assert window.settings.always_on_top is enabled
+        assert window._actions["always_on_top"].isChecked() is enabled
+        assert Settings.load().always_on_top is enabled
+        assert window.isVisible()
+        assert window.geometry() == geometry
+        assert window.editor.document() is document
+        assert window.editor.toPlainText() == "2 + 2 + 1"
+        assert window.editor.textCursor().position() == cursor
+        # Offscreen activation is unreliable after flag changes; check the request
+        # and remembered focus here, and keyboard focus on a real desktop.
+        assert window.focusWidget() is window.editor
+        assert len(activation_requests) - requests_before == int(was_active)
+
+    window.editor.undo()
+    assert window.editor.toPlainText() == "2 + 2"
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_always_on_top_saved_choice_applies_before_first_show(window, app, enabled) -> None:
+    QSettings().setValue("always_on_top", enabled)
+    restored = MainWindow()
+    try:
+        assert not restored.isVisible()
+        assert restored.settings.always_on_top is enabled
+        assert bool(restored.windowFlags() & TOP) is enabled
+        assert restored._actions["always_on_top"].isChecked() is enabled
+        restored.show()
+        pump(app)
+        assert restored.isVisible()
+        assert bool(restored.windowFlags() & TOP) is enabled
+    finally:
+        restored.close()
+        restored.deleteLater()
+
+
+@pytest.mark.parametrize("state", ["maximized", "fullscreen", "minimized"])
+def test_always_on_top_toggle_keeps_window_state_and_normal_size(window, app, state) -> None:
+    window.resize(650, 450)
+    pump(app)
+    normal = window.geometry()
+    if state == "maximized":
+        window.showMaximized()
+    elif state == "fullscreen":
+        window.showFullScreen()
+    else:
+        window.showMinimized()
+    pump(app)
+    before = window.windowState()
+    for _ in range(2):
+        window._actions["always_on_top"].trigger()
+        pump(app)
+        assert window.isVisible()
+        assert window.windowState() == before
+    window.showNormal()
+    pump(app)
+    assert window.geometry() == normal
+
+
+def test_always_on_top_toggle_does_not_show_a_hidden_window(window, app) -> None:
+    window.hide()
+    window._actions["always_on_top"].trigger()
+    pump(app)
+    assert not window.isVisible()
+    assert window.windowFlags() & TOP
+
+
+def test_always_on_top_toggle_requests_no_activation_for_an_inactive_window(
+    window, app, monkeypatch
+) -> None:
+    other = QWidget()
+    try:
+        other.show()
+        other.activateWindow()
+        pump(app)
+        assert other.isActiveWindow()
+        activation_requests = []
+        show_attributes = []
+        show = window.show
+        attribute = Qt.WidgetAttribute.WA_ShowWithoutActivating
+
+        def show_window() -> None:
+            show_attributes.append(window.testAttribute(attribute))
+            show()
+
+        monkeypatch.setattr(window, "show", show_window)
+        monkeypatch.setattr(window, "activateWindow", lambda: activation_requests.append(True))
+        window._actions["always_on_top"].trigger()
+        pump(app)
+        assert show_attributes == [True]
+        assert activation_requests == []
+        assert not window.testAttribute(attribute)
+    finally:
+        other.close()
+        other.deleteLater()
+
+
+def test_always_on_top_rebuilt_menus_and_settings_keep_choice(window, app) -> None:
+    window._actions["always_on_top"].trigger()
+    window.set_theme("light")
+    window.set_language("uk")
+    pump(app)
+    assert window._actions["always_on_top"].isChecked()
+    assert window._actions["always_on_top"].text() == "Завжди поверх інших вікон"
+    assert window.windowFlags() & TOP
+    dialog = SettingsDialog(window.settings, window.t, window)
+    try:
+        assert dialog.result_settings().always_on_top
+    finally:
+        dialog.deleteLater()
+    window._actions["always_on_top"].trigger()
+    window.set_language("en")
+    assert not window._actions["always_on_top"].isChecked()
+    assert window._actions["always_on_top"].text() == "Always on Top"
+    assert not window.windowFlags() & TOP
