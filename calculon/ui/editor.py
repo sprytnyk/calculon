@@ -587,6 +587,7 @@ class SheetEdit(QPlainTextEdit):
         self.highlighter.typing = NO_WORD
         self._last_text = None
         self.setDocument(doc)
+        self._set_tab_width()  # a new document starts with Qt's 80px tabs
         self.highlighter.setDocument(doc)
         self._update_margins()
         self._refresh_matches()
@@ -673,10 +674,13 @@ class SheetEdit(QPlainTextEdit):
     def setFont(self, font: QFont) -> None:  # noqa: N802
         super().setFont(font)
         self.document().setDefaultFont(font)
-        self.setTabStopDistance(QFontMetrics(font).horizontalAdvance(" ") * 4)
+        self._set_tab_width()
         self.document().setDocumentMargin(DOCUMENT_MARGIN)
         self._update_margins()
         self.results.update()
+
+    def _set_tab_width(self) -> None:
+        self.setTabStopDistance(QFontMetrics(self.font()).horizontalAdvance(" ") * 4)
 
     def _schedule(self) -> None:
         # long sheets: wait for a pause in typing so keystrokes never lag

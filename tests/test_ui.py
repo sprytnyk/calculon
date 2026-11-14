@@ -364,6 +364,17 @@ def test_undo_survives_switching_sheets(window, app) -> None:
     assert window.editor.result_text(0) == "2"
 
 
+def test_tab_is_four_spaces_wide_in_every_sheet(window, app) -> None:
+    sheet = window.store.create_sheet("", "Tabs", "a\tb")
+    window.open_sheet(sheet)
+    editor = window.editor
+    for _ in range(2):  # and again after zooming in
+        space = editor.fontMetrics().horizontalAdvance(" ")
+        assert editor.tabStopDistance() == pytest.approx(space * 4)
+        window.zoom(1)
+    window.zoom(0)
+
+
 def test_find_in_sheet(window, app) -> None:
     window.new_sheet("")
     window.editor.setPlainText("rent = $900\nfood = $300\nrent + food")
