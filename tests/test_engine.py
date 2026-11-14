@@ -113,11 +113,11 @@ def one(text: str, **opts) -> str:
         ("-$5 + $2", "-$3.00"),
         # units
         ("10 km in m", "10,000 m"),
-        ("5 hours 30 minutes to seconds", "19,800 seconds"),
+        ("5 hours 30 minutes to seconds", "19,800 s"),
         ("100 pounds in kg", "45.359237 kg"),
         ("meters in 10 km", "10,000 m"),
         ("days in 3 weeks", "21 days"),
-        ("seconds in a day", "86,400 seconds"),
+        ("seconds in a day", "86,400 s"),
         ("km m", "1,000 m"),
         ("5 km cast miles", "5 mi"),
         ("300 + 20 km", "320 km"),
@@ -201,7 +201,7 @@ def one(text: str, **opts) -> str:
         ("midpoint between March 12 and April 5", "24 March"),
         ("Feb 28 + 1 month", "28 March"),
         ("January 31 2020 + 1 month", "29 February 2020"),
-        ("7:45am - 4:20pm", "8 hours 35 minutes"),
+        ("7:45am - 4:20pm", "8 hours 35 min"),
         ("9:00 + 90 minutes", "10:30"),
         # a night is one day
         ("2 nights", "2 nights"),
@@ -213,8 +213,8 @@ def one(text: str, **opts) -> str:
         ("2 nights × $95 per night", "$190.00"),
         ("2 days × $95 per day", "$190.00"),
         ("3 × $95/day", "$285.00/day"),
-        ("Meeting March 5, 10:00 - 11:30", "1 hour 30 minutes"),
-        ("March 5 10:00 to 12:30", "2 hours 30 minutes"),
+        ("Meeting March 5, 10:00 - 11:30", "1 hour 30 min"),
+        ("March 5 10:00 to 12:30", "2 hours 30 min"),
         ("10 June + 2 nights", "12 June"),
         # nights with a time end at 12:00 check-out; before 06:00 is still the night before
         ("11.11.2026 14:00 + 2 nights", "13 November, 12:00"),
@@ -232,7 +232,7 @@ def one(text: str, **opts) -> str:
         ("12 June 2027 @ 9:00", "12 June 2027, 09:00"),
         ("tomorrow 9am", "11 November, 09:00"),
         ("13.11.2026 15:00 - 12.11.2026 15:00", "1 day"),
-        ("11.11.2026 15:00 to 12.11.2026 17:30", "1 day 2 hours 30 minutes"),
+        ("11.11.2026 15:00 to 12.11.2026 17:30", "1 day 2 hours 30 min"),
         ("next friday", "13 November"),
         ("March 1st + 1 week", "8 March"),
     ],
@@ -459,8 +459,8 @@ def test_timeline_boundary() -> None:
     # days and hours keep it short; hovering over @to shows it exactly
     assert one(start + "@to 14.11.2026 18:40") == "2 days 3 hours left"
     assert one(start + "@to 13.11.2026 15:40") == "1 day left"
-    assert one(start + "@to 13.11.2026 14:20") == "23 hours 20 minutes left"
-    assert one(start + "@to 12.11.2026 15:20") == "20 minutes left"
+    assert one(start + "@to 13.11.2026 14:20") == "23 hours 20 min left"
+    assert one(start + "@to 12.11.2026 15:20") == "20 min left"
     assert one(start + "@to 12.11.2026 12:00") == "3 hours over"
     assert one(start + "@to 13.11.2026") == "1 day left"  # no time: whole days
     # how long the timeline lasts shows when hovering over @to
@@ -619,8 +619,8 @@ def test_words_in_prose_are_not_coloured_as_keywords() -> None:
         ("100 bps in kbps", "0.1 kbps"),
         ("1 MiB/s in Mbps", "8.388608 Mbps"),
         ("100 Mbps + 10 MB/s", "180 Mbps"),
-        ("10 GB / 100 Mbps", "800 seconds"),
-        ("10 GB at 100 Mbps in minutes", "13.333333 minutes"),
+        ("10 GB / 100 Mbps", "800 s"),
+        ("10 GB at 100 Mbps in minutes", "13.333333 min"),
         ("100 Mbps × 1 hour in GB", "45 GB"),
         ("10 km at 5 kph", "2 hours"),
         # lowercase, as people type it: mb is megabytes, mbps is megabits
@@ -630,7 +630,7 @@ def test_words_in_prose_are_not_coloured_as_keywords() -> None:
         ("500 mb in gb", "0.5 GB"),
         ("1 mbit in mb", "0.125 MB"),
         ("1 Mb in MB", "0.125 MB"),  # exact case stays SI
-        ("10 gb at 100 mbps in minutes", "13.333333 minutes"),
+        ("10 gb at 100 mbps in minutes", "13.333333 min"),
     ],
 )
 def test_data_rates(line: str, answer: str) -> None:
@@ -639,7 +639,7 @@ def test_data_rates(line: str, answer: str) -> None:
 
 def test_data_rates_in_ukrainian() -> None:
     assert one("100 Мбіт/с у МБ/с", lang="uk") == "12.5 МБ/с"
-    assert one("10 ГБ по 100 Мбіт/с у хвилинах", lang="uk") == "13.333333 хвилини"
+    assert one("10 ГБ по 100 Мбіт/с у хвилинах", lang="uk") == "13.333333 хв"
     assert one("1 мбіт/с у мб/с", lang="uk") == "0.125 МБ/с"
 
 

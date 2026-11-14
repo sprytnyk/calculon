@@ -87,8 +87,8 @@ _DEFS: list[tuple[str, tuple[str, str], list[str], list[str]]] = [
     ("acre", ("acre", "acres"), [], ["acre", "acres"]),
     # time
     ("millisecond", ("ms", "ms"), ["ms"], ["millisecond", "milliseconds", "msec", "msecs"]),
-    ("second", ("second", "seconds"), ["s"], ["second", "seconds", "sec", "secs"]),
-    ("minute", ("minute", "minutes"), [], ["minute", "minutes", "min", "mins"]),
+    ("second", ("s", "s"), ["s"], ["second", "seconds", "sec", "secs"]),
+    ("minute", ("min", "min"), [], ["minute", "minutes", "min", "mins"]),
     ("hour", ("hour", "hours"), ["h"], ["hour", "hours", "hr", "hrs"]),
     ("day", ("day", "days"), ["d"], ["day", "days"]),
     ("night", ("night", "nights"), [], ["night", "nights"]),
@@ -208,13 +208,13 @@ _UK_DEFS: list[tuple[str, tuple[str, str, str], list[str], list[str]]] = [
     ("millisecond", ("мс", "мс", "мс"), ["мс"], ["мілісекунда", "мілісекунди", "мілісекунд"]),
     (
         "second",
-        ("секунда", "секунди", "секунд"),
+        ("с", "с", "с"),
         ["с"],
         ["секунда", "секунди", "секунд", "секунду", "сек"],
     ),
     (
         "minute",
-        ("хвилина", "хвилини", "хвилин"),
+        ("хв", "хв", "хв"),
         ["хв"],
         ["хвилина", "хвилини", "хвилин", "хвилину"],
     ),
