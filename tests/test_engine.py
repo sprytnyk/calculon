@@ -140,8 +140,8 @@ def one(text: str, **opts) -> str:
         ("30 hours at $30/hour", "$900.00"),
         ("$500 at $20/hour", "25 hours"),
         ("3 hours / 3 days", "0.042"),
-        ("€30/day in €/month", "€913.13/month"),
-        ("$24 a day for a year", "$8,766.00"),
+        ("€30/day in €/month", "€913.11/month"),
+        ("$24 a day for a year", "$8,765.82"),
         # numbers
         ("2.5k", "2,500"),
         ("5M", "5,000,000"),
@@ -388,6 +388,7 @@ def test_big_answers_are_short_in_the_answers_column_only() -> None:
         ("5 ft 3 in in cm", "160.02 cm"),
         ("3 in to cm", "7.62 cm"),
         ("10 GB at 100 Mbps in minutes", "13.333 min"),
+        ("1 year in days", "365.242 days"),
     ],
 )
 def test_inches_and_years(line: str, expected: str) -> None:

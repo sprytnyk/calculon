@@ -15,6 +15,8 @@ for _prefix in ("", "kilo", "mega", "giga", "tera"):
     UREG.define(f"{_prefix}bit_per_second = {_prefix}bit / second")
     UREG.define(f"{_prefix}byte_per_second = {_prefix}byte / second")
 UREG.define("night = day")
+# the average Gregorian year, as Soulver uses; pint's own is 365.25 days. Months follow it.
+UREG.define("year = 365.2425 * day = a = yr = julian_year")
 
 # A unit expression is a tuple of (atom, power). An atom is a pint unit name
 # ("kilometer") or a currency code prefixed with CUR ("¤USD").

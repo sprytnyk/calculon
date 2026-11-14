@@ -304,7 +304,7 @@ def to_relativedelta(q: Q) -> relativedelta:
         kw[field_] = kw.get(field_, 0) + float(amount) * mult
     # relativedelta needs whole years/months; spill fractions into days.
     days_extra = 0.0
-    for field_, per in (("years", 365.25), ("months", 30.436875)):
+    for field_, per in (("years", 365.2425), ("months", 30.436875)):
         if field_ in kw and kw[field_] != int(kw[field_]):
             whole = int(kw[field_])
             days_extra += (kw[field_] - whole) * per
