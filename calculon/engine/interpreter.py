@@ -384,6 +384,15 @@ def _classify_word(t: Tok, toks: list[Tok], i: int, items: list[Item]) -> Item:
     m = re.fullmatch(r"(?:line|рядок)(\d+)", low)
     if m:
         return Item("lineref", m.group(1), t, t)
+    # "5 ft 3 in in cm": "in" right after a number, then "in"/"to" or nothing, is inches
+    nxt = toks[i + 1] if i + 1 < len(toks) else None
+    if (
+        low == "in"
+        and items
+        and items[-1].kind == "num"
+        and (nxt is None or (nxt.kind == "WORD" and nxt.text.lower() in CONVERT_WORDS))
+    ):
+        return Item("unit", U.lookup("inch") or "inch", t, t)
     if low in AGGREGATES or low in KEYWORDS:
         return Item("kw", low, t, t)
     if low in UK.WORDS:

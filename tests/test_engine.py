@@ -382,6 +382,18 @@ def test_big_answers_are_short_in_the_answers_column_only() -> None:
     assert uk.lines[0].short == "5 млн ₴"
 
 
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("5 ft 3 in in cm", "160.02 cm"),
+        ("3 in to cm", "7.62 cm"),
+        ("10 GB at 100 Mbps in minutes", "13.333 min"),
+    ],
+)
+def test_inches_and_years(line: str, expected: str) -> None:
+    assert one(line) == expected
+
+
 def test_soulver_references_in_exported_text() -> None:
     text = "$1000\n[$1 000,00](line1) − 200\n[$800,00](line2) × fuel $50"
     assert calc(text) == ["$1,000.00", "$800.00", "$40,000.00"]
