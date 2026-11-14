@@ -389,6 +389,8 @@ def test_big_answers_are_short_in_the_answers_column_only() -> None:
         ("3 in to cm", "7.62 cm"),
         ("10 GB at 100 Mbps in minutes", "13.333 min"),
         ("1 year in days", "365.242 days"),
+        ("1 decade in years", "10 years"),
+        ("2 centuries in decades", "20 decades"),
     ],
 )
 def test_inches_and_years(line: str, expected: str) -> None:

@@ -17,6 +17,15 @@ for _prefix in ("", "kilo", "mega", "giga", "tera"):
 UREG.define("night = day")
 # the average Gregorian year, as Soulver uses; pint's own is 365.25 days. Months follow it.
 UREG.define("year = 365.2425 * day = a = yr = julian_year")
+# pint's "decade" is a ratio (as in "decades of frequency") and can't be redefined,
+# so Calculon's "decade" goes to pint under another name
+UREG.define("decade_of_years = 10 * year")
+PINT_NAMES = {"decade": "decade_of_years"}
+
+
+def _pint(atom: str) -> str:
+    return PINT_NAMES.get(atom, atom)
+
 
 # A unit expression is a tuple of (atom, power). An atom is a pint unit name
 # ("kilometer") or a currency code prefixed with CUR ("¤USD").
@@ -236,8 +245,8 @@ _UK_DEFS: list[tuple[str, tuple[str, str, str], list[str], list[str]]] = [
         ["місяць", "місяці", "місяців", "місяця"],
     ),
     ("year", ("рік", "роки", "років"), [], ["рік", "роки", "років", "року"]),
-    ("decade", ("десятиліття", "десятиліття", "десятиліть"), [], []),
-    ("century", ("століття", "століття", "століть"), [], []),
+    ("decade", ("десятиліття", "десятиліття", "десятиліть"), [], ["десятиліття", "десятиліть"]),
+    ("century", ("століття", "століття", "століть"), [], ["століття", "століть"]),
     ("degree_Celsius", ("°C", "°C", "°C"), ["°С"], []),  # Cyrillic С
     ("kelvin", ("K", "K", "K"), ["К"], []),
     ("bit", ("біт", "біти", "бітів"), [], ["біт", "біти", "бітів"]),
@@ -304,7 +313,8 @@ for _word, _name in {
     "фунтах": "pound", "унціях": "ounce", "літрах": "liter", "мілілітрах": "milliliter",
     "галонах": "gallon", "гектарах": "hectare", "акрах": "acre", "секундах": "second",
     "хвилинах": "minute", "годинах": "hour", "днях": "day", "добах": "day", "ночах": "night",
-    "тижнях": "week", "місяцях": "month", "роках": "year", "байтах": "byte",
+    "тижнях": "week", "місяцях": "month", "роках": "year", "десятиліттях": "decade",
+    "століттях": "century", "байтах": "byte",
     "кілобайтах": "kilobyte", "мегабайтах": "megabyte", "гігабайтах": "gigabyte",
     "терабайтах": "terabyte", "бітах": "bit", "градусах": "degree", "радіанах": "radian",
     "калоріях": "calorie", "кілокалоріях": "kilocalorie",
@@ -422,7 +432,7 @@ def dimensionality(atom: str) -> str:
         return "[currency]"
     if is_custom(atom):
         return f"[{atom}]"
-    return str(UREG.Unit(atom).dimensionality)
+    return str(UREG.Unit(_pint(atom)).dimensionality)
 
 
 def dims_of(units: Units) -> dict[str, int]:
@@ -435,7 +445,7 @@ def dims_of(units: Units) -> dict[str, int]:
         if is_custom(atom):
             out[f"[{atom}]"] = out.get(f"[{atom}]", 0) + power
             continue
-        for dim, p in UREG.Unit(atom).dimensionality.items():
+        for dim, p in UREG.Unit(_pint(atom)).dimensionality.items():
             out[dim] = out.get(dim, 0) + int(p * power)
     return {k: v for k, v in out.items() if v}
 
@@ -447,7 +457,7 @@ def round_factor(f: float) -> Decimal:
 @cache
 def factor(src: str, dst: str) -> Decimal:
     """How many dst are in one src (both physical, same dimensionality)."""
-    return round_factor(UREG.Quantity(1, src).to(dst).magnitude)
+    return round_factor(UREG.Quantity(1, _pint(src)).to(_pint(dst)).magnitude)
 
 
 def physical_factor(src: Units, dst: Units) -> Decimal:
@@ -471,7 +481,7 @@ def _pint_expr(units: Units) -> str:
         if is_currency(atom) or is_custom(atom):
             continue
         name, p = split_power(atom)
-        parts.append(f"{name}**{p * power}")
+        parts.append(f"{_pint(name)}**{p * power}")
     return " * ".join(parts)
 
 
