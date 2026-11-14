@@ -99,6 +99,7 @@ def one(text: str, **opts) -> str:
         ("10 usd in eur", "€9.00"),
         ("20 GBP as AUD", "37.50 AUD"),
         ("50 EUR in USD at 1.05 USD/EUR", "$52.50"),
+        ("50 USD in EUR at 1.05 USD/EUR", "€47.62"),
         ("$200 + €200", "€380.00"),
         ("$20 + 30", "$50.00"),
         ("1000 UAH in USD", "$24.39"),

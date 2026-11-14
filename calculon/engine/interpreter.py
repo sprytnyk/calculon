@@ -1256,8 +1256,11 @@ def _custom_rate(value: Q, target: U.Units, rate: Value, rates: RateTable) -> Q:
         raise CalcError("rate must be a number")
     if rate.unitless:
         return Q(value.mag * rate.mag, target)
-    out = mul(value, rate, RateTable())  # empty table: no hidden conversions
-    if out.units != target:
+    try:
+        out: Q | None = mul(value, rate, RateTable())  # empty table: no hidden conversions
+    except CalcError:  # $50 × USD/EUR can't cancel without rates: the rate goes the other way
+        out = None
+    if out is None or out.units != target:
         out = div(value, rate, RateTable())
     if U.normalize(out.units) != U.normalize(target):
         raise CalcError("rate doesn't match")
