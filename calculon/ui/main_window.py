@@ -32,6 +32,8 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QApplication,
+    QGridLayout,
+    QHBoxLayout,
     QInputDialog,
     QLabel,
     QMainWindow,
@@ -157,10 +159,31 @@ class MainWindow(QMainWindow):
         self.vim_pending_label = QLabel()
         self.vim_pending_label.setObjectName("vimPending")
         self.vim_pending_label.hide()
-        self.statusBar().addWidget(self.vim_mode_label)
-        self.statusBar().addWidget(self.total_label)
-        self.statusBar().addPermanentWidget(self.vim_pending_label)
-        self.statusBar().addPermanentWidget(self.rates_label)
+        # The total sits in the middle of the window. The two sides get the same width,
+        # so the total stays put when the vim labels or the rates text change.
+        status = QGridLayout()
+        status.setContentsMargins(0, 0, 0, 0)
+        # no gaps: the grid drops one beside an empty column, which would move the total
+        status.setHorizontalSpacing(0)
+        status.addWidget(self.vim_mode_label, 0, 0, Qt.AlignmentFlag.AlignLeft)
+        status.addWidget(self.total_label, 0, 1)
+        # a short note like "Copied $30.00" shows in the total's place for a moment
+        self.message_label = QLabel()
+        self.message_label.hide()
+        status.addWidget(self.message_label, 0, 1)
+        self._message_timer = QTimer(self)
+        self._message_timer.setSingleShot(True)
+        self._message_timer.timeout.connect(self._hide_message)
+        right = QHBoxLayout()
+        right.addStretch()
+        right.addWidget(self.vim_pending_label)
+        right.addWidget(self.rates_label)
+        status.addLayout(right, 0, 2)
+        status.setColumnStretch(0, 1)
+        status.setColumnStretch(2, 1)
+        status_row = QWidget()
+        status_row.setLayout(status)
+        self.statusBar().addWidget(status_row, 1)
         self.editor.vim_mode_changed.connect(lambda text: self._show_vim(self.vim_mode_label, text))
         self.editor.vim_pending_changed.connect(
             lambda text: self._show_vim(self.vim_pending_label, text)
@@ -689,7 +712,7 @@ class MainWindow(QMainWindow):
             self._saved_mtime = self.store.mtime(rel)
             self._dirty = False
         except OSError as exc:
-            self.statusBar().showMessage(str(exc), 5000)
+            self.show_message(str(exc), 5000)
         path = str(self.store.path(rel))
         if path not in self.file_watcher.files():
             self.file_watcher.addPath(path)
@@ -714,9 +737,7 @@ class MainWindow(QMainWindow):
             c.setPosition(min(cursor, len(text)))
             self.editor.setTextCursor(c)
             self._dirty = False
-            self.statusBar().showMessage(
-                self.t("external_change", name=self.store.display_name(rel)), 4000
-            )
+            self.show_message(self.t("external_change", name=self.store.display_name(rel)), 4000)
         self._saved_mtime = mtime
         if path not in self.file_watcher.files():
             self.file_watcher.addPath(path)
@@ -870,9 +891,21 @@ class MainWindow(QMainWindow):
         folder = path if path.is_dir() else path.parent
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
 
+    def show_message(self, text: str, ms: int) -> None:
+        """Show text in the total's place for ms milliseconds. Unlike QStatusBar's own
+        messages, it leaves the vim mode and the rates where they are."""
+        self.message_label.setText(text)
+        self.total_label.hide()
+        self.message_label.show()
+        self._message_timer.start(ms)
+
+    def _hide_message(self) -> None:
+        self.message_label.hide()
+        self.total_label.show()
+
     def _copy(self, text: str) -> None:
         QGuiApplication.clipboard().setText(text)
-        self.statusBar().showMessage(self.t("copied", text=text), 2000)
+        self.show_message(self.t("copied", text=text), 2000)
 
     def _copy_current_result(self) -> None:
         text = self.editor.current_result()
@@ -881,7 +914,7 @@ class MainWindow(QMainWindow):
 
     def _copy_with_results(self) -> None:
         QGuiApplication.clipboard().setText(self.editor.text_with_results())
-        self.statusBar().showMessage(self.t("copied", text="…"), 2000)
+        self.show_message(self.t("copied", text="…"), 2000)
 
     def _copy_total(self) -> None:
         result = self.editor.result

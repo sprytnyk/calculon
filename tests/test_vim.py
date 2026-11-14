@@ -10,7 +10,7 @@ from PySide6.QtTest import QTest
 
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog
-from tests.test_ui import pump
+from tests.test_ui import off_centre, pump
 
 Mode = pytest.importorskip("side_vim").Mode
 
@@ -249,3 +249,26 @@ def test_esc_never_brings_back_a_cursor_from_another_sheet(vim, app) -> None:
     esc(bar.field)
     assert ed.textCursor().document() is ed.document()
     assert ed.toPlainText() == ""
+
+
+def test_the_total_stays_put_as_vim_labels_come_and_go(vim, app) -> None:
+    ed = vim.editor
+    ed.recalculate()
+    assert vim.total_label.text()
+    where = off_centre(vim.total_label, app)
+    assert abs(where) <= 2
+    QTest.keyClicks(ed, "i")  # -- INSERT -- at the left
+    assert off_centre(vim.total_label, app) == where
+    esc(ed)
+    QTest.keyClicks(ed, "2d")  # pending keys at the right
+    assert off_centre(vim.total_label, app) == where
+    esc(ed)
+    assert off_centre(vim.total_label, app) == where
+
+
+def test_a_message_leaves_the_vim_mode_alone(vim, app) -> None:
+    QTest.keyClicks(vim.editor, "i")
+    vim._copy_total()
+    pump(app)
+    assert vim.message_label.isVisible()
+    assert vim.vim_mode_label.isVisible() and vim.vim_mode_label.text() == "-- INSERT --"

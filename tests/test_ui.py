@@ -33,6 +33,14 @@ def pump(app) -> None:
         app.processEvents()
 
 
+def off_centre(label, app) -> int:
+    """How far the middle of a status bar label is from the middle of the window, in
+    pixels. A pixel or two off is fine: QStatusBar keeps 2 px of margin on its left only."""
+    pump(app)
+    window = label.window()
+    return label.mapTo(window, label.rect().center()).x() - window.rect().center().x()
+
+
 def test_first_start_creates_welcome_sheet(window, app) -> None:
     assert window.store.all_sheets() == ["Welcome.txt"]
     assert window.current == ("sheet", "Welcome.txt")
@@ -1008,3 +1016,29 @@ def test_always_on_top_rebuilt_menus_and_settings_keep_choice(window, app, theme
     expected_icon = icons.icon("unpin").pixmap(20).toImage()
     assert window._actions["always_on_top"].icon().pixmap(20).toImage() == expected_icon
     assert not window.windowFlags() & TOP
+
+
+def test_total_stays_in_the_middle_of_the_window(window, app) -> None:
+    window.new_sheet("")
+    window.editor.setPlainText("rent = $900\nfood = $300")
+    window.editor.recalculate()
+    assert window.total_label.text()
+    assert abs(off_centre(window.total_label, app)) <= 2
+    window.rates_label.setText("Rates from a very long time ago, click to refresh")
+    assert abs(off_centre(window.total_label, app)) <= 2
+    window.resize(window.width() + 150, window.height())
+    assert abs(off_centre(window.total_label, app)) <= 2
+
+
+def test_a_message_takes_the_place_of_the_total(window, app) -> None:
+    window.new_sheet("")
+    window.editor.setPlainText("$10\n$20")
+    window.editor.recalculate()
+    window._copy_total()
+    message = window.message_label
+    assert message.text() == "Copied $30.00"
+    assert message.isVisible() and not window.total_label.isVisible()
+    assert abs(off_centre(message, app)) <= 2
+    assert window.rates_label.isVisible()
+    window._message_timer.timeout.emit()  # its time is up
+    assert window.total_label.isVisible() and not message.isVisible()
