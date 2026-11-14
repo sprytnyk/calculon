@@ -3,7 +3,7 @@
 from collections.abc import Callable
 
 from PySide6.QtCore import QEvent, QObject, Qt
-from PySide6.QtGui import QKeyEvent
+from PySide6.QtGui import QKeyEvent, QTextCursor
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QToolButton, QWidget
 
 from . import icons
@@ -18,6 +18,8 @@ class FindBar(QWidget):
         self.editor = editor
         self.tr_ = tr
         self._start = 0  # where the cursor was when the search began
+        self._origin = QTextCursor()  # the whole cursor then, for Esc in vim mode
+        self._backward = False  # opened with vim's ?
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 6, 10, 6)
         layout.setSpacing(4)
@@ -30,7 +32,7 @@ class FindBar(QWidget):
         self.count.setObjectName("findCount")
         self.prev = self._button("caret_up", lambda: self.step(backward=True))
         self.next = self._button("caret_down", lambda: self.step())
-        self.close_button = self._button("close", self.close_bar)
+        self.close_button = self._button("close", self._cancel)
         layout.addWidget(self.field, 1)
         layout.addWidget(self.count)
         layout.addSpacing(4)
@@ -61,10 +63,12 @@ class FindBar(QWidget):
         self.close_button.setIcon(icons.icon("close"))
         self._update_count()
 
-    def open(self) -> None:
+    def open(self, backward: bool = False) -> None:
         cur = self.editor.textCursor()
         picked = cur.selectedText()
         self._start = cur.selectionStart()
+        self._origin = QTextCursor(cur)
+        self._backward = backward
         self.show()
         if picked and " " not in picked:  # a selection within one line
             self.field.setText(picked)
@@ -78,6 +82,20 @@ class FindBar(QWidget):
         self.editor.set_find("")
         self.editor.setFocus()
 
+    def _cancel(self) -> None:
+        """Esc or the close button. In vim mode the cursor goes back where it was."""
+        self.close_bar()
+        # the cursor belongs to the sheet the search began in; another sheet may be open
+        if self.editor.vim_on() and self._origin.document() is self.editor.document():
+            self.editor.setTextCursor(self._origin)
+
+    def _accept(self, backward: bool) -> None:
+        """Enter in vim mode: like vim's / or ?, jump from where the search began, then
+        n and N carry on."""
+        text = self.field.text()
+        self._cancel()
+        self.editor.vim_accept_search(text, forward=not backward)
+
     def step(self, backward: bool = False) -> None:
         if not self.isVisible():
             self.open()
@@ -86,15 +104,21 @@ class FindBar(QWidget):
         self._update_count()
 
     def sheet_changed(self) -> None:
-        """Another sheet is open: search it from the top."""
-        if self.isVisible():
-            self._start = 0
-            self.editor.set_find(self.field.text())
-            self._update_count()
+        """Another sheet is open: search it from the top. In vim mode the bar closes
+        instead, since its search began in the sheet you left."""
+        if not self.isVisible():
+            return
+        if self.editor.vim_on():
+            self.hide()  # not close_bar: focus stays where it is, on the sidebar say
+            self.editor.set_find("")
+            return
+        self._start = 0
+        self.editor.set_find(self.field.text())
+        self._update_count()
 
     def _search(self, text: str) -> None:
         self.editor.set_find(text)
-        self.editor.find_next(start=self._start)
+        self.editor.find_next(self._backward, start=self._start)
         self._update_count()
 
     def _update_count(self) -> None:
@@ -113,9 +137,13 @@ class FindBar(QWidget):
         if obj is self.field and event.type() == QEvent.Type.KeyPress:
             assert isinstance(event, QKeyEvent)
             if event.key() == Qt.Key.Key_Escape:
-                self.close_bar()
+                self._cancel()
                 return True
             if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
-                self.step(backward=bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier))
+                shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+                if self.editor.vim_on():
+                    self._accept(backward=self._backward != shift)
+                else:
+                    self.step(backward=shift)
                 return True
         return super().eventFilter(obj, event)

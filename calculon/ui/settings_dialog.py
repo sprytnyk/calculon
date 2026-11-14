@@ -31,7 +31,7 @@ from ..engine.currency import KNOWN_CODES
 from ..settings import Settings
 from ..spelling import Status, platform_key, probe
 from ..translations import LANGUAGES
-from . import icons
+from . import icons, vim
 from .theme import DARK, PALETTES, Theme
 
 NUMBER_STYLES = [
@@ -287,11 +287,18 @@ class SettingsDialog(QDialog):
         self.spell_hint.setWordWrap(True)
         self.spell_hint.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         spelling.add("", self.spell_hint)
-        return [
+        cards = [
             (tr("section_sheets"), sheets),
             (tr("section_appearance"), look),
             (tr("section_spelling"), spelling),
         ]
+        self.vim_mode = QCheckBox(tr("vim_mode"))
+        self.vim_mode.setChecked(s.vim_mode)
+        if vim.AVAILABLE:  # no switch without side-vim
+            editing = Card()
+            editing.add("", self.vim_mode, tr("hint_vim_mode"))
+            cards.append((tr("section_editing"), editing))
+        return cards
 
     def _numbers(self, s: Settings) -> list[tuple[str, QWidget]]:
         tr = self.t
@@ -404,6 +411,7 @@ class SettingsDialog(QDialog):
             font_size=self.font_size.value(),
             ligatures=self.ligatures.isChecked(),
             # a greyed-out box keeps what was saved, for when Hunspell turns up
+            vim_mode=self.vim_mode.isChecked() if vim.AVAILABLE else self.original.vim_mode,
             spell_check=(
                 self.spell_check.isChecked()
                 if self.spell_check.isEnabled()

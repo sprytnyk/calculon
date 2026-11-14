@@ -58,7 +58,7 @@ from ..engine import units as U
 from ..engine.currency import KNOWN_CODES
 from ..engine.interpreter import AGGREGATES, FUNCTIONS, KEYWORDS, ROUNDERS
 from ..spelling import SpellChecker, misspelled, words
-from . import icons
+from . import icons, vim
 from .theme import Theme
 
 WORD_RE = re.compile(r"[^\W\d_][\w]*$")
@@ -503,6 +503,9 @@ class SheetEdit(QPlainTextEdit):
     evaluated = Signal(object)  # SheetResult
     copied = Signal(str)
     results_resized = Signal(int)
+    vim_mode_changed = Signal(str)  # what the status bar shows: "" or "-- INSERT --"
+    vim_pending_changed = Signal(str)  # keys typed so far, like "2d"
+    vim_search = Signal(bool)  # / (True, forward) or ? (False)
 
     def __init__(self, theme: Theme, parent: QWidget | None = None):
         super().__init__(parent)
@@ -514,6 +517,7 @@ class SheetEdit(QPlainTextEdit):
         self.results_width = 260
         self.show_line_numbers = True
         self._last_text: str | None = None
+        self.vim = None  # side-vim's VimMode, made the first time vim mode is turned on
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.setVerticalScrollBar(SheetScrollBar(self))
         self.setTabChangesFocus(False)
@@ -624,6 +628,48 @@ class SheetEdit(QPlainTextEdit):
             self.highlighter.rehighlight()
         finally:
             self.blockSignals(False)
+
+    def set_vim(self, on: bool) -> None:
+        """Turn vim mode on or off. Does nothing without side-vim."""
+        if not vim.AVAILABLE or (self.vim is None and not on):
+            return
+        if self.vim is None:
+            self.vim = vim.VimMode(self)
+            self.vim.clipboard = True
+            self.vim.escape_hook = self._vim_escape
+            self.vim.search_hook = self.vim_search.emit
+            self.vim.mode_changed.connect(lambda mode: self.vim_mode_changed.emit(vim.label(mode)))
+            self.vim.pending_changed.connect(self.vim_pending_changed)
+        if self.vim.enabled != on:
+            self.vim.set_enabled(on)
+        # set_enabled(False) leaves vim's mode as it was, so the label goes here
+        self.vim_mode_changed.emit(vim.label(self.vim.mode) if on else "")
+
+    def vim_on(self) -> bool:
+        return self.vim is not None and self.vim.enabled
+
+    def vim_insert(self) -> bool:
+        """True when vim mode is off or in Insert mode: keys type text as usual."""
+        return not self.vim_on() or self.vim.mode is vim.Mode.INSERT
+
+    def vim_reset(self) -> None:
+        """Another sheet is open: start it in Normal mode, like opening a file in vim."""
+        if self.vim_on():
+            self.vim.set_enabled(True)
+
+    def vim_accept_search(self, text: str, forward: bool) -> None:
+        """Enter in the find bar: back to Normal mode, then jump like vim's / or ?."""
+        if self.vim_on():
+            self.vim.normal()
+            self.vim.set_search(text, forward)
+
+    def _vim_escape(self) -> bool:
+        """Esc closes the autocomplete list before vim sees it."""
+        popup = self._completer.popup()
+        if popup.isVisible():
+            popup.hide()
+            return True
+        return False
 
     def setReadOnly(self, read_only: bool) -> None:  # noqa: N802
         # the help sheet and the trash are read-only: nothing there to fix
@@ -1095,6 +1141,8 @@ class SheetEdit(QPlainTextEdit):
             Qt.Key.Key_Delete,
         ):
             self._completer.popup().hide()
+            if not self.vim_insert():
+                return  # a typing key: it changes text only in Insert mode, like Qt's own
             self.delete_to_line_edge(forward=event.key() == Qt.Key.Key_Delete)
             return
         popup = self._completer.popup()

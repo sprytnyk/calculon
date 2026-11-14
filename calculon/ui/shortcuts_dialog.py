@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from . import icons
+from .vim import key_rows as vim_keys
 
 
 def key_text(seq: QKeySequence | QKeySequence.StandardKey | Qt.Key | str) -> str:
@@ -39,7 +40,7 @@ def menu_shortcuts(bar: QMenuBar) -> list[tuple[str, list[tuple[QAction, str]]]]
 
 
 class ShortcutsDialog(QDialog):
-    def __init__(self, bar: QMenuBar, tr, parent: QWidget | None = None):
+    def __init__(self, bar: QMenuBar, tr, parent: QWidget | None = None, vim: bool = False):
         super().__init__(parent)
         self.setWindowTitle(tr("shortcuts"))
         self.setWindowIcon(icons.icon("shortcuts"))
@@ -115,6 +116,10 @@ class ShortcutsDialog(QDialog):
                 ],
             )
         )
+        if vim:
+            sections.append(
+                (tr("shortcuts_vim"), [(None, tr(name), keys) for name, keys in vim_keys()])
+            )
         for title, rows in sections:
             head = QTreeWidgetItem([title, ""])
             font = QFont(self.tree.font())

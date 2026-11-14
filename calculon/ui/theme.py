@@ -267,6 +267,7 @@ def apply(app: QApplication, theme: Theme) -> None:
                       border-top: 1px solid {theme.border}; }}
         QStatusBar QLabel {{ color: {theme.muted}; padding: 0 6px; }}
         QStatusBar QLabel#total {{ color: {theme.result}; font-weight: 600; }}
+        QStatusBar QLabel#vimMode {{ color: {theme.text}; font-weight: 600; }}
         QTreeWidget {{ background: {theme.sidebar}; border: none; outline: 0;
                        show-decoration-selected: 0; }}
         QTreeWidget::item {{ padding: 4px 2px; }}

@@ -149,8 +149,22 @@ class MainWindow(QMainWindow):
         self.total_label.clicked.connect(self._copy_total)
         self.rates_label = ClickLabel()
         self.rates_label.clicked.connect(self.rates.refresh)
+        # vim mode: the mode at the far left and unfinished keys at the right, as in vim
+        self.vim_mode_label = QLabel()
+        self.vim_mode_label.setObjectName("vimMode")
+        self.vim_mode_label.hide()
+        self.vim_pending_label = QLabel()
+        self.vim_pending_label.setObjectName("vimPending")
+        self.vim_pending_label.hide()
+        self.statusBar().addWidget(self.vim_mode_label)
         self.statusBar().addWidget(self.total_label)
+        self.statusBar().addPermanentWidget(self.vim_pending_label)
         self.statusBar().addPermanentWidget(self.rates_label)
+        self.editor.vim_mode_changed.connect(lambda text: self._show_vim(self.vim_mode_label, text))
+        self.editor.vim_pending_changed.connect(
+            lambda text: self._show_vim(self.vim_pending_label, text)
+        )
+        self.editor.vim_search.connect(lambda forward: self.find_bar.open(backward=not forward))
         self.statusBar().setSizeGripEnabled(False)
 
         self._save_timer = QTimer(self)
@@ -294,7 +308,7 @@ class MainWindow(QMainWindow):
         self._action(m, "insert_reference", ed.insert_line_reference, "Ctrl+L")
         m.addSeparator()
         fb = self.find_bar
-        self._action(m, "find_in_sheet", fb.open, K.Find)
+        self._action(m, "find_in_sheet", lambda: fb.open(), K.Find)
         self._action(m, "find_next", fb.step, K.FindNext)
         self._action(m, "find_previous", lambda: fb.step(backward=True), K.FindPrevious)
         self._action(m, "find", self._focus_search, "Ctrl+P")
@@ -404,6 +418,7 @@ class MainWindow(QMainWindow):
         self.editor.apply_theme(self.theme)
         self.editor.set_results_width(s.results_width)
         self.editor.set_line_numbers(s.line_numbers)
+        self.editor.set_vim(s.vim_mode)
         self._engine_changed()
         self._load_qt_translation()
         self.sidebar.tr_ = self.t
@@ -416,6 +431,11 @@ class MainWindow(QMainWindow):
         self._update_rates_label()
         self.setWindowTitle(self._title())
         self.build_menus()
+
+    @staticmethod
+    def _show_vim(label: QLabel, text: str) -> None:
+        label.setText(text)
+        label.setVisible(bool(text))
 
     def _load_qt_translation(self) -> None:
         """Qt's own texts (Close, OK, Cancel, Yes, No) in the UI language."""
@@ -582,6 +602,7 @@ class MainWindow(QMainWindow):
         self.editor.recalculate()
         self.find_bar.sheet_changed()
         self.editor.setReadOnly(read_only)
+        self.editor.vim_reset()
         self.editor._cursor_moved()
         self._dirty = False
         self.banner.setText(banner)
@@ -873,7 +894,7 @@ class MainWindow(QMainWindow):
         self.sidebar.search.selectAll()
 
     def show_shortcuts(self) -> None:
-        ShortcutsDialog(self.menuBar(), self.t, self).exec()
+        ShortcutsDialog(self.menuBar(), self.t, self, vim=self.editor.vim_on()).exec()
 
     def about(self) -> None:
         box = QMessageBox(self)
