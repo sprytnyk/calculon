@@ -10,7 +10,12 @@ dates, and the answers show up in a column on the right. The syntax follows
 
 - Lines mix words and maths: `$19 for breakfast + $22 for the uber`, `20% off $80`,
   `100 EUR in USD`, `10 km in miles`, `today + 3 weeks`
-- Variables, totals of the lines above, and answers from earlier lines
+- Variables, totals of the lines above, and answers from earlier lines. A line with just
+  `housing =` names the subtotal above it, so you can use `housing` further down
+- List numbers like `1.`, `1)` and `•` at the start of a line are skipped
+- Sheets exported from Soulver keep their line references, like `[$1 000,00](line2)`
+- Big answers are shortened in the answers column, like $386.8M. Copying gives the full
+  number
 - Trip plans with `@from` and `@to`: each stay or leg shows the date it reaches, and `@to`
   says how much time is left before a date. Soulver marks a trip's start and end in its
   window instead, so these lines don't carry over to it
