@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import pytest
 
-from calculon.engine import Config, FormatOptions, RateTable, evaluate_sheet
+from calculon.engine import Config, FormatOptions, RateTable, evaluate_sheet, format_value
 
 RATES = RateTable(
     base="USD",
@@ -423,6 +423,62 @@ def test_sheet_total() -> None:
     res = evaluate_sheet("$10\n$20\ntotal\n$5", RATES, CONFIG)
     assert res.total is not None
     assert res.total.mag == Decimal(35)
+
+
+def sheet_total(text: str) -> str:
+    total = evaluate_sheet(text, RATES, CONFIG).total
+    return format_value(total, FormatOptions()) if total is not None else ""
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        # - 5k carries on from the total, so it takes the place of the lines it adds up
+        ("rent = 12k UAH\nfood = 8k UAH\ntotal\n- 2k", "₴18,000.00"),
+        ("$100\n* 2", "$200.00"),
+        ("$100\n* 2\n+ $1", "$201.00"),
+        # an average isn't in the sheet total, so neither is what carries on from it
+        ("$10\n$20\naverage\n* 12", "$30.00"),
+        # rent += $100 takes the place of the line that last set rent
+        ("rent = $900\nrent += $100", "$1,000.00"),
+        ("rent = $900\n$50\nrent -= $100\nrent += $10", "$860.00"),
+        ("$900\n$100\nhousing =\nhousing += $50", "$1,050.00"),
+        # the tagged lines are in already, so a total of a tag isn't
+        ("$20 lunch #food\n$15 taxi\n$30 dinner #food\ntotal of #food", "$65.00"),
+        ("$20 lunch #food\n$15 taxi\naverage of #food", "$35.00"),
+        ("$20 lunch #food\n$15 taxi\ntotal of #food\n* 2", "$55.00"),
+        # a list of its own numbers is a new answer
+        ("$20\ntotal of $3, $4", "$27.00"),
+        # a line takes the place of the answers it uses
+        ("rent = 12k UAH\nfood = 8k UAH\nhousing = rent + food", "₴20,000.00"),
+        ("rent = 12k UAH\ntax = rent * 20%\nnet = rent - tax", "₴9,600.00"),
+        # a new amount worked out from an answer counts as well as that answer
+        ("rent = $1,000\ndeposit = rent × 2", "$3,000.00"),
+        ("rent = 12k UAH\ntax = rent * 20%", "₴14,400.00"),
+        ("$10\nline 1 * 2", "$30.00"),
+        ("rent = $1,000\nfood = $500\nrent × 2 + food", "$3,500.00"),
+        ("rent = $1,000\nfood = $500\ntotal of rent, food", "$1,500.00"),
+        ("rent = $1,000\nrent in EUR", "€900.00"),
+        ("$10\n$20\nx = average\nx * 2", "$30.00"),
+        # two lines can use one answer, and both count
+        ("x = $5\na = x + $1\nb = x + $2", "$13.00"),
+        ("$20 lunch #food\n$15 taxi\ntotal of #food\ntotal", "$35.00"),
+    ],
+)
+def test_the_sheet_total_counts_each_answer_once(text: str, expected: str) -> None:
+    assert sheet_total(text) == expected
+
+
+def test_a_total_below_a_tag_total_counts_each_line_once() -> None:
+    res = evaluate_sheet("$20 lunch #food\n$15 taxi\ntotal of #food\ntotal", RATES, CONFIG)
+    assert [line.text for line in res.lines][-2:] == ["$20.00", "$35.00"]
+    assert not res.lines[2].is_total  # not bold, and the block goes on past it
+
+
+def test_money_wins_the_sheet_total() -> None:
+    speeds = "100 mbps to mbs\n300 mbps to mbs\n85 mbps to mbs\n82 mbps to mbs\n"
+    assert sheet_total(speeds + "rent = 12k UAH\nfood = 8k UAH\ntotal") == "₴20,000.00"
+    assert sheet_total(speeds + "2 km") == "70.875 MB/s"  # no money: the kind used most
 
 
 def test_number_styles() -> None:

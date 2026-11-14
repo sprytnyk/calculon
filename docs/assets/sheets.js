@@ -275,10 +275,10 @@ window.CALCULON = {
       ],
       "answer": "€131.99",
       "total": true,
-      "status": "Total: ₴6,720.00"
+      "status": "Total: €131.99"
      }
     ],
-    "total": "Total: ₴6,720.00"
+    "total": "Total: €131.99"
    },
    "basics": {
     "name": "Moving budget",
@@ -1279,10 +1279,10 @@ window.CALCULON = {
       ],
       "answer": "131,99 €",
       "total": true,
-      "status": "Разом: 6 720,00 ₴"
+      "status": "Разом: 131,99 €"
      }
     ],
-    "total": "Разом: 6 720,00 ₴"
+    "total": "Разом: 131,99 €"
    },
    "basics": {
     "name": "Переїзд",

@@ -5,6 +5,7 @@ import re
 from contextlib import suppress
 from dataclasses import dataclass, field, replace
 
+from . import units as U
 from .currency import RateTable
 from .format import FormatOptions, format_value
 from .interpreter import (
@@ -18,6 +19,7 @@ from .interpreter import (
     classify,
     evaluate_tokens,
     tokenize_line,
+    var_key,
 )
 from .lexer import Tok
 from .timeline import (
@@ -29,7 +31,7 @@ from .timeline import (
     short_time,
     time_left,
 )
-from .values import CalcError, DateVal, Q, Value, add
+from .values import CalcError, DateVal, Q, Value, add, is_money
 
 log = logging.getLogger(__name__)
 
@@ -75,9 +77,15 @@ class LineResult:
     text: str = ""
     error: str = ""
     spans: list[tuple[int, int, str]] = field(default_factory=list)
-    is_total: bool = False
+    aggregate: str = ""  # a line like total, average or total of #food: "sum", "avg"...
+    of_tag: bool = False  # the aggregate works on tagged lines, not the lines above
     short: str = ""  # the answer as the answers column shows it, when shorter: $386.8M
     hints: list[tuple[int, int, str]] = field(default_factory=list)  # variables' values
+
+    @property
+    def is_total(self) -> bool:
+        """A total of the lines above: bold, and it starts a new block."""
+        return bool(self.aggregate) and not self.of_tag
 
 
 @dataclass
@@ -97,9 +105,14 @@ def evaluate_sheet(
     config = replace(config or Config(), number_style=opts.number_style)
     ctx = Context(rates=rates, config=config)
     results: list[LineResult] = []
-    all_values: list[Value] = []
+    # The sheet total adds up each answer once. A line that adds up earlier answers, as
+    # "t = rent + food" does, takes their place in it; "deposit = rent × 2" doesn't.
+    live: dict[int, Value] = {}  # the lines the total adds up
+    taken_by: dict[int, int] = {}  # a line that left the total -> the line in its place
+    out: set[int] = set()  # lines not in the total, nor anything worked out from them
     timeline: Timeline | None = None
-    for raw in text.split("\n"):
+    for i, raw in enumerate(text.split("\n")):
+        ctx.used, ctx.adds_up = set(), set()
         directive = DIRECTIVE_RE.match(raw)
         try:
             if directive:
@@ -113,18 +126,50 @@ def evaluate_sheet(
             res = LineResult(kind="text", error=f"internal error: {type(exc).__name__}")
         results.append(res)
         ctx.line_values.append(res.value)
-        if res.value is not None:
-            ctx.prev = res.value
-            if not res.is_total and not directive:
-                all_values.append(res.value)
-    total = None
-    if any(isinstance(v, Q) for v in all_values):
-        try:
-            total = aggregate("sum", all_values, rates)
-        except CalcError, ArithmeticError:  # 9e999999 + 9e999999 overflows
-            total = None
+        if res.value is None:
+            continue
+        if directive or res.aggregate not in ("", "sum") or ctx.used & out:
+            out.add(i)  # @from, average, count, or "* 12" under an average
+            continue
+        replaced = ctx.adds_up
+        if res.aggregate:
+            # a total adds up whole lines, so it takes the place of what stands for them
+            # now, as a total of #food does for the lines tagged #food
+            added = (j for j in ctx.used if _added_up(ctx.line_values[j], res.value))
+            replaced = {_in_place_of(j, taken_by) for j in added}
+        for j in replaced:
+            if live.pop(j, None) is not None:
+                taken_by[j] = i
+        live[i] = res.value
     names = sorted(set(ctx.var_names.values()), key=str.lower)
-    return SheetResult(results, total, names)
+    return SheetResult(results, _sheet_total(list(live.values()), rates), names)
+
+
+def _in_place_of(line: int, taken_by: dict[int, int]) -> int:
+    """The line that stands for this one in the sheet total now."""
+    while line in taken_by:
+        line = taken_by[line]
+    return line
+
+
+def _added_up(value: Value | None, total: Value) -> bool:
+    """Whether a total added up this answer: it leaves out the kinds of unit it isn't in,
+    as km in a total of money."""
+    if not isinstance(value, Q) or not isinstance(total, Q) or value.pct:
+        return False
+    return U.dims_of(value.units) == U.dims_of(total.units)
+
+
+def _sheet_total(values: list[Value], rates: RateTable) -> Q | None:
+    """The status bar's total. Money wins when there's any; otherwise the kind of unit
+    used most, as in a total line."""
+    if not any(isinstance(v, Q) for v in values):
+        return None
+    money = [v for v in values if isinstance(v, Q) and is_money(v)]
+    try:
+        return aggregate("sum", money or values, rates)
+    except CalcError, ArithmeticError:  # 9e999999 + 9e999999 overflows
+        return None
 
 
 def _evaluate_directive(
@@ -202,6 +247,7 @@ def _evaluate_line(
         ctx.tags = {}
         ctx.variables = {}
         ctx.var_names = {}
+        ctx.var_lines = {}
         ctx.custom_units = set()
         return res
     offset = 0
@@ -282,7 +328,7 @@ def _evaluate_items(
     timeline: Timeline | None = None,
 ) -> None:
     meaningful = [it for it in items if it.kind != "noise"]
-    res.is_total = _is_total_line(meaningful)
+    res.aggregate, res.of_tag = _aggregate_of(meaningful)
     if not [it for it in meaningful if it.kind != "tag"]:
         res.kind = "text"
         return
@@ -293,7 +339,7 @@ def _evaluate_items(
         meaningful.insert(0, _prev_item(meaningful[0]))
     try:
         if var_name and op in ("+=", "-="):
-            key = " ".join(var_name.lower().split())
+            key = var_key(var_name)
             if key not in ctx.variables:
                 raise ParseError(f"{var_name} is not defined")
             current = ctx.variables[key]
@@ -320,6 +366,13 @@ def _evaluate_items(
         res.kind = "text"
         res.error = "number too large"
         return
+    # "- 5k" and "rent += $100" change the answer they start from, whatever the maths
+    if continued:
+        ctx.adds_up.add(len(ctx.line_values) - 1)
+    elif var_name and op in ("+=", "-="):
+        line = ctx.var_lines[var_key(var_name)]
+        ctx.used.add(line)
+        ctx.adds_up.add(line)
     if var_name:
         ctx.set_var(var_name, value)
     res.kind = "value"
@@ -328,19 +381,27 @@ def _evaluate_items(
     with suppress(ArithmeticError, ValueError):
         if (short := format_value(value, opts, short=True)) != text:
             res.short = short
+    line = len(ctx.line_values)  # the line being worked out
     if res.is_total:
         ctx.block = []
-    else:
-        ctx.block.append(value)
+    elif not res.of_tag:  # its tagged lines are in the block already
+        ctx.block.append(line)
     for i, it in enumerate(items):
         if it.kind == "tag" and not (i and items[i - 1].key == "of"):
-            ctx.tags.setdefault(it.key, []).append(value)
+            ctx.tags.setdefault(it.key, []).append(line)
 
 
-def _is_total_line(items: list[Item]) -> bool:
+def _aggregate_of(items: list[Item]) -> tuple[str, bool]:
+    """What a line like total or average works out ("sum", "avg"...), or "" if it isn't
+    one, and whether it works on tagged lines, as "total of #food" does. "total of 3, 4"
+    isn't one: it adds up numbers of its own."""
     if not items or items[0].kind != "kw" or items[0].key not in AGGREGATES:
-        return False
-    return not (len(items) > 1 and items[1].key == "of")
+        return "", False
+    kind = AGGREGATES[items[0].key]
+    if len(items) > 1 and items[1].key == "of":
+        tagged = len(items) > 2 and items[2].kind == "tag"
+        return (kind, True) if tagged else ("", False)
+    return kind, False
 
 
 def _prev_item(first: Item) -> Item:

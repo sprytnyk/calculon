@@ -265,16 +265,26 @@ class Context:
     config: Config = field(default_factory=Config)
     variables: dict[str, Value] = field(default_factory=dict)
     var_names: dict[str, str] = field(default_factory=dict)  # key -> name as typed
+    var_lines: dict[str, int] = field(default_factory=dict)  # key -> the line that set it
     line_values: list[Value | None] = field(default_factory=list)
-    prev: Value | None = None
-    block: list[Value] = field(default_factory=list)  # values since the last total/heading
-    tags: dict[str, list[Value]] = field(default_factory=dict)
+    block: list[int] = field(default_factory=list)  # lines since the last total or heading
+    tags: dict[str, list[int]] = field(default_factory=dict)  # the lines with each tag
     custom_units: set[str] = field(default_factory=set)
+    # what evaluate_tokens found the line's answer is worked out from: the earlier lines
+    # it used, and those it only adds to or takes from, as "rent + food" does
+    used: set[int] = field(default_factory=set)
+    adds_up: set[int] = field(default_factory=set)
 
     def set_var(self, name: str, value: Value) -> None:
-        key = " ".join(name.lower().split())
+        key = var_key(name)
         self.variables[key] = value
         self.var_names[key] = name.strip()
+        self.var_lines[key] = len(self.line_values)  # the line being worked out
+
+
+def var_key(name: str) -> str:
+    """How a variable is stored: "Rent  Total" and "rent total" are one variable."""
+    return " ".join(name.lower().split())
 
 
 class ParseError(Exception):
@@ -454,6 +464,36 @@ class Parser:
         self.ctx = ctx
         self.rates = ctx.rates
         self.plain: list[int] = []  # positions of soft keywords read as plain text
+        self.used: set[int] = set()  # earlier lines read
+        # id(value) -> (value, the earlier lines it is a sum of); the value is kept so
+        # its id can't go to another one
+        self._sums: dict[int, tuple[Value, frozenset[int]]] = {}
+
+    def adds_up(self, value: Value) -> frozenset[int]:
+        """The earlier lines value is a sum of: rent and food for rent + food, none for
+        rent × 2."""
+        kept = self._sums.get(id(value))
+        return kept[1] if kept is not None and kept[0] is value else frozenset()
+
+    def _sum_of(self, value: Value, lines: frozenset[int]) -> Value:
+        if lines:
+            self._sums[id(value)] = (value, lines)
+        return value
+
+    def read_lines(self, lines: list[int]) -> list[Value]:
+        self.used.update(lines)
+        return [v for i in lines if (v := self.ctx.line_values[i]) is not None]
+
+    def read_line(self, i: int) -> Value:
+        self.used.add(i)
+        value = self.ctx.line_values[i]
+        assert value is not None
+        return self._sum_of(value, frozenset({i}))
+
+    def read_var(self, key: str) -> Value:
+        line = self.ctx.var_lines[key]
+        self.used.add(line)
+        return self._sum_of(self.ctx.variables[key], frozenset({line}))
 
     def rewind(self, pos: int) -> None:
         self.pos = pos
@@ -547,7 +587,7 @@ class Parser:
                 if min_bp > 5:
                     return None
                 self.pos += 1
-                return self.conversion(left, key, stops)
+                return self._sum_of(self.conversion(left, key, stops), self.adds_up(left))
             if key in ("for", "at", "@"):
                 if min_bp > 8:
                     return None
@@ -559,7 +599,8 @@ class Parser:
                     return None
                 self.pos += 1
                 right = self.expr(11, stops)
-                return add(left, right, r, ADD_OPS[key])
+                lines = self.adds_up(left) | self.adds_up(right)
+                return self._sum_of(add(left, right, r, ADD_OPS[key]), lines)
             if key in MUL_OPS or key in DIV_OPS or key in ("multiplied", "divided", "mod", "per"):
                 if min_bp > 20:
                     return None
@@ -707,7 +748,7 @@ class Parser:
             return self.money()
         if kind == "var":
             self.pos += 1
-            return self.postfix(self.ctx.variables[key])
+            return self.postfix(self.read_var(key))
         if kind == "const":
             self.pos += 1
             return self.postfix(Q(CONSTANTS[key]))  # type: ignore[arg-type]
@@ -753,9 +794,11 @@ class Parser:
             return self.weekday_date({"next": 1, "last": -1, "this": 0}[key])
         if key in ("prev", "previous", "ans", "answer"):
             self.pos += 1
-            if self.ctx.prev is None:
+            lines = self.ctx.line_values
+            prev = next((i for i in reversed(range(len(lines))) if lines[i] is not None), None)
+            if prev is None:
                 raise ParseError("no previous answer")
-            return self.postfix(self.ctx.prev)
+            return self.postfix(self.read_line(prev))
         if key == "line" and self.peek(1) and self.peek(1).kind == "num":  # type: ignore[union-attr]
             self.pos += 1
             n = self.peek()
@@ -913,7 +956,7 @@ class Parser:
             return q
         if it.kind == "var":
             self.pos += 1
-            v = self.ctx.variables[it.key]
+            v = self.read_var(it.key)
             if isinstance(v, Q) and v.unitless and not v.pct:
                 return v
         if it.kind == "op" and it.key == "(":
@@ -1092,7 +1135,7 @@ class Parser:
         # compare before int(): int(1e999999) takes a minute
         if n != n.to_integral_value() or not 1 <= n <= len(lines) or lines[int(n) - 1] is None:
             raise ParseError("no such line")
-        return lines[int(n) - 1]  # type: ignore[return-value]
+        return self.read_line(int(n) - 1)
 
     def function(self) -> Value:
         it = self.peek()
@@ -1130,14 +1173,17 @@ class Parser:
             nxt = self.peek()
             if nxt is not None and nxt.kind == "tag":
                 self.pos += 1
-                values = list(self.ctx.tags.get(nxt.key, []))
+                values = self.read_lines(self.ctx.tags.get(nxt.key, []))
             else:
                 values = [self.expr(0, frozenset(LIST_SEPARATORS))]
                 while self.take(*LIST_SEPARATORS):
                     values.append(self.expr(0, frozenset(LIST_SEPARATORS)))
-                return aggregate(kind, values, self.rates, lines=False)
+                total = aggregate(kind, values, self.rates, lines=False)
+                if kind != "sum":
+                    return total
+                return self._sum_of(total, frozenset().union(*map(self.adds_up, values)))
         else:
-            values = list(self.ctx.block)
+            values = self.read_lines(self.ctx.block)
         return aggregate(kind, values, self.rates)
 
     def rate_apply(self, left: Value, right: Value, key: str) -> Value:
@@ -1589,6 +1635,8 @@ def evaluate_tokens(
             if skipped is not None:
                 kept = {id(it) for it in cand}
                 skipped.update(id(it) for it in items if id(it) not in kept)
+            ctx.used = parser.used
+            ctx.adds_up = set(parser.adds_up(value))
             return value
     first = errors[0] if errors else ParseError("nothing to calculate")
     if isinstance(first, CalcError):

@@ -190,7 +190,7 @@ def mul(a: Value, b: Value, rates: RateTable) -> Q:
         return Q(a.mag * b.mag, a.units + b.units)
     # $30 × 4 days: money times a bare duration reads as $30/day × 4 days.
     for m, t in ((a, b), (b, a)):
-        if _is_money(m) and t.is_time() and not t.parts:
+        if is_money(m) and t.is_time() and not t.parts:
             return Q(m.mag * t.mag, m.units)
     q = simplify(Q(a.mag * b.mag, a.units + b.units, fmt=a.fmt or b.fmt), rates)
     if _money_squared(q):  # as in Soulver: $5 × €5 = €25, the right-hand currency wins
@@ -271,7 +271,7 @@ def _currency(q: Q) -> str | None:
     return next((u for u, _ in q.units if U.is_currency(u)), None)
 
 
-def _is_money(q: Q) -> bool:
+def is_money(q: Q) -> bool:
     return len(q.units) == 1 and U.is_currency(q.units[0][0]) and q.units[0][1] == 1
 
 
