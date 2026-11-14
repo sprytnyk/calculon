@@ -336,6 +336,44 @@ def test_money_times_money_keeps_the_right_hand_currency(line: str, expected: st
     assert one(line) == expected
 
 
+def test_an_operator_at_the_start_continues_the_line_just_above() -> None:
+    """As typing does in Soulver, "-" included, so a list of costs is a running balance."""
+    assert calc("$1000\n-200\n- 50\n+ 25\n× 2\n/ 5\n^ 2") == [
+        "$1,000.00",
+        "$800.00",
+        "$750.00",
+        "$775.00",
+        "$1,550.00",
+        "$310.00",
+        "$96,100.00",
+    ]
+    assert calc("$1000\n- 200\n- 50\nsubtotal") == ["$1,000.00", "$800.00", "$750.00", "$2,550.00"]
+
+
+def test_nothing_continues_across_a_gap_or_after_text_in_front() -> None:
+    text = (
+        "$1000\n\n- 200\n$1000\n# Next\n- 200\n$1000\n// note\n+ 5\n"
+        "$1000\nRefund: -200\nx = -5\n1. -5"
+    )
+    assert [t for t in calc(text) if t] == [
+        "$1,000.00",
+        "-200",
+        "$1,000.00",
+        "-200",
+        "$1,000.00",
+        "5",
+        "$1,000.00",
+        "-200",
+        "-5",
+        "-5",
+    ]
+
+
+def test_a_note_starting_with_an_operator_does_not_repeat_the_answer_above() -> None:
+    text = "$10 lunch\n- milk\n* remember the receipt\n-> next\ntotal"
+    assert calc(text) == ["$10.00", "", "", "", "$10.00"]
+
+
 def test_empty_add_assignment_stays_empty() -> None:
     assert calc("x = 5\nx +=\nx") == ["5", "", "5"]
 

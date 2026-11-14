@@ -124,7 +124,8 @@ average of 36, 42, 19 and 81
 100
 line124 * 2 // the line number is shown on the left; or double-click an answer
 prev + 1 // the answer just above; Ctrl+L types it
-+ 10 // a line starting with an operator continues the previous answer
++ 10 // an operator at the start continues the answer just above; - does too
+Refund: -5 // anything in front stops that: this is just -5
 
 ---
 // three dashes start a new section and clear variables and tags

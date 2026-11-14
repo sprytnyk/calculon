@@ -41,7 +41,9 @@ ASSIGN_RE = re.compile(r"^(?P<lead>\s*)(?P<name>[^\W\d][\w ]*?)\s*(?P<op>\+=|-=|
 LIST_MARK_RE = re.compile(
     r"^\s*(?:(?:\d+[.)]|•)\s+(?=\S)|\d+\s+(?=[^\W\d][\w ]*?\s*(?:\+=|-=|=)(?!=)))"
 )
-CONTINUE_RE = re.compile(r"^\s*(\+|\*|/|×|÷|\^)")
+# an operator at the very start continues the answer on the line just above, as typing does
+# in Soulver; "-200" too, so a plain negative number under an answer needs a label
+CONTINUE_RE = re.compile(r"^\s*(\+|-|−|\*|/|×|÷|\^)")
 
 # highlight classes
 SPAN_CLASSES = {
@@ -232,7 +234,8 @@ def _evaluate_line(
     plain: set[int] = set()  # "if", "to", "in" in prose: not coloured as keywords
     moves = timeline if labelled and not var_name else None
     skipped: set[int] = set()  # what the maths left out, as in the 4 of "4 Car $200"
-    _evaluate_items(res, items, body, var_name, op, ctx, opts, plain, skipped, moves)
+    continues = offset == 0 and CONTINUE_RE.match(line) is not None  # no label, name, list mark
+    _evaluate_items(res, items, var_name, op, ctx, opts, plain, skipped, continues, moves)
     if res.kind != "value":
         plain = {id(it) for it in items if it.kind == "kw" and it.key in SOFT}
     # a list number the maths left out looks like the skipped "1." of "1. Rent $1000"
@@ -261,13 +264,13 @@ def _format(value: Value, opts: FormatOptions) -> str:
 def _evaluate_items(
     res: LineResult,
     items: list[Item],
-    body: str,
     var_name: str | None,
     op: str | None,
     ctx: Context,
     opts: FormatOptions,
     plain: set[int],
     skipped: set[int],
+    continues: bool,
     timeline: Timeline | None = None,
 ) -> None:
     meaningful = [it for it in items if it.kind != "noise"]
@@ -275,8 +278,10 @@ def _evaluate_items(
     if not [it for it in meaningful if it.kind != "tag"]:
         res.kind = "text"
         return
-    # a line starting with an operator continues from the previous answer
-    if CONTINUE_RE.match(body) and ctx.prev is not None and meaningful[0].kind == "op":
+    # a line starting with an operator continues from the answer just above it
+    above = ctx.line_values[-1] if ctx.line_values else None
+    continued = continues and above is not None and meaningful[0].kind == "op"
+    if continued:
         meaningful.insert(0, _prev_item(meaningful[0]))
     try:
         if var_name and op in ("+=", "-="):
@@ -292,6 +297,9 @@ def _evaluate_items(
             )
         else:
             value = evaluate_tokens(meaningful, ctx, plain, skipped)
+        if continued and all(id(it) in skipped for it in meaningful[1:]):
+            # "- milk" under $10 is a note, not $10 again
+            raise ParseError("nothing after the operator")
         if timeline is not None and not res.is_total:
             value = timeline.advance(value, ctx.rates)  # a labelled duration moves it
     except (ParseError, CalcError, ArithmeticError, ValueError, OverflowError) as exc:
