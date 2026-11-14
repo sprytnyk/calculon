@@ -40,7 +40,7 @@ class Settings:
     number_style: str = "auto"  # auto follows the language: 1,234.56 or 1 234,56
     date_order: str = "DMY"
     dollar: str = "USD"
-    max_decimals: int = 6
+    max_decimals: int = 3
     money_decimals: int = 2
     rates_url: str = ""  # empty: built-in sources
     font_size: int = 14

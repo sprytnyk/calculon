@@ -576,7 +576,7 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "6.213712 mi",
+      "answer": "6.214 mi",
       "total": false
      },
      {
@@ -655,7 +655,7 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "16.666667 hours",
+      "answer": "16.667 hours",
       "total": false
      }
     ],
@@ -1556,7 +1556,7 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "6,213712 милі",
+      "answer": "6,214 милі",
       "total": false
      },
      {
@@ -1635,7 +1635,7 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "16,666667 години",
+      "answer": "16,667 години",
       "total": false
      }
     ],

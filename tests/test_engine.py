@@ -50,7 +50,7 @@ def one(text: str, **opts) -> str:
         ("21 mod 5", "1"),
         ("20 % 3", "2"),
         ("10 / 4", "2.5"),
-        ("1 / 3", "0.333333"),
+        ("1 / 3", "0.333"),
         ("10!", "3,628,800"),
         ("5 squared", "25"),
         # percentages
@@ -114,7 +114,7 @@ def one(text: str, **opts) -> str:
         # units
         ("10 km in m", "10,000 m"),
         ("5 hours 30 minutes to seconds", "19,800 s"),
-        ("100 pounds in kg", "45.359237 kg"),
+        ("100 pounds in kg", "45.359 kg"),
         ("meters in 10 km", "10,000 m"),
         ("days in 3 weeks", "21 days"),
         ("seconds in a day", "86,400 s"),
@@ -128,7 +128,7 @@ def one(text: str, **opts) -> str:
         ("100 °C in °F", "212 °F"),
         ("1 GB in MB", "1,000 MB"),
         ("1 GiB in MiB", "1,024 MiB"),
-        ("60 mph in km/h", "96.56064 km/h"),
+        ("60 mph in km/h", "96.561 km/h"),
         ("2 cups of flour", "2 cups"),
         # rates
         ("$30 × 4 days", "$120.00"),
@@ -139,7 +139,7 @@ def one(text: str, **opts) -> str:
         ("$50/week × 12 weeks", "$600.00"),
         ("30 hours at $30/hour", "$900.00"),
         ("$500 at $20/hour", "25 hours"),
-        ("3 hours / 3 days", "0.041667"),
+        ("3 hours / 3 days", "0.042"),
         ("€30/day in €/month", "€913.13/month"),
         ("$24 a day for a year", "$8,766.00"),
         # numbers
@@ -152,10 +152,10 @@ def one(text: str, **opts) -> str:
         ("5 as binary", "0b101"),
         ("3 million + 10%", "3,300,000"),
         ("1.5e3", "1,500"),
-        ("123456789 as sci", "1.234568e8"),
+        ("123456789 as sci", "1.235e8"),
         # functions
         ("sqrt 16", "4"),
-        ("sqrt(2)", "1.414214"),
+        ("sqrt(2)", "1.414"),
         ("square root of 81", "9"),
         ("round(3.14159, 2)", "3.14"),
         ("floor(2.7)", "2"),
@@ -164,7 +164,7 @@ def one(text: str, **opts) -> str:
         ("cos(0)", "1"),
         ("log 1000", "3"),
         ("abs(-4)", "4"),
-        ("pi * 2", "6.283185"),
+        ("pi * 2", "6.283"),
         # statistics
         ("total of 3, 4, 7 and 9", "23"),
         ("average of 36, 42, 19 and 81", "44.5"),
@@ -617,10 +617,10 @@ def test_words_in_prose_are_not_coloured_as_keywords() -> None:
         ("1 GB/s in Gbps", "8 Gbps"),
         ("1 Tbps in Gbps", "1,000 Gbps"),
         ("100 bps in kbps", "0.1 kbps"),
-        ("1 MiB/s in Mbps", "8.388608 Mbps"),
+        ("1 MiB/s in Mbps", "8.389 Mbps"),
         ("100 Mbps + 10 MB/s", "180 Mbps"),
         ("10 GB / 100 Mbps", "800 s"),
-        ("10 GB at 100 Mbps in minutes", "13.333333 min"),
+        ("10 GB at 100 Mbps in minutes", "13.333 min"),
         ("100 Mbps × 1 hour in GB", "45 GB"),
         ("10 km at 5 kph", "2 hours"),
         # lowercase, as people type it: mb is megabytes, mbps is megabits
@@ -630,7 +630,7 @@ def test_words_in_prose_are_not_coloured_as_keywords() -> None:
         ("500 mb in gb", "0.5 GB"),
         ("1 mbit in mb", "0.125 MB"),
         ("1 Mb in MB", "0.125 MB"),  # exact case stays SI
-        ("10 gb at 100 mbps in minutes", "13.333333 min"),
+        ("10 gb at 100 mbps in minutes", "13.333 min"),
     ],
 )
 def test_data_rates(line: str, answer: str) -> None:
@@ -639,7 +639,7 @@ def test_data_rates(line: str, answer: str) -> None:
 
 def test_data_rates_in_ukrainian() -> None:
     assert one("100 Мбіт/с у МБ/с", lang="uk") == "12.5 МБ/с"
-    assert one("10 ГБ по 100 Мбіт/с у хвилинах", lang="uk") == "13.333333 хв"
+    assert one("10 ГБ по 100 Мбіт/с у хвилинах", lang="uk") == "13.333 хв"
     assert one("1 мбіт/с у мб/с", lang="uk") == "0.125 МБ/с"
 
 

@@ -32,7 +32,7 @@ MONTHS_UK = (
 @dataclass(frozen=True)
 class FormatOptions:
     number_style: str = "comma_dot"
-    max_decimals: int = 6
+    max_decimals: int = 3
     money_decimals: int = 2
     time_24h: bool = True
     lang: str = "en"  # unit names, month names and where currency symbols go
