@@ -1,4 +1,4 @@
-.PHONY: all run check lint test format icons site build clean
+.PHONY: all run check lint test format icons site gif build clean
 
 all: check
 
@@ -23,6 +23,10 @@ icons:
 # the website's example sheets and colours, from the engine and the Glacier theme
 site:
 	QT_QPA_PLATFORM=offscreen uv run python -m scripts.build_site
+
+# docs/demo.gif, the README demo of typing a sheet and switching themes (needs ffmpeg)
+gif:
+	QT_QPA_PLATFORM=offscreen uv run python -m scripts.make_gif
 
 # make build            -> test build, version 0.0.0.dev0+<git describe>
 # make build TAG=v1.2.3 -> release version 1.2.3

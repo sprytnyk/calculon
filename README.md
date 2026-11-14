@@ -4,9 +4,7 @@ A natural-language notepad calculator. Write plain lines with numbers, money, un
 dates, and the answers show up in a column on the right. The syntax follows
 [Soulver's](https://documentation.soulver.app/), so most sheets work in both.
 
-![Calculon in the Ember theme with a trip budget sheet: the lines on the left, their answers on the right](docs/screenshot.png)
-
-![The same sheet in the Glacier theme](docs/screenshot-glacier.png)
+![Typing a trip budget sheet in Calculon: the answers show up on the right as each line is written, then the theme switches from Ember to Glacier](docs/demo.gif)
 
 ## Features
 
@@ -131,6 +129,7 @@ make check              # ruff and pytest
 make build              # dist/calculon, or dist/Calculon.app on macOS (test version)
 make icons              # remake assets/icon.png, .ico and .icns from icon-source.png
 make site               # remake the website's example sheets and colours in docs/
+make gif                # remake docs/demo.gif, the README demo (needs ffmpeg)
 ```
 
 `dist/calculon --self-test` checks that a build has everything it needs: unit data,
