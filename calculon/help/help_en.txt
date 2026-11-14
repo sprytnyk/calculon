@@ -16,6 +16,7 @@ remainder of 21 divided by 5
 $19 for breakfast + $22 for the uber
 4 people × $20
 Hotel room: $120 // a label ends with a colon and a space
+1. Taxi $25 // list numbers like 1. or 1) and • at the start are skipped
 Boeing "747" costs $386.8M // text in quotes and after two slashes is ignored
 $999 (for the new phone)
 
@@ -121,7 +122,7 @@ average of 36, 42, 19 and 81
 
 # Earlier lines
 100
-line123 * 2 // the line number is shown on the left; or double-click an answer
+line124 * 2 // the line number is shown on the left; or double-click an answer
 prev + 1 // the answer just above; Ctrl+L types it
 + 10 // a line starting with an operator continues the previous answer
 

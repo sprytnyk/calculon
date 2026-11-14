@@ -292,6 +292,33 @@ def test_empty_assignment_names_the_subtotal() -> None:
     assert calc(text) == ["$10.00", "$15.00", "$25.00", "$5.00", "$5.00", "$30.00"]
 
 
+def test_list_markers_are_skipped() -> None:
+    text = (
+        "1. Rent $1000\n2) Food $300\n3 housing = subtotal\n"
+        "• Car $200\n5. Fuel $50\n6 transport =\n7. housing + transport"
+    )
+    assert calc(text) == [
+        "$1,000.00",
+        "$300.00",
+        "$1,300.00",
+        "$200.00",
+        "$50.00",
+        "$250.00",
+        "$1,550.00",
+    ]
+
+
+def test_a_leading_number_left_out_of_the_maths_looks_like_a_list_number() -> None:
+    def look(line: str) -> str:
+        res = evaluate_sheet(line, RATES, CONFIG)
+        return next(cls for a, _, cls in res.lines[0].spans if a == 0)
+
+    assert look("1. Rent $1000") == "comment"
+    assert look("4 Car $200") == "comment"
+    assert look("3 apples") == "number"
+    assert look("4 people × $20") == "number"
+
+
 def test_empty_add_assignment_stays_empty() -> None:
     assert calc("x = 5\nx +=\nx") == ["5", "", "5"]
 

@@ -36,6 +36,11 @@ HEADING_RE = re.compile(r"^\s*#(\s|$)")
 DIVIDER_RE = re.compile(r"^\s*-{3,}\s*$")
 LABEL_RE = re.compile(r"^(?P<label>[^:=\n]*[^\W\d_][^:=\n]*?):(?=\s|$)")
 ASSIGN_RE = re.compile(r"^(?P<lead>\s*)(?P<name>[^\W\d][\w ]*?)\s*(?P<op>\+=|-=|=)(?!=)\s*")
+# "1. ", "1) " and "• " start a list item; a bare "3 " too, but only before "name ="
+# since a variable name can't start with a digit. "-" and "*" stay operators.
+LIST_MARK_RE = re.compile(
+    r"^\s*(?:(?:\d+[.)]|•)\s+(?=\S)|\d+\s+(?=[^\W\d][\w ]*?\s*(?:\+=|-=|=)(?!=)))"
+)
 CONTINUE_RE = re.compile(r"^\s*(\+|\*|/|×|÷|\^)")
 
 # highlight classes
@@ -190,12 +195,16 @@ def _evaluate_line(
         ctx.custom_units = set()
         return res
     offset = 0
+    m = LIST_MARK_RE.match(line)
+    if m:
+        res.spans.append((0, m.end(), "comment"))
+        offset = m.end()
     labelled = False
-    m = LABEL_RE.match(line)
+    m = LABEL_RE.match(line[offset:])
     if m:
         labelled = True
-        res.spans.append((0, m.end() + 1, "label"))
-        offset = m.end() + 1
+        res.spans.append((offset, offset + m.end() + 1, "label"))
+        offset += m.end() + 1
     body = line[offset:]
     var_name = None
     op = None
@@ -222,9 +231,15 @@ def _evaluate_line(
     seen = {id(it): ctx.variables.get(it.key) for it in items if it.kind == "var"}
     plain: set[int] = set()  # "if", "to", "in" in prose: not coloured as keywords
     moves = timeline if labelled and not var_name else None
-    _evaluate_items(res, items, body, var_name, op, ctx, opts, plain, moves)
+    skipped: set[int] = set()  # what the maths left out, as in the 4 of "4 Car $200"
+    _evaluate_items(res, items, body, var_name, op, ctx, opts, plain, skipped, moves)
     if res.kind != "value":
         plain = {id(it) for it in items if it.kind == "kw" and it.key in SOFT}
+    # a list number the maths left out looks like the skipped "1." of "1. Rent $1000"
+    lead = next((it for it in items if it.kind != "noise"), None)
+    if res.kind == "value" and lead is not None and lead.kind == "num" and id(lead) in skipped:
+        plain.add(id(lead))
+        res.spans.append((lead.start, lead.end, "comment"))
     for it in items:
         cls = SPAN_CLASSES.get(it.kind)
         if cls and id(it) not in plain and it.end > it.start:
@@ -252,6 +267,7 @@ def _evaluate_items(
     ctx: Context,
     opts: FormatOptions,
     plain: set[int],
+    skipped: set[int],
     timeline: Timeline | None = None,
 ) -> None:
     meaningful = [it for it in items if it.kind != "noise"]
@@ -269,10 +285,13 @@ def _evaluate_items(
                 raise ParseError(f"{var_name} is not defined")
             current = ctx.variables[key]
             value = add(
-                current, evaluate_tokens(meaningful, ctx, plain), ctx.rates, 1 if op == "+=" else -1
+                current,
+                evaluate_tokens(meaningful, ctx, plain, skipped),
+                ctx.rates,
+                1 if op == "+=" else -1,
             )
         else:
-            value = evaluate_tokens(meaningful, ctx, plain)
+            value = evaluate_tokens(meaningful, ctx, plain, skipped)
         if timeline is not None and not res.is_total:
             value = timeline.advance(value, ctx.rates)  # a labelled duration moves it
     except (ParseError, CalcError, ArithmeticError, ValueError, OverflowError) as exc:

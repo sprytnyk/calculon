@@ -1538,10 +1538,16 @@ PATTERNS: list[Callable[[Parser], Value | None]] = [
 ]
 
 
-def evaluate_tokens(items: list[Item], ctx: Context, plain: set[int] | None = None) -> Value:
+def evaluate_tokens(
+    items: list[Item],
+    ctx: Context,
+    plain: set[int] | None = None,
+    skipped: set[int] | None = None,
+) -> Value:
     """Evaluate the line; if it fails, use the longest tail (then head) that works.
 
     `plain` gets the id() of each soft keyword ("if", "to", "in") the maths didn't use.
+    `skipped` gets the id() of each item left out of the tail or head that worked.
     """
     soft = [it for it in items if it.kind == "kw" and it.key in SOFT]
     items = [
@@ -1568,6 +1574,9 @@ def evaluate_tokens(items: list[Item], ctx: Context, plain: set[int] | None = No
             if plain is not None:
                 used = {id(it) for i, it in enumerate(cand) if i not in parser.plain}
                 plain.update(id(it) for it in soft if id(it) not in used)
+            if skipped is not None:
+                kept = {id(it) for it in cand}
+                skipped.update(id(it) for it in items if id(it) not in kept)
             return value
     first = errors[0] if errors else ParseError("nothing to calculate")
     if isinstance(first, CalcError):
