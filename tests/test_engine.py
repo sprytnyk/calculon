@@ -374,6 +374,14 @@ def test_a_note_starting_with_an_operator_does_not_repeat_the_answer_above() -> 
     assert calc(text) == ["$10.00", "", "", "", "$10.00"]
 
 
+def test_big_answers_are_short_in_the_answers_column_only() -> None:
+    res = evaluate_sheet("$386.8M\n999999\n999999999\n100000000 km\n2^64", RATES, CONFIG)
+    assert [line.short for line in res.lines] == ["$386.8M", "", "1B", "100M km", "1.845e19"]
+    assert res.lines[0].text == "$386,800,000.00"  # hover and copy give it in full
+    uk = evaluate_sheet("₴5000000", RATES, CONFIG, FormatOptions(lang="uk"))
+    assert uk.lines[0].short == "5 млн ₴"
+
+
 def test_soulver_references_in_exported_text() -> None:
     text = "$1000\n[$1 000,00](line1) − 200\n[$800,00](line2) × fuel $50"
     assert calc(text) == ["$1,000.00", "$800.00", "$40,000.00"]

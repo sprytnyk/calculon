@@ -1,6 +1,6 @@
 """Turning values into the text shown in the results column."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
 from fractions import Fraction
@@ -17,6 +17,12 @@ NUMBER_STYLES = {
     "dot_comma": (".", ","),  # 1.234,56
     "space_comma": (" ", ","),  # 1 234,56 (narrow no-break space)
     "space_dot": (" ", "."),  # 1 234.56
+}
+# The answers column shortens big numbers: $386,800,000.00 shows as $386.8M.
+SHORT_FROM = Decimal(10) ** 6
+SHORT_SCALES = {
+    "en": ((Decimal(10) ** 12, "T"), (Decimal(10) ** 9, "B"), (SHORT_FROM, "M")),
+    "uk": ((Decimal(10) ** 12, " трлн"), (Decimal(10) ** 9, " млрд"), (SHORT_FROM, " млн")),
 }
 # Number format used for each UI language when the setting is "auto".
 LANGUAGE_NUMBER_STYLES = {"en": "comma_dot", "uk": "space_comma"}
@@ -80,13 +86,27 @@ def format_sci(x: Decimal, opts: FormatOptions) -> str:
     return f"{mant.replace('.', point)}e{int(exp)}"
 
 
-def format_value(v: Value, opts: FormatOptions) -> str:
+def format_short(x: Decimal, opts: FormatOptions) -> str | None:
+    """386,800,000 as 386.8M, or None when the number isn't big enough to shorten."""
+    if not x.is_finite() or abs(x) < SHORT_FROM:
+        return None
+    three = replace(opts, max_decimals=3)
+    if abs(x) >= Decimal(10) ** 15:
+        return format_sci(x, three)
+    for size, suffix in SHORT_SCALES.get(opts.lang, SHORT_SCALES["en"]):
+        if abs(x) >= size - size / 2000:  # 999,999,999 rounds to 1B, not 1,000M
+            return format_number(x / size, three) + suffix
+    return None
+
+
+def format_value(v: Value, opts: FormatOptions, short: bool = False) -> str:
+    """`short` is for the answers column: big numbers as 386.8M."""
     if isinstance(v, DateVal):
         return format_date(v, opts)
-    return format_q(v, opts)
+    return format_q(v, opts, short)
 
 
-def format_q(q: Q, opts: FormatOptions) -> str:
+def format_q(q: Q, opts: FormatOptions, short: bool = False) -> str:
     if q.pct:
         return format_number(q.mag * 100, opts) + "%"
     if q.fmt and q.unitless:
@@ -101,6 +121,8 @@ def format_q(q: Q, opts: FormatOptions) -> str:
     if money and code:
         decimals = 0 if code in ZERO_DECIMALS else opts.money_decimals
     number = format_sci(q.mag, opts) if q.fmt == "sci" else format_number(q.mag, opts, decimals)
+    if short and not q.fmt and (shorter := format_short(q.mag, opts)) is not None:
+        number = shorter
     if not q.units:
         return number
     prefix, suffix = U.display_units(q.units, q.mag, opts.lang)

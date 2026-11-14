@@ -2,6 +2,7 @@
 
 import logging
 import re
+from contextlib import suppress
 from dataclasses import dataclass, field, replace
 
 from .currency import RateTable
@@ -75,6 +76,7 @@ class LineResult:
     error: str = ""
     spans: list[tuple[int, int, str]] = field(default_factory=list)
     is_total: bool = False
+    short: str = ""  # the answer as the answers column shows it, when shorter: $386.8M
     hints: list[tuple[int, int, str]] = field(default_factory=list)  # variables' values
 
 
@@ -323,6 +325,9 @@ def _evaluate_items(
     res.kind = "value"
     res.value = value
     res.text = text
+    with suppress(ArithmeticError, ValueError):
+        if (short := format_value(value, opts, short=True)) != text:
+            res.short = short
     if res.is_total:
         ctx.block = []
     else:

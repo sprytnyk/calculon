@@ -294,7 +294,8 @@ class ResultsArea(QWidget):
                         color = theme.accent
                     painter.setPen(QColor(color))
                     painter.setFont(bold if line.is_total else font)
-                    text = fm.elidedText(line.text, Qt.TextElideMode.ElideLeft, rect.width())
+                    shown = line.short or line.text  # $386.8M; hover and copy give it in full
+                    text = fm.elidedText(shown, Qt.TextElideMode.ElideLeft, rect.width())
                     painter.drawText(
                         rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, text
                     )

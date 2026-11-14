@@ -161,7 +161,7 @@ def sheet(text: str, lang: str, table: RateTable) -> dict[str, Any]:
             {
                 "text": src,
                 "spans": [[a, b, cls] for a, b, cls in line.spans],
-                "answer": line.text,
+                "answer": line.short or line.text,
                 "total": line.is_total,
             }
         )
