@@ -136,7 +136,7 @@ make check              # ruff and pytest
 make build              # dist/calculon, or dist/Calculon.app on macOS (test version)
 make icons              # remake assets/icon.png, .ico and .icns from icon-source.png
 make site               # remake the website's example sheets and colours in docs/
-make gif                # remake docs/demo.gif, the README demo (needs ffmpeg)
+make gif                # remake docs/demo.gif and docs/screenshot.png (needs ffmpeg)
 ```
 
 `dist/calculon --self-test` checks that a build has everything it needs: unit data,

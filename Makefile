@@ -24,7 +24,8 @@ icons:
 site:
 	QT_QPA_PLATFORM=offscreen uv run python -m scripts.build_site
 
-# docs/demo.gif, the README demo of typing a sheet and switching themes (needs ffmpeg)
+# docs/demo.gif, the README demo of typing a sheet and switching themes, and
+# docs/screenshot.png, the website's link preview (needs ffmpeg)
 gif:
 	QT_QPA_PLATFORM=offscreen uv run python -m scripts.make_gif
 

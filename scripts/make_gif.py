@@ -1,4 +1,5 @@
 """Make docs/demo.gif for the README: the Lviv trip sheet typed out in Ember, then Glacier.
+Also docs/screenshot.png, the website's link preview: the typed sheet in Ember.
 
 Run with: make gif (needs ffmpeg)
 
@@ -21,7 +22,9 @@ from calculon import rates
 from calculon.storage import SheetStore
 from calculon.ui.main_window import WELCOME, MainWindow
 
-GIF = Path(__file__).resolve().parent.parent / "docs" / "demo.gif"
+DOCS = Path(__file__).resolve().parent.parent / "docs"
+GIF = DOCS / "demo.gif"
+SCREENSHOT = DOCS / "screenshot.png"
 # like the old screenshots: a 1414 x 863 window on a screen scaled to 120%
 SCALE = 1.2
 SIZE = (1178, 719)
@@ -73,8 +76,9 @@ def make_sheets(folder: Path) -> None:
     store.pin("Budget.txt")
 
 
-def record(folder: Path) -> list[tuple[Path, float]]:
-    """Save a PNG per step into folder, and return each with how long it shows."""
+def record(folder: Path) -> tuple[list[tuple[Path, float]], Path]:
+    """Save a PNG per step into folder. Return each with how long it shows, and the one
+    for the screenshot."""
     rates.RatesService.refresh = lambda self: None  # keep the bundled snapshot
     sheets = folder / "sheets"
     make_sheets(sheets)
@@ -116,11 +120,12 @@ def record(folder: Path) -> list[tuple[Path, float]]:
         type_text(LVIV)
         window.editor.moveCursor(QTextCursor.MoveOperation.Start)
         snap(3.0)
+        still = frames[-1][0]
         window.set_colours("glacier")
         snap(3.5)
     finally:
         window.close()
-    return frames
+    return frames, still
 
 
 def write_gif(frames: list[tuple[Path, float]], gif: Path) -> None:
@@ -151,8 +156,10 @@ def main() -> int:
         QCoreApplication.setApplicationName("Calculon")
         app = QApplication(sys.argv)
         app.setDesktopFileName("calculon")
-        write_gif(record(folder), GIF)
-    print(f"wrote {GIF}")
+        frames, still = record(folder)
+        write_gif(frames, GIF)
+        shutil.copyfile(still, SCREENSHOT)
+    print(f"wrote {GIF} and {SCREENSHOT}")
     return 0
 
 
