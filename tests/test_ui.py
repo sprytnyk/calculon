@@ -141,7 +141,9 @@ def test_menu_icons(window) -> None:
     first = file_menu.actions()[0]
     assert not first.icon().isNull()
     view = window.menuBar().actions()[2].menu()
-    checkable = [a for a in view.actions() if a.isCheckable()]
+    top = window._actions["always_on_top"]
+    assert not top.icon().isNull()
+    checkable = [a for a in view.actions() if a.isCheckable() and a is not top]
     assert checkable and all(a.icon().isNull() for a in checkable)
 
 
@@ -851,6 +853,7 @@ def test_always_on_top_off_by_default(window) -> None:
     assert not action.isChecked()
     assert not window.settings.always_on_top
     assert not window.windowFlags() & TOP
+    assert action.icon().pixmap(20).toImage() == icons.icon("unpin").pixmap(20).toImage()
 
 
 def test_always_on_top_menu_toggles_without_losing_placement_or_edits(
@@ -884,6 +887,8 @@ def test_always_on_top_menu_toggles_without_losing_placement_or_edits(
         assert bool(window.windowHandle().flags() & TOP) is enabled
         assert window.settings.always_on_top is enabled
         assert window._actions["always_on_top"].isChecked() is enabled
+        expected_icon = icons.icon("pin" if enabled else "unpin").pixmap(20).toImage()
+        assert window._actions["always_on_top"].icon().pixmap(20).toImage() == expected_icon
         assert Settings.load().always_on_top is enabled
         assert window.isVisible()
         assert window.geometry() == geometry
@@ -908,6 +913,8 @@ def test_always_on_top_saved_choice_applies_before_first_show(window, app, enabl
         assert restored.settings.always_on_top is enabled
         assert bool(restored.windowFlags() & TOP) is enabled
         assert restored._actions["always_on_top"].isChecked() is enabled
+        expected_icon = icons.icon("pin" if enabled else "unpin").pixmap(20).toImage()
+        assert restored._actions["always_on_top"].icon().pixmap(20).toImage() == expected_icon
         restored.show()
         pump(app)
         assert restored.isVisible()
@@ -978,13 +985,16 @@ def test_always_on_top_toggle_requests_no_activation_for_an_inactive_window(
         other.deleteLater()
 
 
-def test_always_on_top_rebuilt_menus_and_settings_keep_choice(window, app) -> None:
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_always_on_top_rebuilt_menus_and_settings_keep_choice(window, app, theme) -> None:
     window._actions["always_on_top"].trigger()
-    window.set_theme("light")
+    window.set_theme(theme)
     window.set_language("uk")
     pump(app)
     assert window._actions["always_on_top"].isChecked()
     assert window._actions["always_on_top"].text() == "Завжди поверх інших вікон"
+    expected_icon = icons.icon("pin").pixmap(20).toImage()
+    assert window._actions["always_on_top"].icon().pixmap(20).toImage() == expected_icon
     assert window.windowFlags() & TOP
     dialog = SettingsDialog(window.settings, window.t, window)
     try:
@@ -995,4 +1005,6 @@ def test_always_on_top_rebuilt_menus_and_settings_keep_choice(window, app) -> No
     window.set_language("en")
     assert not window._actions["always_on_top"].isChecked()
     assert window._actions["always_on_top"].text() == "Always on Top"
+    expected_icon = icons.icon("unpin").pixmap(20).toImage()
+    assert window._actions["always_on_top"].icon().pixmap(20).toImage() == expected_icon
     assert not window.windowFlags() & TOP

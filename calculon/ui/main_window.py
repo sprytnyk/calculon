@@ -317,6 +317,8 @@ class MainWindow(QMainWindow):
         m = bar.addMenu(self.t("menu_view"))
         act = self._action(m, "always_on_top", self._toggle_always_on_top, checkable=True)
         act.setChecked(self.settings.always_on_top)
+        # The pin shows the state because Fusion draws an icon instead of a tick.
+        act.setIcon(icons.icon("pin" if self.settings.always_on_top else "unpin"))
         m.addSeparator()
         sub = m.addMenu(icons.icon("theme"), self.t("theme"))
         group = QActionGroup(self)
@@ -548,7 +550,9 @@ class MainWindow(QMainWindow):
                 self.activateWindow()
             if focus is not None:
                 focus.setFocus(Qt.FocusReason.OtherFocusReason)
-        self._actions["always_on_top"].setChecked(self.settings.always_on_top)
+        act = self._actions["always_on_top"]
+        act.setChecked(self.settings.always_on_top)
+        act.setIcon(icons.icon("pin" if self.settings.always_on_top else "unpin"))
 
     def _toggle_line_numbers(self) -> None:
         self.settings.line_numbers = not self.settings.line_numbers
