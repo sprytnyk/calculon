@@ -96,21 +96,13 @@ window.CALCULON = {
    [
     "Trips",
     [
-     "hero",
-     "dates"
+     "hero"
     ]
    ],
    [
     "Home",
     [
-     "basics",
      "spelling"
-    ]
-   ],
-   [
-    null,
-    [
-     "money"
     ]
    ]
   ],
@@ -1081,21 +1073,13 @@ window.CALCULON = {
    [
     "Подорожі",
     [
-     "hero",
-     "dates"
+     "hero"
     ]
    ],
    [
     "Дім",
     [
-     "basics",
      "spelling"
-    ]
-   ],
-   [
-    null,
-    [
-     "money"
     ]
    ]
   ],

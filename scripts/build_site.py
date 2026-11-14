@@ -106,8 +106,9 @@ days between 14.11.2026 and 25.12.2026""",
 # suggests for it. Browsers have no Hunspell, so this is written down here.
 MISSPELLED = "Шпаклівкаа"
 SUGGESTIONS = ["Шпаклівка", "Шпаклівкам", "Шпаклівках", "Шпаклівка а", "Шпаківка"]
-# the sidebar of the window at the top of the page: (folder, [sheets]), then loose sheets
-SIDEBAR = [("trips", ["hero", "dates"]), ("home", ["basics", "spelling"]), (None, ["money"])]
+# the sidebar of the window at the top of the page: (folder, [sheets]), then loose sheets.
+# The Examples section shows basics, money and dates, so the sidebar leaves them out
+SIDEBAR = [("trips", ["hero"]), ("home", ["spelling"])]
 FOLDERS = {"en": {"trips": "Trips", "home": "Home"}, "uk": {"trips": "Подорожі", "home": "Дім"}}
 # right-click menu: Edit menu items, their shortcuts and icons, as in the app
 MENU = [
