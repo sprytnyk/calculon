@@ -193,6 +193,24 @@ def test_icons_are_coloured_from_the_start(window) -> None:
     assert icons.color_for("quit") in colours
 
 
+def test_sidebar_toggle_keeps_the_tick_and_survives_a_restart(window, app) -> None:
+    tick = window._actions["toggle_sidebar"]
+    tick.trigger()
+    assert window.sidebar.isHidden() and not tick.isChecked()
+    window._focus_search()  # Ctrl+P brings it back, and the menu says so
+    assert not window.sidebar.isHidden() and tick.isChecked()
+    tick.trigger()
+    window.close()
+    w = MainWindow()
+    w.show()
+    pump(app)
+    assert w.sidebar.isHidden() and not w._actions["toggle_sidebar"].isChecked()
+    w.set_sidebar_visible(True)
+    w.splitter.moveSplitter(0, 1)  # dragged all the way left: narrow, but still there
+    assert w.splitter.sizes()[0] > 0
+    w.close()
+
+
 def test_shortcuts_dialog_lists_menu_and_sidebar_keys(window) -> None:
     rows = dict(ShortcutsDialog(window.menuBar(), window.t, window).rows())
     assert rows["New Sheet"] == key_text(QKeySequence.StandardKey.New)

@@ -143,6 +143,8 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(self.sidebar)
         self.splitter.addWidget(right)
         self.splitter.setStretchFactor(1, 1)
+        # hiding is the toggle's job; dragging it to zero width would be a second kind of hidden
+        self.splitter.setCollapsible(0, False)
         self.splitter.setSizes([230, 770])
         self.splitter.setHandleWidth(1)
         self.setCentralWidget(self.splitter)
@@ -254,6 +256,7 @@ class MainWindow(QMainWindow):
         state = qs.value("window/splitter")
         if state is not None:
             self.splitter.restoreState(state)
+        self.set_sidebar_visible(qs.value("window/sidebar", True) in (True, "true", "1", 1))
 
     def _open_initial(self) -> None:
         last = self.settings.last_sheet
@@ -382,8 +385,8 @@ class MainWindow(QMainWindow):
         self._action(m, "zoom_out", lambda: self.zoom(-1), standard_key.ZoomOut)
         self._action(m, "zoom_reset", lambda: self.zoom(0), "Ctrl+0")
         m.addSeparator()
-        act = self._action(m, "toggle_sidebar", self._toggle_sidebar, "Ctrl+\\", checkable=True)
-        act.setChecked(self.sidebar.isVisible() or not self.isVisible())
+        act = self._action(m, "toggle_sidebar", self.set_sidebar_visible, "Ctrl+\\", checkable=True)
+        act.setChecked(not self.sidebar.isHidden())
         act = self._action(
             m, "toggle_line_numbers", self._toggle_line_numbers, "Ctrl+Shift+L", checkable=True
         )
@@ -555,8 +558,9 @@ class MainWindow(QMainWindow):
         self.settings.results_width = width
         self.settings.save()
 
-    def _toggle_sidebar(self) -> None:
-        self.sidebar.setVisible(not self.sidebar.isVisible())
+    def set_sidebar_visible(self, visible: bool) -> None:
+        self.sidebar.setVisible(visible)
+        self._actions["toggle_sidebar"].setChecked(visible)
 
     def _toggle_always_on_top(self) -> None:
         self.settings.always_on_top = not self.settings.always_on_top
@@ -963,7 +967,7 @@ class MainWindow(QMainWindow):
             self.editor.toggle_comment()
 
     def _focus_search(self) -> None:
-        self.sidebar.show()
+        self.set_sidebar_visible(True)
         self.sidebar.search.setFocus()
         self.sidebar.search.selectAll()
 
@@ -978,5 +982,6 @@ class MainWindow(QMainWindow):
         qs = QSettings()
         qs.setValue("window/geometry", self.saveGeometry())
         qs.setValue("window/splitter", self.splitter.saveState())
+        qs.setValue("window/sidebar", not self.sidebar.isHidden())
         self.settings.save()
         super().closeEvent(event)
