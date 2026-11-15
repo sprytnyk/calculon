@@ -50,7 +50,7 @@ from ..engine import format_value
 from ..engine.format import MONTHS_UK
 from ..paths import FONTS, HELP_DIR
 from ..rates import RatesService
-from ..settings import Settings, fallback_sheets_dir, own_words_file
+from ..settings import Settings, fallback_sheets_dir, own_words_file, read_bool
 from ..spelling import SpellChecker, probe
 from ..storage import SheetStore
 from ..translations import LANGUAGES, tr
@@ -265,7 +265,7 @@ class MainWindow(QMainWindow):
         state = qs.value("window/splitter")
         if state is not None:
             self.splitter.restoreState(state)
-        self.set_sidebar_visible(qs.value("window/sidebar", True) in (True, "true", "1", 1))
+        self.set_sidebar_visible(read_bool(qs.value("window/sidebar", True)))
 
     def _open_initial(self) -> None:
         last = self.settings.last_sheet

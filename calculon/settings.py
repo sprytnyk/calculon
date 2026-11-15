@@ -26,6 +26,11 @@ def own_words_file() -> Path:
     return Path(base) / "words.txt"
 
 
+def read_bool(value: object) -> bool:
+    """A yes/no read back from QSettings, which gives "true" or "false" from its files."""
+    return value in (True, "true", "1", 1)
+
+
 def fallback_sheets_dir() -> str:
     """Used when the sheets folder can't be written, e.g. Windows blocks Documents."""
     data = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)
@@ -62,7 +67,7 @@ class Settings:
             value = qs.value(f.name, default)
             try:
                 if isinstance(default, bool):
-                    value = value in (True, "true", "1", 1)
+                    value = read_bool(value)
                 elif isinstance(default, int):
                     value = int(value)  # type: ignore[arg-type]
                 else:
