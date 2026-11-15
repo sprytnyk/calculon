@@ -9,6 +9,7 @@ from .engine import Config, FormatOptions
 from .engine.currency import KNOWN_CODES
 from .engine.format import LANGUAGE_NUMBER_STYLES, NUMBER_STYLES
 from .translations import LANGUAGES
+from .ui.theme import PALETTES
 
 DEFAULT_RATES_URL = "https://open.er-api.com/v6/latest/USD"
 FALLBACK_RATES_URL = "https://api.frankfurter.dev/v1/latest?base=USD"
@@ -74,7 +75,7 @@ class Settings:
         # a hand-edited or newer config can hold values this version doesn't know
         choices = {
             "theme": ("dark", "light", "system"),
-            "colours": ("glacier", "ember"),
+            "colours": tuple(PALETTES),
             "language": tuple(LANGUAGES),
             "number_style": ("auto", *NUMBER_STYLES),
             "date_order": ("DMY", "MDY"),
