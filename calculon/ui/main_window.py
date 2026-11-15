@@ -144,7 +144,7 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(self.sidebar)
         self.splitter.addWidget(right)
         self.splitter.setStretchFactor(1, 1)
-        # hiding is the toggle's job; dragging it to zero width would be a second kind of hidden
+        # Only the toggle hides the sidebar. Dragging the divider stops at its minimum width.
         self.splitter.setCollapsible(0, False)
         self.splitter.setSizes([230, 770])
         self.splitter.setHandleWidth(1)
@@ -168,7 +168,7 @@ class MainWindow(QMainWindow):
         status.setContentsMargins(0, 0, 0, 0)
         # no gaps: the grid drops one beside an empty column, which would move the total
         status.setHorizontalSpacing(0)
-        # stays on screen while the sidebar is hidden, so it can bring it back
+        # in the status bar, so you can still click it while the sidebar is hidden
         self.sidebar_button = QToolButton()
         self.sidebar_button.setObjectName("sidebarButton")
         self.sidebar_button.clicked.connect(lambda: self._actions["toggle_sidebar"].trigger())

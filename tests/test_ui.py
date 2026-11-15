@@ -195,9 +195,9 @@ def test_icons_are_coloured_from_the_start(window) -> None:
 
 def test_sidebar_toggle_keeps_the_tick_and_survives_a_restart(window, app) -> None:
     tick = window._actions["toggle_sidebar"]
-    window.sidebar_button.click()  # the status bar button, there with the sidebar hidden too
+    window.sidebar_button.click()
     assert window.sidebar.isHidden() and not tick.isChecked()
-    window._focus_search()  # Ctrl+P brings it back, and the menu says so
+    window._focus_search()  # Ctrl+P shows the sidebar again and ticks the menu item
     assert not window.sidebar.isHidden() and tick.isChecked()
     tick.trigger()
     window.close()
@@ -206,7 +206,7 @@ def test_sidebar_toggle_keeps_the_tick_and_survives_a_restart(window, app) -> No
     pump(app)
     assert w.sidebar.isHidden() and not w._actions["toggle_sidebar"].isChecked()
     w.set_sidebar_visible(True)
-    w.splitter.moveSplitter(0, 1)  # dragged all the way left: narrow, but still there
+    w.splitter.moveSplitter(0, 1)  # the divider dragged all the way left
     assert w.splitter.sizes()[0] > 0
     w.close()
 
