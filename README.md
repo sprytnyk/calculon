@@ -32,7 +32,7 @@ dates, and the answers show up in a column on the right. The syntax follows
   [side-vim](https://github.com/sprytnyk/side-vim). To turn it on, open
   the Vim page in Settings
 - Two themes, Glacier and Ember, each dark, light or following the system, with Glacier by default
-- Spell check for English and Ukrainian on Linux, and on macOS after a manual setup
+- Spell check for English and Ukrainian on Linux and Windows, and on macOS after a manual setup
 
 The Help sheet in the sidebar explains the calculation syntax with examples. Open it with F1.
 Keyboard Shortcuts in the Help menu lists the keys, including Vim keys when Vim mode is on.
@@ -99,9 +99,9 @@ It skips numbers, units, currencies and variable names, and checks only the word
 around them. Words you add go to `words.txt` in Calculon's app data folder, one per
 line. On Linux that's `~/.local/share/sprytnyk.dev/Calculon`.
 
-Calculon doesn't ship a spell checker or dictionaries. It uses the Hunspell library and
-the dictionaries already on your system. Loading English and Ukrainian takes about a
-quarter of a second.
+Calculon doesn't ship a spell checker or dictionaries. It uses the ones already on your
+system: Hunspell on Linux and macOS, and Windows' own spell checker on Windows. Hunspell
+takes about a quarter of a second to load English and Ukrainian.
 
 **Linux.** On Debian and Ubuntu:
 
@@ -124,7 +124,10 @@ curl -LO $base/en/en_US.aff -LO $base/en/en_US.dic
 curl -LO $base/uk_UA/uk_UA.aff -LO $base/uk_UA/uk_UA.dic
 ```
 
-**Windows.** Not yet.
+**Windows.** Calculon uses the spell checker built into Windows. Windows has a dictionary
+for each language added in Settings > Time & language > Language & region. Most systems
+have English already; add Ukrainian there if you write in it. Words you add in Calculon
+go to its own `words.txt`, not to Windows' dictionary.
 
 The Spell Check page of Settings shows what Calculon found, and the install command for
 anything missing. `calculon --self-test` prints it too.
@@ -146,8 +149,8 @@ make gif                # remake docs/demo.gif and docs/screenshot.png (needs ff
 ```
 
 `dist/calculon --self-test` checks that a build has everything it needs: unit data,
-time zones, help sheets, fonts and the rates snapshot. If the system has Hunspell, it
-also checks that spell check works. On macOS, run
+time zones, help sheets, fonts and the rates snapshot. If the system has a spell
+checker, it also checks that spell check works. On macOS, run
 `dist/Calculon.app/Contents/MacOS/calculon --self-test`.
 
 The calculator engine in `calculon/engine/` has no Qt in it.
@@ -160,7 +163,8 @@ sheets get their answers from the engine, and a test fails when they're out of d
 Pushing a `vX.Y.Z` tag runs the *Release builds* workflow. It runs the checks, then
 builds Linux x64 and Windows x64 binaries and a `Calculon.app` for macOS x64 and arm64.
 On macOS it installs Hunspell and the dictionaries as described under Spell check, and
-the self-test fails if spell check doesn't find both languages. It keeps the builds as
+the self-test fails if spell check doesn't find both languages. On Windows it runs the
+spell check tests against Windows' own spell checker. It keeps the builds as
 a run artifact with `SHA256SUMS`. The version comes from the tag, and
 there is no version file. The `release` skill in `.claude/skills/release/` does the
 rest: the signed tag, the signed checksums, the release notes and the GitHub release.

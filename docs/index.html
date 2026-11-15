@@ -274,15 +274,16 @@
             <summary>How do I turn on spell check?</summary>
             <div>
               <p>
-                Calculon uses the Hunspell library and the dictionaries on your system. On Debian
-                and Ubuntu:
+                Calculon uses the spell checker on your system. On Linux that's Hunspell. To install
+                it with English and Ukrainian dictionaries on Debian or Ubuntu, run:
               </p>
               <pre>sudo apt install libhunspell-1.7-0 hunspell-en-us hunspell-uk</pre>
               <p>
                 On macOS, install Hunspell with Homebrew and put the en_US and uk_UA dictionaries
                 in <code>~/Library/Spelling</code>. The
                 <a href="https://github.com/sprytnyk/calculon#spell-check">README</a> has the
-                steps. Spell check isn't available on Windows yet.
+                steps. On Windows, Calculon uses Windows' own spell checker. For Ukrainian, add
+                the language in Settings &gt; Time &amp; language &gt; Language &amp; region.
               </p>
               <p>Then turn it on with Check Spelling in the View menu, or press F7.</p>
             </div>

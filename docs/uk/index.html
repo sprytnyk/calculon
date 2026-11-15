@@ -269,13 +269,19 @@
           <details>
             <summary>Як увімкнути перевірку правопису?</summary>
             <div>
-              <p>Calculon використовує бібліотеку Hunspell і словники вашої системи. У Debian та Ubuntu:</p>
+              <p>
+                Calculon використовує перевірку правопису вашої системи. На Linux це Hunspell.
+                Щоб встановити його з українським і англійським словниками в Debian чи Ubuntu,
+                виконайте:
+              </p>
               <pre>sudo apt install libhunspell-1.7-0 hunspell-en-us hunspell-uk</pre>
               <p>
                 На macOS встановіть Hunspell через Homebrew і покладіть словники en_US та uk_UA у
                 <code>~/Library/Spelling</code>. Кроки є в
                 <a href="https://github.com/sprytnyk/calculon#spell-check">README</a>.
-                На Windows перевірка правопису поки недоступна.
+                На Windows Calculon використовує перевірку правопису самої Windows. Для
+                української додайте мову в Параметрах Windows, у розділі Час і мова &gt; Мова та
+                регіон.
               </p>
               <p>Потім увімкніть її пунктом Перевіряти правопис у меню Вигляд або клавішею F7.</p>
             </div>
