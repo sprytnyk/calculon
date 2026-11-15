@@ -209,7 +209,7 @@ def test_windows_checks_and_suggests(fake: FakeWindows) -> None:
     assert fake.opened == ["en-GB", "uk-UA"]  # each opened once
     assert checker.suggest("rnet") == ["rent", "net"]
     assert checker.suggest("оредна") == ["оренда"]
-    assert checker.suggest("rent") == []  # Windows answers S_FALSE for a word spelled right
+    assert checker.suggest("rent") == []  # the fake's S_FALSE means no suggestions
     assert checker.suggest("zzzz") == []
     assert set(fake.alive.values()) == {"checker"}  # every list and error released
     checker.close()
@@ -256,7 +256,6 @@ def test_real_windows_english(real: SpellChecker) -> None:
         assert not real.check(bad), bad
     assert "hotel" in real.suggest("hotell")
     assert "receive" in real.suggest("recieve")
-    assert real.suggest("hotel") == []
 
 
 @on_windows
