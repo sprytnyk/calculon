@@ -122,6 +122,6 @@ class AboutDialog(QDialog):
             self.status.setText(self.t("update_newer", version=result.version, url=result.url))
         elif result == "up_to_date":
             self.status.setText(self.t("update_none"))
-            self.status.setStyleSheet(f"color: {self.theme.icons['green']};")
+            self.status.setStyleSheet(f"color: {self.theme.accent};")
         else:
             self.status.setText(self.t("update_failed"))

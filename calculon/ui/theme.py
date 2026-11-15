@@ -27,8 +27,7 @@ class Theme:
     border: str
     text: str
     muted: str
-    accent: str
-    focus: str  # border of the field being typed in
+    accent: str  # links, focus borders and primary buttons
     selection: str
     current_line: str
     result: str
@@ -73,8 +72,7 @@ DARK = Theme(
     text="#e3e4e8",
     muted="#7d808c",
     accent="#f0a35e",
-    focus="#6cb6ff",
-    selection="#3b3f4f",
+    selection="#45382e",
     current_line="#202128",
     result="#8fd6a4",
     result_hover="#c4f0d0",
@@ -100,8 +98,7 @@ LIGHT = Theme(
     text="#24262b",
     muted="#8a8d95",
     accent="#c2410c",
-    focus="#2563eb",
-    selection="#cfe0f5",
+    selection="#f6dcc3",
     current_line="#f4f4f1",
     result="#15803d",
     result_hover="#0b5a29",
@@ -140,7 +137,6 @@ GLACIER_DARK = Theme(
     text="#e2e8f0",
     muted="#94a3b8",
     accent="#60a5fa",
-    focus="#2563eb",
     selection="#1c3767",
     current_line="#162032",
     result="#7dd3ae",
@@ -167,7 +163,6 @@ GLACIER_LIGHT = Theme(
     text="#1e293b",
     muted="#64748b",
     accent="#2563eb",
-    focus="#2563eb",
     selection="#dbeafe",
     current_line="#f1f5f9",
     result="#047857",
@@ -275,7 +270,7 @@ def apply(app: QApplication, theme: Theme) -> None:
         QTreeWidget:!focus::item:selected {{ color: {theme.text}; }}
         QLineEdit#search {{ background: {theme.bg}; border: 1px solid {theme.border};
                             border-radius: 6px; padding: 4px 8px; }}
-        QLineEdit#search:focus {{ border-color: {theme.focus}; }}
+        QLineEdit#search:focus {{ border-color: {theme.accent}; }}
         QPlainTextEdit {{ border: none; selection-background-color: {theme.selection}; }}
         QToolButton#sidebarButton {{ border: none; padding: 4px 6px; border-radius: 4px;
                                      color: {theme.muted}; }}
@@ -319,7 +314,7 @@ def apply(app: QApplication, theme: Theme) -> None:
 
 def controls_stylesheet(t: Theme) -> str:
     """Text fields, dropdowns, number fields and buttons everywhere in the app."""
-    on_focus = "#10131a" if t.is_dark else "#ffffff"
+    on_accent = t.bg if t.is_dark else "#ffffff"  # page colour on dark, white on light
     down = icons.icon_file("caret_down", t.muted)
     up = icons.icon_file("caret_up", t.muted)
     return f"""
@@ -329,7 +324,7 @@ def controls_stylesheet(t: Theme) -> str:
         selection-background-color: {t.selection}; selection-color: {t.text}; }}
     QLineEdit:hover, QComboBox:hover, QAbstractSpinBox:hover {{ border-color: {t.muted}; }}
     QLineEdit:focus, QComboBox:focus, QComboBox:on, QAbstractSpinBox:focus {{
-        border-color: {t.focus}; }}
+        border-color: {t.accent}; }}
     QLineEdit:disabled, QComboBox:disabled, QAbstractSpinBox:disabled {{ color: {t.muted}; }}
     QComboBox QLineEdit, QAbstractSpinBox QLineEdit {{
         border: none; background: transparent; padding: 0; min-height: 0; }}
@@ -359,9 +354,9 @@ def controls_stylesheet(t: Theme) -> str:
         border-radius: 7px; padding: 7px 18px; min-width: 64px; }}
     QPushButton:hover {{ border-color: {t.muted}; }}
     QPushButton:pressed {{ background: {t.selection}; }}
-    QPushButton:focus {{ border-color: {t.focus}; }}
-    QPushButton#primary {{ background: {t.focus}; border-color: {t.focus};
-        color: {on_focus}; font-weight: 600; }}
+    QPushButton:focus {{ border-color: {t.accent}; }}
+    QPushButton#primary {{ background: {t.accent}; border-color: {t.accent};
+        color: {on_accent}; font-weight: 600; }}
     QPushButton#primary:hover {{ border-color: {t.text}; }}
     """
 

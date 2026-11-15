@@ -8,7 +8,6 @@
   --text: #1e293b;
   --muted: #64748b;
   --accent: #2563eb;
-  --focus: #2563eb;
   --selection: #dbeafe;
   --current-line: #f1f5f9;
   --result: #047857;
@@ -44,7 +43,6 @@
     --text: #e2e8f0;
     --muted: #94a3b8;
     --accent: #60a5fa;
-    --focus: #2563eb;
     --selection: #1c3767;
     --current-line: #162032;
     --result: #7dd3ae;

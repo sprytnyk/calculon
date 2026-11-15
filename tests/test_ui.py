@@ -122,6 +122,30 @@ def test_colours_switch(window, app) -> None:
     assert QApplication.palette().base().color().name() == "#1a1b20"
 
 
+@pytest.mark.parametrize(
+    ("colours", "mode", "accent", "selection", "on_accent"),
+    [
+        ("ember", "dark", "#f0a35e", "#45382e", "#1a1b20"),
+        ("ember", "light", "#c2410c", "#f6dcc3", "#ffffff"),
+        ("glacier", "dark", "#60a5fa", "#1c3767", "#0f172a"),
+        ("glacier", "light", "#2563eb", "#dbeafe", "#ffffff"),
+    ],
+)
+def test_each_theme_uses_its_accent(
+    window, app, colours, mode, accent, selection, on_accent
+) -> None:
+    # links, selection, focus borders and primary buttons follow each theme's accent
+    window.set_colours(colours)
+    window.set_theme(mode)
+    palette = QApplication.palette()
+    assert palette.link().color().name() == accent
+    assert palette.highlight().color().name() == selection
+    sheet = app.styleSheet()
+    assert f"QLineEdit#search:focus {{ border-color: {accent}; }}" in sheet
+    assert f"QPushButton#primary {{ background: {accent}; border-color: {accent};" in sheet
+    assert f"color: {on_accent}; font-weight: 600;" in sheet
+
+
 def test_ukrainian_numbers_follow_language(window, app) -> None:
     window.new_sheet("")
     window.editor.setPlainText("1 234,5 + 10\n5 кг у г")
@@ -1095,10 +1119,10 @@ def test_about_links_to_a_newer_release(about) -> None:
     assert about.status.openExternalLinks()
 
 
-def test_about_says_up_to_date_in_green(about, window) -> None:
+def test_about_says_up_to_date_in_the_accent(about, window) -> None:
     about.finished_check(FakeReply(NoError, b'{"tag_name": "v0.0.0"}'))
     assert about.status.text() == window.t("update_none")
-    assert window.theme.icons["green"] in about.status.styleSheet()
+    assert window.theme.accent in about.status.styleSheet()
 
 
 def test_about_says_when_the_check_failed(about, window) -> None:
