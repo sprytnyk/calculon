@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QCoreApplication, QSettings
+from PySide6.QtCore import QCoreApplication, QEvent, QSettings
 from PySide6.QtWidgets import QApplication
 
 from calculon import rates
@@ -43,3 +43,6 @@ def window(app, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     yield w
     w.close()
     w.deleteLater()
+    # Qt only frees it once the event loop runs, which tests never reach. Left alive,
+    # old windows pile up and slow every new one: the theme repaints them all.
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
