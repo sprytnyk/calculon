@@ -312,7 +312,7 @@ class Sidebar(QWidget):
             self._show_current(selected)
         tree.verticalScrollBar().setValue(scroll)
         tree.blockSignals(False)
-        QTimer.singleShot(0, lambda: tree.setAnimated(True))
+        QTimer.singleShot(0, tree, lambda: tree.setAnimated(True))
         self._signature = self._snapshot()
         self._watch()
 

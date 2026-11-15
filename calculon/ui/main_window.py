@@ -243,10 +243,10 @@ class MainWindow(QMainWindow):
         self.apply_settings()  # sets the theme first, then builds the menus with its icons
         self._restore_window()
         self._open_initial()
-        QTimer.singleShot(0, self.rates.refresh_if_stale)
+        QTimer.singleShot(0, self.rates, self.rates.refresh_if_stale)
         if folder_error:
             QTimer.singleShot(
-                0, lambda: QMessageBox.warning(self, self.t("settings_title"), folder_error)
+                0, self, lambda: QMessageBox.warning(self, self.t("settings_title"), folder_error)
             )
 
     def t(self, key: str, **kw) -> str:
@@ -437,7 +437,7 @@ class MainWindow(QMainWindow):
             if action is not None:
                 while (popup := QApplication.activePopupWidget()) is not None:
                     popup.close()
-                QTimer.singleShot(0, action.trigger)
+                QTimer.singleShot(0, action, action.trigger)
                 return True
         return super().eventFilter(obj, event)
 
@@ -824,7 +824,7 @@ class MainWindow(QMainWindow):
                     button.style().polish(button)
             dlg.resize(max(dlg.width(), 380), dlg.height())
 
-        QTimer.singleShot(0, polish)
+        QTimer.singleShot(0, dlg, polish)
         ok = dlg.exec() == QInputDialog.DialogCode.Accepted
         return dlg.textValue(), ok
 

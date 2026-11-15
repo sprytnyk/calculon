@@ -1,10 +1,12 @@
 """UI smoke tests: the real window, offscreen, with every user folder in a temp dir."""
 
+import sys
 import time
 from functools import partial
 from pathlib import Path
 
 import pytest
+import shiboken6
 from PySide6.QtCore import QByteArray, QPoint, QRect, QSettings, QSize, Qt
 from PySide6.QtGui import (
     QColor,
@@ -30,6 +32,7 @@ from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu
 from calculon.ui.main_window import MainWindow
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog, key_text
+from calculon.ui.sidebar import Sidebar
 
 
 def pump(app) -> None:
@@ -279,6 +282,18 @@ def test_ligature_sample_follows_checkbox(window) -> None:
     assert dlg.ligature_sample.font().featureValue(calt) == 0
     dlg.ligatures.setChecked(True)
     assert not dlg.ligature_sample.font().isFeatureSet(calt)
+
+
+def test_a_freed_sidebar_leaves_no_timer_behind(app, tmp_path, monkeypatch) -> None:
+    """A rebuild turns the tree's animation back on from a timer. The window fixture
+    frees each window before that timer fires, so the timer must go with the sidebar."""
+    errors: list[BaseException] = []
+    monkeypatch.setattr(sys, "excepthook", lambda _type, error, _tb: errors.append(error))
+    sidebar = Sidebar(SheetStore(tmp_path / "sheets"), lambda key, **_: key)
+    sidebar.rebuild()
+    shiboken6.delete(sidebar)
+    app.processEvents()
+    assert errors == []
 
 
 def test_sidebar_draws_one_highlight_per_row(window, app) -> None:
