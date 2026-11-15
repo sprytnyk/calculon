@@ -423,6 +423,41 @@ def test_pane_keys_are_off_without_vim_mode(window, app) -> None:
     assert ed.toPlainText() == "h"  # a plain editor types the h
 
 
+def test_spelling_keys(vim, app, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    spell = spell_window(vim, app, "pay teh rnet\n# оредна plan", tmp_path)
+    ed = vim.editor
+    ed.setFocus()
+    menus: list[list[str]] = []
+
+    def texts(menu) -> list[str]:
+        return [act.text() for act in menu.actions()]
+
+    monkeypatch.setattr(ed, "show_menu", lambda menu, _: menus.append(texts(menu)))
+
+    def keys(typed: str) -> int:
+        QTest.keyClicks(ed, typed)
+        return ed.textCursor().position()
+
+    assert [keys("]s"), keys("2]s"), keys("]s"), keys("[s")] == [4, 15, 4, 15]  # round past the end
+    assert keys("2[s") == 4
+    keys("z=")
+    assert menus == [["&1 the", "&2 tech", "", "Add to Dictionary", "Ignore"]]
+    keys("2z=")  # the second suggestion, without the menu
+    assert (ed.toPlainText(), len(menus)) == ("pay tech rnet\n# оредна plan", 1)
+    keys("u")
+    assert ed.toPlainText() == "pay teh rnet\n# оредна plan"
+    assert keys("2]szg") == 8
+    assert (tmp_path / "words.txt").read_text(encoding="utf-8") == "rnet\n"
+    assert keys("]szG") == 15
+    assert "оредна" in spell.ignored
+    assert keys("gg]s") == 4  # only teh is left
+    pump(app)
+    assert underlined(ed, 0) == ["teh"] and underlined(ed, 1) == []
+    ed.set_spell_checker(None)
+    assert keys("0]sz=") == 0  # spell check is off: nothing to find
+    assert len(menus) == 1
+
+
 def test_only_insert_mode_hides_the_word_being_typed(vim, app, tmp_path: Path) -> None:
     spell_window(vim, app, "pay teh", tmp_path)
     ed = vim.editor

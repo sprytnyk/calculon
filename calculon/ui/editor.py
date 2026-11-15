@@ -1,6 +1,7 @@
 """The sheet editor: text on the left, results in a column on the right."""
 
 import re
+from bisect import bisect_left, bisect_right
 from collections.abc import Callable
 
 from PySide6.QtCore import (
@@ -674,6 +675,7 @@ class SheetEdit(QPlainTextEdit):
             self.vim.escape_hook = self._vim_escape
             self.vim.search_hook = self.vim_search.emit
             self.vim.window_hook = self.vim_window.emit
+            self.vim.spell_hook = self._vim_spell
             self.vim.mode_changed.connect(lambda mode: self.vim_mode_changed.emit(vim.label(mode)))
             self.vim.mode_changed.connect(self._update_typing)
             self.vim.pending_changed.connect(self.vim_pending_changed)
@@ -1034,9 +1036,12 @@ class SheetEdit(QPlainTextEdit):
 
     def misspelled_at(self, pos: QPoint) -> QTextCursor | None:
         """The misspelled word under `pos` (viewport coordinates), selected, or None."""
+        return self.misspelled_word(self.cursorForPosition(pos))
+
+    def misspelled_word(self, cur: QTextCursor) -> QTextCursor | None:
+        """The misspelled word `cur` is in or touches, selected, or None."""
         if self.highlighter.check is None:
             return None
-        cur = self.cursorForPosition(pos)
         block, at = cur.block(), cur.positionInBlock()
         for start, end in self.highlighter.misspelled(block.blockNumber(), block.text()):
             if start <= at <= end:
@@ -1069,6 +1074,67 @@ class SheetEdit(QPlainTextEdit):
         ignore = QAction(icons.icon("spell_ignore"), self.spell_texts["ignore"], parent)
         ignore.triggered.connect(lambda: self._accept_word(text, keep=False))
         return [*actions, add, ignore]
+
+    def add_spelling(self, menu: QMenu, word: QTextCursor) -> list[QAction]:
+        """Put the suggestions for `word`, then Add to Dictionary and Ignore, into
+        `menu`. Returns the suggestions."""
+        actions = self.spelling_actions(word, menu)
+        menu.addActions(actions[:-2])
+        menu.addSeparator()
+        menu.addActions(actions[-2:])
+        return [act for act in actions[:-2] if act.isEnabled()]  # not "No suggestions"
+
+    def misspelled_starts(self) -> list[int]:
+        """Where each misspelled word starts, as positions in the sheet, in order."""
+        starts = []
+        block = self.document().firstBlock()
+        while block.isValid():
+            found = self.highlighter.misspelled(block.blockNumber(), block.text())
+            starts += [block.position() + start for start, _ in found]
+            block = block.next()
+        return starts
+
+    def _vim_spell(self, command: str, count: int | None) -> None:
+        """vim's spelling commands, on the misspelled words spell check underlines."""
+        if command in ("]s", "[s"):
+            self._jump_misspelled(command == "]s", count or 1)
+            return
+        word = self.misspelled_word(self.textCursor())
+        if word is None:
+            return
+        if command == "z=":
+            self._suggest(word, count)
+        else:
+            self._accept_word(word.selectedText(), keep=command == "zg")
+
+    def _jump_misspelled(self, forward: bool, count: int) -> None:
+        """]s and [s: on to the next or previous misspelled word, round past the end."""
+        starts = self.misspelled_starts()
+        if not starts:
+            return
+        at = self.textCursor().position()
+        for _ in range(count):
+            if forward:
+                at = starts[bisect_right(starts, at) % len(starts)]
+            else:
+                at = starts[bisect_left(starts, at) - 1]  # -1 is the last one
+        cur = self.textCursor()
+        cur.setPosition(at)
+        self.setTextCursor(cur)
+
+    def _suggest(self, word: QTextCursor, count: int | None) -> None:
+        """z= shows the suggestions; 1 to 9 picks one. 2z= takes the second straight
+        away, as in vim."""
+        menu = QMenu(self)
+        suggestions = self.add_spelling(menu, word)
+        if count is not None:
+            if count <= len(suggestions):
+                suggestions[count - 1].trigger()
+            menu.deleteLater()
+            return
+        for n, act in enumerate(suggestions[:9], 1):
+            act.setText(f"&{n} {act.text()}")
+        self.show_menu(menu, self.viewport().mapToGlobal(self.cursorRect().bottomLeft()))
 
     def _replace_word(self, word: QTextCursor, text: str) -> None:
         word.insertText(text)
@@ -1105,10 +1171,7 @@ class SheetEdit(QPlainTextEdit):
         menu = QMenu(self)
         word = self.misspelled_at(pos)
         if word is not None:
-            actions = self.spelling_actions(word, menu)
-            menu.addActions(actions[:-2])
-            menu.addSeparator()
-            menu.addActions(actions[-2:])
+            self.add_spelling(menu, word)
         state = self._menu_state()
         for group in EDIT_MENU:
             keys = [
