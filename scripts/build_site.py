@@ -218,6 +218,7 @@ def theme_css() -> str:
     def block(theme: Theme) -> str:
         names = [f.name for f in fields(theme) if f.name not in ("name", "icons")]
         lines = [f"  --{n.replace('_', '-')}: {getattr(theme, n)};" for n in names]
+        lines.append(f"  --on-accent: {theme.on_accent};")
         lines += [f"  --icon-{k}: {v};" for k, v in theme.icons.items()]
         return "\n".join(lines)
 

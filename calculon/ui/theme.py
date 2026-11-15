@@ -48,6 +48,11 @@ class Theme:
     def is_dark(self) -> bool:
         return self.name == "dark"
 
+    @property
+    def on_accent(self) -> str:
+        """Text on the accent, as on primary buttons: page colour on dark, white on light."""
+        return self.bg if self.is_dark else "#ffffff"
+
 
 # Ember: warm greys with orange highlights
 # icon colours: bright shades on dark, deeper ones on light
@@ -314,7 +319,6 @@ def apply(app: QApplication, theme: Theme) -> None:
 
 def controls_stylesheet(t: Theme) -> str:
     """Text fields, dropdowns, number fields and buttons everywhere in the app."""
-    on_accent = t.bg if t.is_dark else "#ffffff"  # page colour on dark, white on light
     down = icons.icon_file("caret_down", t.muted)
     up = icons.icon_file("caret_up", t.muted)
     return f"""
@@ -356,7 +360,7 @@ def controls_stylesheet(t: Theme) -> str:
     QPushButton:pressed {{ background: {t.selection}; }}
     QPushButton:focus {{ border-color: {t.accent}; }}
     QPushButton#primary {{ background: {t.accent}; border-color: {t.accent};
-        color: {on_accent}; font-weight: 600; }}
+        color: {t.on_accent}; font-weight: 600; }}
     QPushButton#primary:hover {{ border-color: {t.text}; }}
     """
 

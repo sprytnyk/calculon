@@ -22,6 +22,7 @@
   --label: #334155;
   --tag: #047857;
   --misspelled: #e11d48;
+  --on-accent: #ffffff;
   --icon-neutral: #64748b;
   --icon-blue: #2563eb;
   --icon-amber: #d97706;
@@ -57,6 +58,7 @@
     --label: #cbd5e1;
     --tag: #34d399;
     --misspelled: #fb7185;
+    --on-accent: #0f172a;
     --icon-neutral: #94a3b8;
     --icon-blue: #60a5fa;
     --icon-amber: #fbbf24;
