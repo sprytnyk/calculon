@@ -1,12 +1,12 @@
 """Ukrainian sheets: 1 234,56 numbers, metric units in Cyrillic, Ukrainian results."""
 
-import time
 from dataclasses import replace
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from calculon.engine import FormatOptions, evaluate_sheet
-from tests.test_engine import CONFIG, RATES
+from tests.test_engine import CONFIG, NOW, RATES
 
 NB = " "  # thousands separator in the 1 234,56 style
 UK = FormatOptions(number_style="space_comma", lang="uk")
@@ -17,18 +17,11 @@ def uk(text: str) -> str:
     return evaluate_sheet(text, RATES, UK_CONFIG, UK).lines[-1].text
 
 
-@pytest.fixture
-def kyiv_time(monkeypatch: pytest.MonkeyPatch):
-    """Answers in other cities depend on the machine's own time zone; pin it."""
-    monkeypatch.setenv("TZ", "Europe/Kyiv")
-    time.tzset()
-    yield
-    monkeypatch.undo()
-    time.tzset()
-
-
-def test_time_in_another_city(kyiv_time) -> None:
-    assert uk("15:00 у Лондоні") == "13:00 Лондон"  # Kyiv is 2 hours ahead in November
+def test_time_in_another_city() -> None:
+    now = NOW.replace(tzinfo=ZoneInfo("Europe/Kyiv"))
+    config = replace(UK_CONFIG, now=lambda: now)
+    result = evaluate_sheet("15:00 у Лондоні", RATES, config, UK)
+    assert result.lines[-1].text == "13:00 Лондон"  # Kyiv is 2 hours ahead in November
 
 
 @pytest.mark.parametrize(
