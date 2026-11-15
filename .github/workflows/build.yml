@@ -116,10 +116,9 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           # the windowed build prints nothing, so test the same code from source
-          out=$(uv run --no-sync pytest tests/test_windows_spelling.py -v -rs)
-          echo "$out"
+          uv run --no-sync pytest tests/test_windows_spelling.py -v -rs 2>&1 | tee "$RUNNER_TEMP/windows-spelling.log"
           # a runner without Windows' English dictionary would skip it, not fail it
-          grep -q "test_real_windows_english PASSED" <<< "$out"
+          grep -q "test_real_windows_english PASSED" "$RUNNER_TEMP/windows-spelling.log"
       - name: Self-test the build
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
