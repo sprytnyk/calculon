@@ -1,18 +1,14 @@
-"""Vim mode through side-vim: how Calculon hooks it up. side-vim's own keys are tested there.
-
-Skipped when side-vim isn't installed, as in CI until it's on PyPI.
-"""
+"""Vim mode through side-vim: how Calculon hooks it up. side-vim's own keys are tested there."""
 
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtTest import QTest
+from side_vim import Mode
 
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog
 from tests.test_ui import off_centre, pump
-
-Mode = pytest.importorskip("side_vim").Mode
 
 CTRL = Qt.KeyboardModifier.ControlModifier
 TEXT = "rent = $900\nfood = $300\nrent + food"

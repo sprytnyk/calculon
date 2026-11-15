@@ -48,7 +48,7 @@ class Settings:
     line_numbers: bool = True
     always_on_top: bool = False
     spell_check: bool = False  # needs the system's Hunspell, see calculon/spelling.py
-    vim_mode: bool = False  # needs side-vim, see calculon/ui/vim.py
+    vim_mode: bool = False
     results_width: int = 260
     last_sheet: str = ""
 

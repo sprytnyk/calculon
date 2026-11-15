@@ -51,6 +51,7 @@ from PySide6.QtWidgets import (
     QToolTip,
     QWidget,
 )
+from side_vim import Mode, VimMode
 
 from ..engine import Config, FormatOptions, RateTable, SheetResult, evaluate_sheet
 from ..engine import ukrainian as UK
@@ -629,11 +630,11 @@ class SheetEdit(QPlainTextEdit):
             self.blockSignals(False)
 
     def set_vim(self, on: bool) -> None:
-        """Turn vim mode on or off. Does nothing without side-vim."""
-        if not vim.AVAILABLE or (self.vim is None and not on):
+        """Turn vim mode on or off."""
+        if self.vim is None and not on:
             return
         if self.vim is None:
-            self.vim = vim.VimMode(self)
+            self.vim = VimMode(self)
             self.vim.clipboard = True
             self.vim.escape_hook = self._vim_escape
             self.vim.search_hook = self.vim_search.emit
@@ -649,7 +650,7 @@ class SheetEdit(QPlainTextEdit):
 
     def vim_insert(self) -> bool:
         """True when vim mode is off or in Insert mode: keys type text as usual."""
-        return not self.vim_on() or self.vim.mode is vim.Mode.INSERT
+        return not self.vim_on() or self.vim.mode is Mode.INSERT
 
     def vim_reset(self) -> None:
         """Another sheet is open: start it in Normal mode, like opening a file in vim."""

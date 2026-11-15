@@ -1,14 +1,8 @@
-"""Vim mode through side-vim, when it's installed. Calculon works the same without it."""
+"""What Calculon shows for side-vim's vim mode: the mode label and the keys."""
 
 import sys
-from enum import Enum
 
-try:
-    from side_vim import Mode, VimMode
-except ImportError:  # optional until side-vim is on PyPI
-    Mode = VimMode = None
-
-AVAILABLE = VimMode is not None
+from side_vim import Mode
 
 # what vim shows at the bottom left; Normal mode shows nothing
 LABELS = {
@@ -18,7 +12,7 @@ LABELS = {
 }
 
 
-def label(mode: Enum) -> str:
+def label(mode: Mode) -> str:
     return LABELS.get(mode.value, "")
 
 
