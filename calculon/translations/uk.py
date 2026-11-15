@@ -200,6 +200,10 @@ T = {
     "test_fail": "Не працює: {error}",
     "restart_note": "Мова змінюється одразу.",
     # about
+    "update_checking": "Перевірка оновлень…",
+    "update_none": "У вас найновіша версія Calculon",
+    "update_newer": "<a href='{url}'>Calculon {version} доступний на GitHub</a>",
+    "update_failed": "Не вдалося перевірити оновлення",
     "about_text": (
         "<h2>Calculon {version}</h2>"
         "<p>Блокнот, що рахує, поки ви пишете.</p>"

@@ -45,7 +45,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import __version__
 from ..engine import format_value
 from ..engine.format import MONTHS_UK
 from ..paths import FONTS, HELP_DIR
@@ -56,6 +55,7 @@ from ..storage import SheetStore
 from ..translations import LANGUAGES, tr
 from . import icons
 from . import theme as themes
+from .about_dialog import AboutDialog
 from .editor import EDIT_MENU, KIND_ORDER, SheetEdit
 from .find_bar import FindBar
 from .settings_dialog import SettingsDialog
@@ -971,12 +971,7 @@ class MainWindow(QMainWindow):
         ShortcutsDialog(self.menuBar(), self.t, self, vim=self.editor.vim_on()).exec()
 
     def about(self) -> None:
-        box = QMessageBox(self)
-        box.setWindowTitle(self.t("about"))
-        box.setTextFormat(Qt.TextFormat.RichText)
-        box.setText(self.t("about_text", version=__version__))
-        box.setIconPixmap(self.windowIcon().pixmap(64, 64))
-        box.exec()
+        AboutDialog(self.t, self.theme, self.windowIcon().pixmap(64, 64), self).exec()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         self.save_current()

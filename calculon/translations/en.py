@@ -197,6 +197,10 @@ T = {
     "test_fail": "Doesn't work: {error}",
     "restart_note": "Language changes apply right away.",
     # about
+    "update_checking": "Checking for updates…",
+    "update_none": "Calculon is up to date",
+    "update_newer": "<a href='{url}'>Calculon {version} is available on GitHub</a>",
+    "update_failed": "Couldn't check for updates",
     "about_text": (
         "<h2>Calculon {version}</h2>"
         "<p>A notepad that calculates as you type.</p>"

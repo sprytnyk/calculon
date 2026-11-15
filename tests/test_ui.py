@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QPoint, QRect, QSettings, QSize, Qt
+from PySide6.QtCore import QByteArray, QPoint, QRect, QSettings, QSize, Qt
 from PySide6.QtGui import (
     QColor,
     QContextMenuEvent,
@@ -14,6 +14,7 @@ from PySide6.QtGui import (
     QTextCharFormat,
     QTextCursor,
 )
+from PySide6.QtNetwork import QNetworkReply
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMenu, QStyle, QWidget
 
@@ -22,6 +23,7 @@ from calculon.settings import Settings
 from calculon.spelling import SpellChecker, Status, probe
 from calculon.storage import SheetStore
 from calculon.ui import icons, main_window
+from calculon.ui.about_dialog import AboutDialog
 from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu
 from calculon.ui.main_window import MainWindow
 from calculon.ui.settings_dialog import SettingsDialog
@@ -1044,3 +1046,63 @@ def test_a_message_takes_the_place_of_the_total(window, app) -> None:
     assert window.rates_label.isVisible()
     window._message_timer.timeout.emit()  # its time is up
     assert window.total_label.isVisible() and not message.isVisible()
+
+
+NoError = QNetworkReply.NetworkError.NoError
+
+
+class FakeReply:
+    def __init__(self, error: QNetworkReply.NetworkError, body: bytes = b"") -> None:
+        self._error, self._body = error, body
+
+    def error(self) -> QNetworkReply.NetworkError:
+        return self._error
+
+    def read(self, _max: int) -> QByteArray:
+        return QByteArray(self._body)
+
+    def deleteLater(self) -> None:  # noqa: N802
+        pass
+
+
+@pytest.fixture
+def about(window, app, monkeypatch: pytest.MonkeyPatch):
+    """Help → About, opened from the menu, with the check to GitHub held back."""
+    opened = []
+    monkeypatch.setattr(AboutDialog, "check", lambda self: None)
+    monkeypatch.setattr(AboutDialog, "exec", lambda self: opened.append(self) or 0)
+    window.about()
+    dlg = opened[0]
+    dlg.show()
+    pump(app)
+    yield dlg
+    dlg.close()
+
+
+def test_about_spins_while_it_checks(about, window) -> None:
+    assert about.spinner.isVisible()
+    assert about.spinner._timer.isActive()
+    assert about.status.text() == window.t("update_checking")
+
+
+def test_about_links_to_a_newer_release(about) -> None:
+    about.finished_check(FakeReply(NoError, b'{"tag_name": "v99.0.0"}'))
+    assert not about.spinner.isVisible()
+    assert not about.spinner._timer.isActive()
+    assert "href='https://github.com/sprytnyk/calculon/releases/tag/v99.0.0'" in (
+        about.status.text()
+    )
+    assert about.status.openExternalLinks()
+
+
+def test_about_says_up_to_date_in_green(about, window) -> None:
+    about.finished_check(FakeReply(NoError, b'{"tag_name": "v0.0.0"}'))
+    assert about.status.text() == window.t("update_none")
+    assert window.theme.icons["green"] in about.status.styleSheet()
+
+
+def test_about_says_when_the_check_failed(about, window) -> None:
+    about.finished_check(FakeReply(QNetworkReply.NetworkError.HostNotFoundError))
+    assert not about.spinner.isVisible()
+    assert about.status.text() == window.t("update_failed")
+    assert about.status.styleSheet() == ""
