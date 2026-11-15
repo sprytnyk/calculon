@@ -329,7 +329,7 @@ def _evaluate_items(
 ) -> None:
     meaningful = [it for it in items if it.kind != "noise"]
     res.aggregate, res.of_tag = _aggregate_of(meaningful)
-    if not [it for it in meaningful if it.kind != "tag"]:
+    if not any(it.kind != "tag" for it in meaningful):
         res.kind = "text"
         return
     # a line starting with an operator continues from the answer just above it
@@ -356,7 +356,7 @@ def _evaluate_items(
             raise ParseError("nothing after the operator")
         if timeline is not None and not res.is_total:
             value = timeline.advance(value, ctx.rates)  # a labelled duration moves it
-    except (ParseError, CalcError, ArithmeticError, ValueError, OverflowError) as exc:
+    except (ParseError, ArithmeticError, ValueError) as exc:
         res.kind = "text"
         res.error = str(exc)
         return

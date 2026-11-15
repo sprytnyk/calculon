@@ -52,7 +52,7 @@ class SheetStore:
 
     def path(self, rel: str) -> Path:
         p = (self.root / rel).resolve()
-        if p != self.root.resolve() and self.root.resolve() not in p.parents:
+        if not p.is_relative_to(self.root.resolve()):
             raise StorageError(f"outside the sheets folder: {rel}")
         return p
 
@@ -65,9 +65,7 @@ class SheetStore:
         return name[: -len(EXT)] if name.endswith(EXT) else name
 
     def tree(self) -> Node:
-        root = Node("", "", True)
-        root.children = self._children("")
-        return root
+        return Node("", "", True, self._children(""))
 
     def _children(self, folder: str) -> list[Node]:
         base = self.path(folder) if folder else self.root

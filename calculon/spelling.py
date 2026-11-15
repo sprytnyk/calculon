@@ -54,7 +54,7 @@ NOT_PROSE = re.compile(r"\S+://\S+|\bwww\.\S+|\S+@\S+\.\S+|(?:~|\.{1,2})?/\S+")
 
 
 def platform_key() -> str:
-    return "darwin" if sys.platform == "darwin" else sys.platform
+    return sys.platform
 
 
 def dictionary_dirs() -> list[Path]:
@@ -268,18 +268,18 @@ class SpellChecker:
             return True
         if lower in self.known_lower:
             return True
-        d = self.dictionaries.get(language_of(word))
-        if d is None:
+        dictionary = self.dictionaries.get(language_of(word))
+        if dictionary is None:
             return True
-        if d.check(word):
+        if dictionary.check(word):
             return True
         # Hunspell knows п'ять but some dictionaries lack the other apostrophes
         plain = word.replace("’", "'").replace("ʼ", "'")
-        return plain != word and d.check(plain)
+        return plain != word and dictionary.check(plain)
 
     def suggest(self, word: str, limit: int = 5) -> list[str]:
-        d = self.dictionaries.get(language_of(word))
-        return d.suggest(word)[:limit] if d else []
+        dictionary = self.dictionaries.get(language_of(word))
+        return dictionary.suggest(word)[:limit] if dictionary else []
 
     def add(self, word: str) -> None:
         """Remember `word` for good, in the user's word list."""
@@ -300,8 +300,8 @@ class SpellChecker:
         self._cache.pop(word, None)
 
     def close(self) -> None:
-        for d in self.dictionaries.values():
-            d.close()
+        for dictionary in self.dictionaries.values():
+            dictionary.close()
         self.dictionaries.clear()
 
 
@@ -314,7 +314,7 @@ def words(text: str) -> Iterator[tuple[int, int, str]]:
     skip = [(m.start(), m.end()) for m in NOT_PROSE.finditer(text)]
     for m in WORD.finditer(text):
         start, end, word = m.start(), m.end(), m.group()
-        if len(word) < 2 or (word.isupper() and len(word) > 1):
+        if len(word) < 2 or word.isupper():
             continue
         if (start and GLUED.match(text, start - 1)) or (end < len(text) and GLUED.match(text, end)):
             continue  # the regex stopped at a digit or underscore: abc123, x_total

@@ -300,7 +300,7 @@ def classify(toks: list[Tok], ctx: Context) -> list[Item]:
     while i < len(toks):
         t = toks[i]
         if t.kind != "WORD":
-            items.append(_classify_symbol(t, toks, i, ctx))
+            items.append(_classify_symbol(t, ctx))
             i += 1
             continue
         # multi-word variables, longest first
@@ -368,7 +368,7 @@ def _mark_custom_units(items: list[Item], ctx: Context) -> None:
                 it.key = U.CUSTOM + name
 
 
-def _classify_symbol(t: Tok, toks: list[Tok], i: int, ctx: Context) -> Item:
+def _classify_symbol(t: Tok, ctx: Context) -> Item:
     if t.kind == "NUM":
         return Item("num", t.text, t, t)
     if t.kind == "CUR":
@@ -531,7 +531,7 @@ class Parser:
             self.rewind(0)
             try:
                 value = pattern(self)
-            except ParseError, CalcError, ArithmeticError, ValueError, OverflowError:
+            except ParseError, ArithmeticError, ValueError:
                 continue
             if value is not None and self.done():
                 return value
@@ -979,7 +979,7 @@ class Parser:
                 self.pos += 1
                 value = Q(value.mag / 100, pct=True)
                 continue
-            if it.kind == "kw" and it.key in ("percent",) and not value.pct:
+            if it.kind == "kw" and it.key == "percent" and not value.pct:
                 self.pos += 1
                 value = Q(value.mag / 100, pct=True)
                 continue
@@ -1240,7 +1240,7 @@ class Parser:
             if self.at("at", "@"):
                 self.pos += 1
                 rate = self.expr(9, stops)
-                return _custom_rate(left, unit, rate, r)
+                return _custom_rate(left, unit, rate)
             if not left.units and not left.pct:
                 return Q(left.mag, unit)
             return self._convert_to(left, unit)
@@ -1306,7 +1306,7 @@ def _rebase_rate(q: Q, per: U.Units, rates: RateTable) -> Q:
     return convert(q, U.normalize(target), rates)
 
 
-def _custom_rate(value: Q, target: U.Units, rate: Value, rates: RateTable) -> Q:
+def _custom_rate(value: Q, target: U.Units, rate: Value) -> Q:
     if not isinstance(rate, Q):
         raise CalcError("rate must be a number")
     if rate.unitless:
@@ -1345,21 +1345,17 @@ def _apply_fn(name: str, arg: Value) -> Q:
         return Q(_dec(FUNCTIONS[name](v)), units)
     if name == "abs":
         return Q(abs(x.mag), x.units, pct=x.pct)
-    if name in ("fact", "factorial") and (v < 0 or v > 1000 or v != int(v)):
-        raise CalcError("factorial needs a whole number up to 1000")
     if name in ("fact", "factorial"):
+        if v < 0 or v > 1000 or v != int(v):
+            raise CalcError("factorial needs a whole number up to 1000")
         return Q(Decimal(math.factorial(int(v))))
-    result = FUNCTIONS[name](v)
-    if name in ("asin", "acos", "atan", "arcsin", "arccos", "arctan"):
-        return Q(_dec(result))
-    return Q(_dec(result))
+    return Q(_dec(FUNCTIONS[name](v)))
 
 
 def _dec(f: float) -> Decimal:
     if math.isnan(f) or math.isinf(f):
         raise CalcError("result is not a number")
-    d = Decimal(f"{f:.15g}")
-    return d
+    return Decimal(f"{f:.15g}")
 
 
 def _round(name: str, args: list[Value]) -> Q:
@@ -1440,9 +1436,7 @@ def _q(v: Value) -> Q:
 
 def _pct_of(v: Value) -> Decimal:
     q = _q(v)
-    if q.pct:
-        return q.mag
-    if q.unitless:
+    if q.pct or q.unitless:
         return q.mag
     raise ParseError("percent expected")
 
@@ -1626,7 +1620,7 @@ def evaluate_tokens(
             if n == 0:
                 raise  # the whole line is maths that can't be done: show no answer
             errors.append(ParseError("no answer"))
-        except (ParseError, ArithmeticError, ValueError, OverflowError, KeyError) as exc:
+        except (ParseError, ArithmeticError, ValueError, KeyError) as exc:
             errors.append(exc)
         else:
             if plain is not None:

@@ -48,7 +48,7 @@ class RatesService(QObject):
             self.table = RateTable.parse(json.dumps(data["table"]), data["table"].get("source", ""))
             self.fetched_at = float(data["fetched_at"])
             return
-        except OSError, ValueError, KeyError, TypeError, RatesError:
+        except OSError, ValueError, KeyError, TypeError:
             pass
         try:
             self.table = RateTable.parse(FALLBACK_RATES.read_bytes(), "bundled snapshot")

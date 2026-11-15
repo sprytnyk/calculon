@@ -492,15 +492,11 @@ def convert_temperature(value: Decimal, src: str, dst: str) -> Decimal:
 
 def normalize(units: Units) -> Units:
     """Merge equal atoms and drop zero powers, keeping first-seen order."""
-    order: list[str] = []
     powers: dict[str, int] = {}
     for atom, power in units:
         name, p = split_power(atom)
-        if name not in powers:
-            order.append(name)
-            powers[name] = 0
-        powers[name] += p * power
-    return tuple((a, powers[a]) for a in order if powers[a])
+        powers[name] = powers.get(name, 0) + p * power
+    return tuple((name, power) for name, power in powers.items() if power)
 
 
 def larger(a: str, b: str) -> str:

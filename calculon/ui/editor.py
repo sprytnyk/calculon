@@ -216,8 +216,7 @@ class ResultsArea(QWidget):
         n = self._block_at(int(event.position().y()))
         if n != self.hover_block:
             self.hover_block = n
-            text = self.editor.result_text(n)
-            self.setToolTip(text if text else "")
+            self.setToolTip(self.editor.result_text(n))
             self.update()
 
     def leaveEvent(self, event) -> None:  # noqa: N802

@@ -157,9 +157,7 @@ def add(a: Value, b: Value, rates: RateTable, sign: int = 1) -> Value:
             return Q(a.mag + sign * b.mag, pct=True)
         return Q(b.mag * (ONE + sign * a.mag), b.units)
     if a.unitless or b.unitless:
-        units = a.units or b.units
-        parts = None
-        return Q(a.mag + sign * b.mag, units, fmt=a.fmt or b.fmt, parts=parts)
+        return Q(a.mag + sign * b.mag, a.units or b.units, fmt=a.fmt or b.fmt)
     if a.units == b.units:
         return Q(a.mag + sign * b.mag, a.units, parts=_merge_parts(a, b, sign))
     if not compatible(a.units, b.units):

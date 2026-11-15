@@ -13,6 +13,7 @@ tests/test_site.py fails when these files are out of date.
 import json
 import shutil
 import textwrap
+from dataclasses import fields
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -188,7 +189,10 @@ def page_data(lang: str, table: RateTable) -> dict[str, Any]:
         if (start := line["text"].find(MISSPELLED)) >= 0:
             spelling["misspelled"] = {"line": n, "start": start, "end": start + len(MISSPELLED)}
     spelling["suggestions"] = SUGGESTIONS
-    t = lambda key, **kw: tr(lang, key, **kw)  # noqa: E731
+
+    def t(key: str, **kw) -> str:
+        return tr(lang, key, **kw)
+
     return {
         "rates_date": rates_date(table, lang),
         "ui": {
@@ -212,7 +216,7 @@ def icon_names() -> list[str]:
 
 def theme_css() -> str:
     def block(theme: Theme) -> str:
-        names = [f for f in theme.__dataclass_fields__ if f not in ("name", "icons")]
+        names = [f.name for f in fields(theme) if f.name not in ("name", "icons")]
         lines = [f"  --{n.replace('_', '-')}: {getattr(theme, n)};" for n in names]
         lines += [f"  --icon-{k}: {v};" for k, v in theme.icons.items()]
         return "\n".join(lines)
@@ -243,7 +247,7 @@ def main() -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8", newline="\n")
         print(path.relative_to(ROOT))
-    copies = dict(COPIES) | {f"assets/icons/{n}.svg": f"icons/{n}.svg" for n in icon_names()}
+    copies = COPIES | {f"assets/icons/{n}.svg": f"icons/{n}.svg" for n in icon_names()}
     for src, dst in copies.items():
         target = DOCS / "assets" / dst
         target.parent.mkdir(parents=True, exist_ok=True)

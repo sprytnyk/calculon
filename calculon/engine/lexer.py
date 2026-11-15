@@ -178,7 +178,6 @@ def _number(line: str, i: int, thousands: str, point: str) -> tuple[Tok, int]:
             i += 4
             continue
         break
-    decimal_sep = point
     if (
         i < n
         and line[i] in (point, ".")
@@ -192,7 +191,6 @@ def _number(line: str, i: int, thousands: str, point: str) -> tuple[Tok, int]:
             if line[i] != "_":
                 digits.append(line[i])
             i += 1
-    del decimal_sep
     # scientific notation: 1.5e3, 2E-4
     m = re.compile(r"[eE][+-]?\d+(?![\w])").match(line, i)
     if m:

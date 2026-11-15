@@ -52,7 +52,7 @@ from ..paths import FONTS, HELP_DIR
 from ..rates import RatesService
 from ..settings import Settings, fallback_sheets_dir, own_words_file
 from ..spelling import SpellChecker, probe
-from ..storage import SheetStore, StorageError
+from ..storage import SheetStore
 from ..translations import LANGUAGES, tr
 from . import icons
 from . import theme as themes
@@ -301,9 +301,11 @@ class MainWindow(QMainWindow):
         bar = self.menuBar()
         bar.clear()
         self._actions: dict[str, QAction] = {}
-        K = QKeySequence.StandardKey
+        standard_key = QKeySequence.StandardKey
         m = bar.addMenu(self.t("menu_file"))
-        self._action(m, "new_sheet", lambda: self.new_sheet(self.sidebar.current_folder()), K.New)
+        self._action(
+            m, "new_sheet", lambda: self.new_sheet(self.sidebar.current_folder()), standard_key.New
+        )
         self._action(
             m, "new_folder", lambda: self.new_folder(self.sidebar.current_folder()), "Ctrl+Shift+N"
         )
@@ -311,18 +313,18 @@ class MainWindow(QMainWindow):
         m.addSeparator()
         self._action(m, "settings", self.open_settings, "Ctrl+,")
         m.addSeparator()
-        quit_act = self._action(m, "quit", self.close, K.Quit)
+        quit_act = self._action(m, "quit", self.close, standard_key.Quit)
         quit_act.setMenuRole(QAction.MenuRole.QuitRole)
 
         m = bar.addMenu(self.t("menu_edit"))
         ed = self.editor
-        self._action(m, "undo", ed.undo, K.Undo)
-        self._action(m, "redo", ed.redo, K.Redo)
+        self._action(m, "undo", ed.undo, standard_key.Undo)
+        self._action(m, "redo", ed.redo, standard_key.Redo)
         m.addSeparator()
-        self._action(m, "cut", ed.cut, K.Cut)
-        self._action(m, "copy", ed.copy, K.Copy)
-        self._action(m, "paste", ed.paste, K.Paste)
-        self._action(m, "select_all", ed.selectAll, K.SelectAll)
+        self._action(m, "cut", ed.cut, standard_key.Cut)
+        self._action(m, "copy", ed.copy, standard_key.Copy)
+        self._action(m, "paste", ed.paste, standard_key.Paste)
+        self._action(m, "select_all", ed.selectAll, standard_key.SelectAll)
         m.addSeparator()
         self._action(m, "toggle_comment", self._toggle_comment, "Ctrl+/")
         self._action(m, "copy_result", self._copy_current_result, "Ctrl+Shift+C")
@@ -332,9 +334,9 @@ class MainWindow(QMainWindow):
         self._action(m, "insert_reference", ed.insert_line_reference, "Ctrl+L")
         m.addSeparator()
         fb = self.find_bar
-        self._action(m, "find_in_sheet", lambda: fb.open(), K.Find)
-        self._action(m, "find_next", fb.step, K.FindNext)
-        self._action(m, "find_previous", lambda: fb.step(backward=True), K.FindPrevious)
+        self._action(m, "find_in_sheet", lambda: fb.open(), standard_key.Find)
+        self._action(m, "find_next", fb.step, standard_key.FindNext)
+        self._action(m, "find_previous", lambda: fb.step(backward=True), standard_key.FindPrevious)
         self._action(m, "find", self._focus_search, "Ctrl+P")
 
         m = bar.addMenu(self.t("menu_view"))
@@ -369,9 +371,12 @@ class MainWindow(QMainWindow):
             sub.addAction(act)
         m.addSeparator()
         self._action(
-            m, "zoom_in", lambda: self.zoom(1), [QKeySequence(K.ZoomIn), QKeySequence("Ctrl+=")]
+            m,
+            "zoom_in",
+            lambda: self.zoom(1),
+            [QKeySequence(standard_key.ZoomIn), QKeySequence("Ctrl+=")],
         )
-        self._action(m, "zoom_out", lambda: self.zoom(-1), K.ZoomOut)
+        self._action(m, "zoom_out", lambda: self.zoom(-1), standard_key.ZoomOut)
         self._action(m, "zoom_reset", lambda: self.zoom(0), "Ctrl+0")
         m.addSeparator()
         act = self._action(m, "toggle_sidebar", self._toggle_sidebar, "Ctrl+\\", checkable=True)
@@ -386,7 +391,7 @@ class MainWindow(QMainWindow):
         self.editor.menu_actions = {key: self._actions[key] for group in EDIT_MENU for key in group}
 
         m = bar.addMenu(self.t("menu_help"))
-        self._action(m, "help_sheet", self.open_help, K.HelpContents)
+        self._action(m, "help_sheet", self.open_help, standard_key.HelpContents)
         self._action(
             m,
             "shortcuts",
@@ -805,7 +810,7 @@ class MainWindow(QMainWindow):
         self.save_current()
         try:
             new_rel = self.store.rename(rel, name)
-        except (OSError, StorageError) as exc:
+        except OSError as exc:
             QMessageBox.warning(self, self.t("rename"), str(exc))
             return
         for cache in (self._docs, self._positions):

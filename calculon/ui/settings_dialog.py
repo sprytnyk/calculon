@@ -112,19 +112,21 @@ class Card(QFrame):
         self._row = 0
 
     def add(self, label: str, control: QWidget | QHBoxLayout, hint: str = "") -> None:
+        column = 1 if label else 0
+        span = 1 if label else 2
         if label:
             lab = QLabel(_label(label))
             self.grid.addWidget(lab, self._row, 0, Qt.AlignmentFlag.AlignVCenter)
         if isinstance(control, QHBoxLayout):
-            self.grid.addLayout(control, self._row, 1 if label else 0, 1, 1 if label else 2)
+            self.grid.addLayout(control, self._row, column, 1, span)
         else:
-            self.grid.addWidget(control, self._row, 1 if label else 0, 1, 1 if label else 2)
+            self.grid.addWidget(control, self._row, column, 1, span)
         self._row += 1
         if hint:
             h = QLabel(hint)
             h.setObjectName("hint")
             h.setWordWrap(True)
-            self.grid.addWidget(h, self._row, 1 if label else 0, 1, 1 if label else 2)
+            self.grid.addWidget(h, self._row, column, 1, span)
             self._row += 1
 
 
