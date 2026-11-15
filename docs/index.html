@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Calculon: a natural-language notepad calculator for Linux, Windows and macOS</title>
-    <meta name="description" content="A natural-language notepad calculator for Linux, Windows and macOS. Write lines with money, units and dates, and the answers show up on the right. Free and open source, in English and Ukrainian." />
+    <meta name="description" content="Calculon is a natural-language notepad calculator for Linux, Windows and macOS. Write lines with money, units and dates in English or Ukrainian, with answers beside each line. It is free and open source." />
     <link rel="icon" href="assets/icon.png" />
     <link rel="canonical" href="https://sprytnyk.github.io/calculon/" />
     <link rel="alternate" hreflang="en" href="https://sprytnyk.github.io/calculon/" />
@@ -13,7 +13,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Calculon" />
     <meta property="og:title" content="Calculon: a natural-language notepad calculator for Linux, Windows and macOS" />
-    <meta property="og:description" content="A natural-language notepad calculator for Linux, Windows and macOS. Write lines with money, units and dates, and the answers show up on the right. Free and open source, in English and Ukrainian." />
+    <meta property="og:description" content="Calculon is a natural-language notepad calculator for Linux, Windows and macOS. Write lines with money, units and dates in English or Ukrainian, with answers beside each line. It is free and open source." />
     <meta property="og:url" content="https://sprytnyk.github.io/calculon/" />
     <meta property="og:image" content="https://sprytnyk.github.io/calculon/screenshot.png" />
     <meta property="og:locale" content="en_GB" />
@@ -24,7 +24,7 @@
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         "name": "Calculon",
-        "description": "A natural-language notepad calculator for Linux, Windows and macOS. Write lines with money, units and dates, and the answers show up on the right. Free and open source, in English and Ukrainian.",
+        "description": "Calculon is a natural-language notepad calculator for Linux, Windows and macOS. Write lines with money, units and dates in English or Ukrainian, with answers beside each line. It is free and open source.",
         "applicationCategory": "UtilitiesApplication",
         "operatingSystem": "Linux, Windows, macOS",
         "url": "https://sprytnyk.github.io/calculon/",
@@ -63,7 +63,7 @@
         <nav>
           <a class="optional" href="#examples">Examples</a>
           <a class="optional" href="#features">Features</a>
-          <a class="optional" href="#faq">FAQ</a>
+          <a class="optional" href="#faq">Questions</a>
           <a href="https://github.com/sprytnyk/calculon">GitHub</a>
           <a href="uk/" data-lang="uk" hreflang="uk" lang="uk">🇺🇦 Українською</a>
         </nav>
@@ -75,8 +75,8 @@
         <h1>A notepad that calculates as&nbsp;you&nbsp;type</h1>
         <p class="lead">
           Calculon is a natural-language notepad calculator. Write lines with money, units and
-          dates, and the answers show up on the right. It runs on Linux, Windows and macOS, in
-          English and Ukrainian.
+          dates, and see the answers beside each line. It runs on Linux, Windows and macOS,
+          in English and Ukrainian.
         </p>
         <div data-downloads>
           <div class="downloads">
@@ -84,7 +84,7 @@
               >Download</a
             >
           </div>
-          <p class="download-note">It's free and open source, under the MIT licence.</p>
+          <p class="download-note">Calculon is free and open source under the MIT licence.</p>
         </div>
 
         <div class="window" data-hero aria-label="Calculon's window with a sheet being typed in">
@@ -105,24 +105,23 @@
           <div class="section-head">
             <h2>Examples</h2>
             <p class="muted">
-              Every line is plain text. Calculon finds the numbers, money, units and dates in it
-              and keeps the answers in a column on the right.
+              Choose an example to see its lines and answers.
             </p>
           </div>
           <div class="examples" data-examples>
             <div class="tabs" role="tablist" aria-label="Examples">
               <button class="tab" role="tab" data-sheet="basics" data-icon="numbers">
                 <strong>Words and maths</strong>
-                <span class="text">Name lines, use variables and percentages, and total the lines above.</span>
+                <span class="text">Use variables and percentages, and add up the lines above.</span>
               </button>
               <button class="tab" role="tab" data-sheet="money" data-icon="rates">
                 <strong>Money and units</strong>
-                <span class="text">Convert about 160 currencies at daily rates, and units like km, °C and TB.</span>
+                <span class="text">Convert about 160 currencies at daily rates. Convert units such as km, °C and TB.</span>
               </button>
               <button class="tab" role="tab" data-sheet="dates" data-icon="sheet">
                 <strong>Dates and timelines</strong>
                 <span class="text"
-                  >Add weeks to a date, count the days between two, or plan a trip with @from and
+                  >Add weeks to a date, count the days between dates, or plan a trip with @from and
                   @to.</span
                 >
               </button>
@@ -136,8 +135,8 @@
                 <div class="statusbar"><span class="total"></span></div>
               </div>
               <p class="rates-note">
-                Currency answers here use the rates from <span data-rates-date></span>, the snapshot
-                that ships with the app. The app updates them once a day.
+                These examples use the exchange rates from <span data-rates-date></span> that ship
+                with the app. Calculon updates its rates once a day.
               </p>
             </div>
           </div>
@@ -154,48 +153,71 @@
               <span class="icon" style="mask-image: url(assets/icons/colours.svg); -webkit-mask-image: url(assets/icons/colours.svg); background: var(--icon-violet)"></span>
               <h3>Two themes</h3>
               <p>
-                Ember, warm greys with orange, and Glacier, the slate blue on this page. Each comes
-                in dark and light, or follows your system.
+                Ember uses warm greys and orange. Glacier uses slate blue, as on this page.
+                Both have dark and light modes and can follow your system setting.
               </p>
             </div>
             <div class="card">
               <span class="icon" style="mask-image: url(assets/icons/open_folder.svg); -webkit-mask-image: url(assets/icons/open_folder.svg); background: var(--icon-amber)"></span>
               <h3>Sheets are plain files</h3>
               <p>
-                Every sheet is a .txt file in a folder you pick. Sync it, back it up or grep it
-                with any tool.
+                Each sheet is a .txt file in a folder you choose. Sync, search and back up your
+                sheets with the tools you already use.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(assets/icons/folder.svg); -webkit-mask-image: url(assets/icons/folder.svg); background: var(--icon-violet)"></span>
+              <h3>Folders, pins and trash</h3>
+              <p>
+                Group sheets in folders, pin favourites and find them with search.
+                Deleted sheets stay in the trash until you empty it.
               </p>
             </div>
             <div class="card">
               <span class="icon" style="mask-image: url(assets/icons/rates.svg); -webkit-mask-image: url(assets/icons/rates.svg); background: var(--icon-green)"></span>
               <h3>Rates that work offline</h3>
               <p>
-                Calculon downloads exchange rates once a day and keeps the last ones, so currencies
-                work without a network.
+                Calculon downloads exchange rates once a day and saves them for offline use.
               </p>
             </div>
             <div class="card">
               <span class="icon" style="mask-image: url(assets/icons/language.svg); -webkit-mask-image: url(assets/icons/language.svg); background: var(--icon-green)"></span>
               <h3>English and Ukrainian</h3>
               <p>
-                Write sheets in either language, or both at once. Numbers follow the interface
-                language: 1,234.56 or 1&nbsp;234,56.
+                Write in English or Ukrainian, or mix them in one sheet. Numbers follow the
+                interface language, with 1,234.56 or 1&nbsp;234,56.
               </p>
             </div>
             <div class="card">
               <span class="icon" style="mask-image: url(assets/icons/spell_add.svg); -webkit-mask-image: url(assets/icons/spell_add.svg); background: var(--icon-green)"></span>
               <h3>Spell check</h3>
               <p>
-                It checks English and Ukrainian with the dictionaries already on your system, and
-                skips numbers, units and variable names.
+                Check English and Ukrainian spelling with your system's dictionaries.
+                Calculon skips numbers, units and variable names.
               </p>
             </div>
             <div class="card">
               <span class="icon" style="mask-image: url(assets/icons/help.svg); -webkit-mask-image: url(assets/icons/help.svg); background: var(--icon-blue)"></span>
-              <h3>Help inside</h3>
+              <h3>Help and shortcuts</h3>
               <p>
-                The Help sheet (F1) shows every feature with live examples you can change.
+                The Help sheet explains the calculation syntax with examples. Open it with F1.
                 Keyboard Shortcuts in the Help menu lists the keys.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(assets/icons/shortcuts.svg); -webkit-mask-image: url(assets/icons/shortcuts.svg); background: var(--icon-blue)"></span>
+              <h3>Vim mode</h3>
+              <p>
+                Move and edit with Vim keys in Normal, Insert and Visual modes. Turn it on under
+                Editing on the General page of Settings.
+              </p>
+            </div>
+            <div class="card">
+              <span class="icon" style="mask-image: url(assets/icons/pin.svg); -webkit-mask-image: url(assets/icons/pin.svg); background: var(--icon-amber)"></span>
+              <h3>Always on top</h3>
+              <p>
+                Keep Calculon above other apps. Turn on Always on Top in the View menu.
+                A crossed-out pin means it's off.
               </p>
             </div>
           </div>
@@ -218,11 +240,11 @@
             <summary>Does it work with Soulver sheets?</summary>
             <div>
               <p>
-                Mostly. Calculon follows the syntax of <a href="https://soulver.app">Soulver</a>,
-                the notepad calculator for Mac and iPhone, for maths, money, units and dates, so
-                most sheets work in both. Timelines are different. Soulver marks their start and
-                end in its interface, and Calculon uses <code>@from</code> and <code>@to</code>
-                lines, which Soulver doesn't read. Calculon isn't made by Soulver's authors.
+                Mostly. Calculon follows <a href="https://soulver.app">Soulver's</a> calculation
+                syntax, so most sheets work in both apps. Trip timelines differ. Soulver sets
+                their start and end in its interface. Calculon uses <code>@from</code> and
+                <code>@to</code> lines, which Soulver doesn't read. Calculon isn't made by
+                Soulver's authors.
               </p>
             </div>
           </details>
@@ -230,9 +252,9 @@
             <summary>Does it work offline? What does it send?</summary>
             <div>
               <p>
-                Everything runs on your computer. The only thing Calculon downloads is exchange
-                rates, once a day, from open.er-api.com or Frankfurter. Without a network it uses
-                the last rates it has. There's no account and no tracking.
+                Calculon runs on your computer and uses the network only for exchange rates.
+                It downloads them once a day from open.er-api.com or Frankfurter. Offline, it
+                uses the last saved rates. You don't need an account, and Calculon doesn't track you.
               </p>
             </div>
           </details>
@@ -240,9 +262,9 @@
             <summary>Where are my sheets?</summary>
             <div>
               <p>
-                In <code>~/Documents/Calculon</code>, as plain <code>.txt</code> files, one per
-                sheet. Folders are real folders. You can pick another folder in Settings and sync
-                it with any tool.
+                Each sheet is a <code>.txt</code> file in <code>~/Documents/Calculon</code>.
+                Folders in the app are folders on disk. You can choose another folder in Settings
+                and sync it with your usual tools.
               </p>
             </div>
           </details>
@@ -258,7 +280,7 @@
                 On macOS, install Hunspell with Homebrew and put the en_US and uk_UA dictionaries
                 in <code>~/Library/Spelling</code>. The
                 <a href="https://github.com/sprytnyk/calculon#spell-check">README</a> has the
-                steps. Windows isn't supported yet.
+                steps. Spell check isn't available on Windows yet.
               </p>
               <p>Then turn it on with Check Spelling in the View menu, or press F7.</p>
             </div>
@@ -276,7 +298,7 @@
                 >Download</a
               >
             </div>
-            <p class="download-note">It's free and open source, under the MIT licence.</p>
+            <p class="download-note">Calculon is free and open source under the MIT licence.</p>
           </div>
         </div>
       </section>
@@ -293,7 +315,8 @@
         <p>
           Made by <a href="https://sprytnyk.dev">sprytnyk</a>. Calculon is a Futurama character ©
           Matt Groening / Comedy Central. This project isn't affiliated with them. Icons by
-          <a href="https://phosphoricons.com">Phosphor</a> (MIT), font Fira Code (OFL).
+          <a href="https://phosphoricons.com">Phosphor</a> under the MIT licence.
+          Fira Code uses the SIL Open Font License.
         </p>
       </div>
     </footer>

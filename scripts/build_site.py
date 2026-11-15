@@ -128,7 +128,7 @@ MENU = [
 # icons the page shows, besides the menu's
 PAGE_ICONS = [
     "sheet", "folder", "help", "trash", "spell_add", "spell_ignore",
-    "colours", "rates", "open_folder", "language", "numbers", "shortcuts",
+    "colours", "rates", "open_folder", "language", "numbers", "shortcuts", "pin",
 ]  # fmt: skip
 COPIES = {
     "assets/icon.png": "icon.png",

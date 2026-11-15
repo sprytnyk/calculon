@@ -18,7 +18,7 @@
       linux_short: "Linux",
       windows_short: "Windows",
       all: "All downloads",
-      version: (v, d) => `Version ${v}, released ${d}. It's free and open source, under the MIT licence.`,
+      version: (v, d) => `Version ${v} was released on ${d}. Calculon is free and open source under the MIT licence.`,
       date: { year: "numeric", month: "long", day: "numeric" },
     },
     uk: {
@@ -29,12 +29,10 @@
       linux_short: "Linux",
       windows_short: "Windows",
       all: "Усі завантаження",
-      version: (v, d) => `Версія ${v}, випущена ${d}. Він безкоштовний і має відкритий код під ліцензією MIT.`,
+      version: (v, d) => `Версія ${v} вийшла ${d}. Calculon безкоштовний і має відкритий код за ліцензією MIT.`,
       date: { year: "numeric", month: "long", day: "numeric" },
     },
   }[lang];
-
-  // ---- small helpers ----
 
   const el = (tag, cls, text) => {
     const node = document.createElement(tag);
@@ -69,8 +67,6 @@
       // private mode: the choice just isn't kept
     }
   };
-
-  // ---- one sheet, typed in line by line ----
 
   // pieces of a line, each with its colour class, cut at the misspelled word
   function pieces(line, miss) {
@@ -179,8 +175,6 @@
     }
   }
 
-  // ---- the right-click menu over the misspelled word ----
-
   function contextMenu(box, sheet) {
     const menu = el("div", "ctxmenu");
     sheet.suggestions.forEach((word, i) => {
@@ -217,8 +211,6 @@
     requestAnimationFrame(() => menu.classList.add("shown"));
     return menu;
   }
-
-  // ---- the window at the top of the page ----
 
   // a click on a sheet in the sidebar opens it, like in the app; folders, Help and Trash
   // are only labels
@@ -278,8 +270,6 @@
       if (!picked) current.type().catch(() => {});
     });
   }
-
-  // ---- the examples, one tab at a time ----
 
   function examples() {
     const root = document.querySelector("[data-examples]");
@@ -353,8 +343,6 @@
     }, { threshold: 0.35 });
     seen.observe(node);
   }
-
-  // ---- download links from the latest GitHub release ----
 
   function system() {
     const p = `${navigator.userAgentData?.platform || ""} ${navigator.platform || ""} ${navigator.userAgent}`;
@@ -438,8 +426,6 @@
       if (note) note.textContent = TEXT.version(release.tag.replace(/^v/, ""), when);
     }
   }
-
-  // ---- language links ----
 
   for (const link of document.querySelectorAll("[data-lang]")) {
     link.addEventListener("click", () => remember("lang", link.dataset.lang));

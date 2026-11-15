@@ -25,11 +25,13 @@ dates, and the answers show up in a column on the right. The syntax follows
 - Sheets in folders, with search, pins and a trash
 - Keep the window above other apps with Always on Top in the View menu. A crossed-out
   pin means it's off
+- Optional Vim mode with Normal, Insert and Visual modes. Turn it on under Editing on
+  the General page of Settings
 - Two themes, Ember and Glacier, each dark, light or following the system
 - Spell check for English and Ukrainian on Linux, and on macOS after a manual setup
 
-The Help sheet in the sidebar (F1) shows everything with live examples. Keyboard
-Shortcuts in the Help menu lists the keys.
+The Help sheet in the sidebar explains the calculation syntax with examples. Open it with F1.
+Keyboard Shortcuts in the Help menu lists the keys, including Vim keys when Vim mode is on.
 
 ## Install
 
