@@ -29,8 +29,8 @@ dates, and the answers show up in a column on the right. The syntax follows
 - Keep the window above other apps with Always on Top in the View menu. A crossed-out
   pin means it's off
 - Optional Vim mode with Normal, Insert and Visual modes, from
-  [side-vim](https://github.com/sprytnyk/side-vim). Turn it on under Editing on the
-  General page of Settings
+  [side-vim](https://github.com/sprytnyk/side-vim). To turn it on, open
+  the Vim page in Settings
 - Two themes, Ember and Glacier, each dark, light or following the system
 - Spell check for English and Ukrainian on Linux, and on macOS after a manual setup
 
@@ -126,8 +126,8 @@ curl -LO $base/uk_UA/uk_UA.aff -LO $base/uk_UA/uk_UA.dic
 
 **Windows.** Not yet.
 
-The General page of Settings shows what Calculon found, and the install command for anything
-missing. `calculon --self-test` prints it too.
+The Spell Check page of Settings shows what Calculon found, and the install command for
+anything missing. `calculon --self-test` prints it too.
 
 ## Develop
 
