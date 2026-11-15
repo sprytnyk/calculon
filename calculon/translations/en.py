@@ -175,6 +175,10 @@ T = {
         "Needs Hunspell: run brew install hunspell, then put the .aff and .dic "
         "dictionary files in ~/Library/Spelling. The README has the steps."
     ),
+    "hint_spell_macos_dicts": (
+        "No dictionary for {languages}. To add one, put the .aff and .dic files in "
+        "~/Library/Spelling. The README has the steps."
+    ),
     "hint_spell_other": "Not available on this system yet.",
     "number_style": "Number format:",
     "number_style_auto": "Same as the language",

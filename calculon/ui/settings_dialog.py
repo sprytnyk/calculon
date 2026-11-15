@@ -91,7 +91,7 @@ def spell_hint(status: Status, tr) -> str:
         parts.append(tr("hint_spell_ok", languages=names(status.dictionaries)))
     if status.missing:
         if platform_key() == "darwin":
-            parts.append(tr("hint_spell_macos"))
+            parts.append(tr("hint_spell_macos_dicts", languages=names(status.missing)))
         else:
             command = status.install_command()
             parts.append(tr("hint_spell_missing", languages=names(status.missing), command=command))

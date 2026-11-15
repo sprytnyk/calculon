@@ -1,6 +1,7 @@
 """UI smoke tests: the real window, offscreen, with every user folder in a temp dir."""
 
 import time
+from functools import partial
 from pathlib import Path
 
 import pytest
@@ -18,11 +19,12 @@ from PySide6.QtNetwork import QNetworkReply
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMenu, QStyle, QWidget
 
-from calculon import rates
+from calculon import rates, spelling
 from calculon.settings import Settings
 from calculon.spelling import SpellChecker, Status, probe
 from calculon.storage import SheetStore
-from calculon.ui import icons, main_window
+from calculon.translations import tr
+from calculon.ui import icons, main_window, settings_dialog
 from calculon.ui.about_dialog import AboutDialog
 from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu
 from calculon.ui.main_window import MainWindow
@@ -721,7 +723,14 @@ def test_no_spelling_in_read_only_sheets(window, app, tmp_path: Path) -> None:
     assert underlined(window.editor, 0) == ["teh", "rnet"]
 
 
+def pretend_os(monkeypatch: pytest.MonkeyPatch, key: str) -> None:
+    """Make spell check act as on `key` ("linux", "darwin", ...), whatever OS runs the tests."""
+    monkeypatch.setattr(spelling, "platform_key", lambda: key)
+    monkeypatch.setattr(settings_dialog, "platform_key", lambda: key)
+
+
 def test_spelling_toggle_and_settings(window, app, monkeypatch: pytest.MonkeyPatch) -> None:
+    pretend_os(monkeypatch, "linux")
     status = Status(supported=True, library=True, dictionaries={"en": Path("/x/en_US")})
     window.spell_status = status
     window._spell = FakeSpell()
@@ -745,8 +754,26 @@ def test_spelling_toggle_and_settings(window, app, monkeypatch: pytest.MonkeyPat
     assert window.editor.spell is None
 
 
-def test_spelling_greyed_out_without_hunspell(window) -> None:
-    window.spell_status = Status(supported=True, library=False)
+@pytest.mark.parametrize(
+    ("status", "hint"),
+    [
+        pytest.param(
+            Status(supported=True, library=False),
+            "sudo apt install libhunspell-1.7-0",
+            id="no hunspell",
+        ),
+        pytest.param(
+            Status(supported=True, library=True),
+            "sudo apt install hunspell-en-us hunspell-uk",
+            id="no dictionaries",
+        ),
+    ],
+)
+def test_spelling_greyed_out_without_hunspell(
+    window, monkeypatch: pytest.MonkeyPatch, status: Status, hint: str
+) -> None:
+    pretend_os(monkeypatch, "linux")
+    window.spell_status = status
     window.settings.spell_check = True
     window.build_menus()
     window.apply_settings()
@@ -756,8 +783,65 @@ def test_spelling_greyed_out_without_hunspell(window) -> None:
     assert window.editor.spell is None
     dlg = SettingsDialog(window.settings, window.t, window)
     assert not dlg.spell_check.isEnabled()
-    assert "sudo apt install libhunspell-1.7-0" in dlg.spell_hint.text()
+    assert hint in dlg.spell_hint.text()
     assert dlg.result_settings().spell_check  # kept for when Hunspell turns up
+
+
+MAC_DICTS = (
+    "To add one, put the .aff and .dic files in ~/Library/Spelling. The README has the steps."
+)
+
+
+@pytest.mark.parametrize(
+    ("os_key", "status", "hint"),
+    [
+        pytest.param(
+            "linux",
+            Status(supported=True, library=False),
+            "Needs Hunspell. To install it: "
+            "sudo apt install libhunspell-1.7-0 hunspell-en-us hunspell-uk",
+            id="linux no hunspell",
+        ),
+        pytest.param(
+            "linux",
+            Status(supported=True, library=True),
+            "No dictionary for English, Ukrainian. "
+            "To add it: sudo apt install hunspell-en-us hunspell-uk",
+            id="linux no dictionaries",
+        ),
+        pytest.param(
+            "darwin",
+            Status(supported=True, library=False),
+            "Needs Hunspell: run brew install hunspell, then put the .aff and .dic "
+            "dictionary files in ~/Library/Spelling. The README has the steps.",
+            id="macos no hunspell",
+        ),
+        pytest.param(
+            "darwin",
+            Status(supported=True, library=True),
+            f"No dictionary for English, Ukrainian. {MAC_DICTS}",
+            id="macos no dictionaries",
+        ),
+        pytest.param(
+            "darwin",
+            Status(supported=True, library=True, dictionaries={"en": Path("/x/en_US")}),
+            "English, with the system's Hunspell dictionaries. "
+            f"No dictionary for Ukrainian. {MAC_DICTS}",
+            id="macos no ukrainian",
+        ),
+        pytest.param(
+            "win32",
+            Status(supported=False, library=False),
+            "Not available on this system yet.",
+            id="windows",
+        ),
+    ],
+)
+def test_spell_hint(
+    monkeypatch: pytest.MonkeyPatch, os_key: str, status: Status, hint: str
+) -> None:
+    pretend_os(monkeypatch, os_key)
+    assert settings_dialog.spell_hint(status, partial(tr, "en")) == hint
 
 
 @pytest.mark.skipif(not probe().available, reason="needs the system's Hunspell")

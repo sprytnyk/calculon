@@ -178,6 +178,10 @@ T = {
         "Потрібен Hunspell: виконайте brew install hunspell і покладіть файли словників "
         ".aff і .dic у ~/Library/Spelling. Кроки є в README."
     ),
+    "hint_spell_macos_dicts": (
+        "Немає словника для мов: {languages}. Щоб додати, покладіть файли .aff і .dic "
+        "у ~/Library/Spelling. Кроки є в README."
+    ),
     "hint_spell_other": "На цій системі поки недоступно.",
     "number_style": "Формат чисел:",
     "number_style_auto": "Як у мові інтерфейсу",
