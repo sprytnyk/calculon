@@ -168,7 +168,7 @@ class RateTable:
                 dec = Decimal(str(value))
             except ArithmeticError:
                 continue
-            if dec > 0 and len(code) == 3 and code.isalpha():
+            if dec.is_finite() and dec > 0 and len(code) == 3 and code.isalpha():
                 rates[code.upper()] = dec
         if not rates:
             raise RatesError("no usable rates in the document")
