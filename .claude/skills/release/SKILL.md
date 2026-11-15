@@ -166,7 +166,7 @@ One-line summary of the release.
 ### Breaking
 - What changed, why, and what users have to do about their sheets or settings.
 
-### Highlights
+### Features
 - New features, the ones users see first.
 
 ### Fixes
