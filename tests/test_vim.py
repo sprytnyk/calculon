@@ -205,6 +205,18 @@ def test_shortcuts_window_lists_vim_keys_only_when_on(vim) -> None:
     assert "Vim mode" not in rows
 
 
+@pytest.mark.parametrize("language", ["en", "uk"])
+def test_shortcuts_window_fits_every_row(vim, app, language) -> None:
+    vim.settings.language = language
+    vim.apply_settings()
+    dlg = ShortcutsDialog(vim.menuBar(), vim.t, vim, vim=True)
+    dlg.show()
+    pump(app)
+    tree = dlg.tree
+    assert tree.columnWidth(0) >= tree.sizeHintForColumn(0)  # no text cut short
+    dlg.close()
+
+
 def test_settings_switch(window) -> None:
     dlg = SettingsDialog(window.settings, window.t, window)
     assert not dlg.vim_mode.isChecked()

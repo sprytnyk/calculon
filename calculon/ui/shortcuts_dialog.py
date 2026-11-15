@@ -146,6 +146,11 @@ class ShortcutsDialog(QDialog):
         layout.setSpacing(14)
         layout.addWidget(self.tree)
         layout.addWidget(buttons)
+        # as wide as the longest row, which depends on the language and the font
+        tree = self.tree
+        columns = tree.sizeHintForColumn(0) + tree.sizeHintForColumn(1)
+        scrollbar = tree.verticalScrollBar().sizeHint().width()
+        tree.setMinimumWidth(columns + scrollbar + 2 * tree.frameWidth())
         self.resize(600, 740)
 
     def rows(self) -> list[tuple[str, str]]:
