@@ -58,15 +58,18 @@ gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum --ignore-missing -c SHA256SU
 
 ## Sheets
 
-Each sheet is a plain `.txt` file in `~/Documents/Calculon`. You can pick another folder
-in Settings. Folders are real folders, so the sheets work with any sync tool, `grep` or
-backups. Calculon keeps pins and custom order in a hidden `.calculon.json` in that
-folder. Deleted sheets go to `.trash/` until you empty the trash.
+On first start, Calculon asks where to keep your sheets and suggests
+`~/Documents/Calculon`. Each sheet is a plain `.txt` file in that folder. You can pick
+another folder later in Settings.
 
-If Calculon can't write to that folder, it starts with a backup folder in its app data
-and says why. On Windows that's `%LOCALAPPDATA%\Calculon\Sheets`, and the usual cause is
-Controlled folder access in Windows Security. Allow Calculon there, or pick another
-folder in Settings.
+Folders are real folders, so the sheets work with any sync tool, `grep` or backups.
+Calculon keeps pins and custom order in a hidden `.calculon.json` in that folder.
+Deleted sheets go to `.trash/` until you empty the trash. Calculon ignores links and
+Windows junctions, such as `My Music` in Documents.
+
+Calculon checks the folder by creating it and writing a test file. If that fails, it says
+why and asks for another folder. On Windows the usual cause is Controlled folder access in
+Windows Security. Allow Calculon there, or pick a folder outside Documents.
 
 ## Exchange rates
 

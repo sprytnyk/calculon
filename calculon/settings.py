@@ -16,6 +16,7 @@ FALLBACK_RATES_URL = "https://api.frankfurter.dev/v1/latest?base=USD"
 
 
 def default_sheets_dir() -> str:
+    """The sheets folder Calculon suggests on first start."""
     docs = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
     return str(Path(docs or Path.home()) / "Calculon")
 
@@ -31,15 +32,9 @@ def read_bool(value: object) -> bool:
     return value in (True, "true", "1", 1)
 
 
-def fallback_sheets_dir() -> str:
-    """Used when the sheets folder can't be written, e.g. Windows blocks Documents."""
-    data = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)
-    return str(Path(data or Path.home()) / "Sheets")
-
-
 @dataclass
 class Settings:
-    sheets_dir: str = ""
+    sheets_dir: str = ""  # empty until the user picks a folder on first start
     theme: str = "dark"  # dark, light, system
     colours: str = "glacier"  # glacier, ember
     language: str = "en"  # en, uk
@@ -75,8 +70,6 @@ class Settings:
             except TypeError, ValueError:
                 value = default
             setattr(s, f.name, value)
-        if not s.sheets_dir:
-            s.sheets_dir = default_sheets_dir()
         # a hand-edited or newer config can hold values this version doesn't know
         choices = {
             "theme": ("dark", "light", "system"),

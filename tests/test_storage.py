@@ -200,6 +200,23 @@ def test_search_includes_pins_and_skips_hidden_folders(tmp_path: Path) -> None:
     assert store.search("groceries") == ["Notes.txt", "Work/Budget.txt"]
 
 
+@pytest.mark.skipif(os.name == "nt" or os.geteuid() == 0, reason="needs POSIX permissions")
+def test_folder_that_cannot_be_written_is_refused(tmp_path: Path) -> None:
+    locked = tmp_path / "locked"
+    locked.mkdir()
+    locked.chmod(0o500)
+    try:
+        with pytest.raises(PermissionError):
+            SheetStore(locked)
+    finally:
+        locked.chmod(0o700)
+
+
+def test_write_check_leaves_nothing_behind(tmp_path: Path) -> None:
+    SheetStore(tmp_path / "sheets")
+    assert list((tmp_path / "sheets").iterdir()) == []
+
+
 def test_broken_meta_file_is_ignored(tmp_path: Path) -> None:
     (tmp_path / ".calculon.json").write_text("{not json")
     store = SheetStore(tmp_path)

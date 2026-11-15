@@ -158,12 +158,14 @@ T = {
     "tab_spelling": "Spell Check",
     "tab_vim": "Vim",
     "sheets_dir": "Sheets folder:",
-    "folder_blocked": (
-        "Calculon can't create or write to {folder}.\n\n{error}\n\n"
-        "On Windows, Controlled folder access in Windows Security may be blocking it. "
-        "Allow Calculon there, or pick another sheets folder in Settings."
+    "folder_blocked": "Calculon can't create or write to {folder}. {error}.",
+    "folder_blocked_windows": (
+        "Controlled folder access in Windows Security may be blocking it. "
+        "Allow Calculon there, or pick another folder."
     ),
-    "folder_fallback": "Until then, your sheets are saved in {fallback}.",
+    "folder_pick_another": "Pick another folder.",
+    "folder_question": "Where should Calculon keep your sheets?",
+    "folder_use": "Use this folder",
     "browse": "Browse…",
     "font_size": "Text size:",
     "ligatures": "Font ligatures",

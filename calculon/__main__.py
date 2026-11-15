@@ -17,6 +17,7 @@ from calculon.engine import Config, FormatOptions, RateTable, evaluate_sheet
 from calculon.engine.format import LANGUAGE_NUMBER_STYLES
 from calculon.paths import APP_ICON, FALLBACK_RATES, FONTS, HELP_DIR
 from calculon.spelling import SpellChecker, probe
+from calculon.ui.folder_dialog import choose_sheets_folder
 from calculon.ui.icons import NAMES, svg
 from calculon.ui.main_window import MainWindow
 
@@ -89,7 +90,10 @@ def main() -> int:
     app.setDesktopFileName("calculon")
     icon = QIcon(str(APP_ICON))
     app.setWindowIcon(icon)
-    window = MainWindow()
+    settings = choose_sheets_folder()
+    if settings is None:
+        return 0
+    window = MainWindow(settings)
     window.setWindowIcon(icon)
     window.show()
     return app.exec()

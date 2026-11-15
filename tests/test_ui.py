@@ -1,10 +1,12 @@
 """UI smoke tests: the real window, offscreen, with every user folder in a temp dir."""
 
+import os
 import subprocess
 import sys
 import time
 from functools import partial
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import shiboken6
@@ -15,6 +17,7 @@ from PySide6.QtGui import (
     QFont,
     QGuiApplication,
     QKeySequence,
+    QPalette,
     QTextCharFormat,
     QTextCursor,
 )
@@ -22,18 +25,20 @@ from PySide6.QtNetwork import QNetworkReply
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMenu, QStyle, QWidget
 
-from calculon import rates, spelling
+from calculon import rates, settings, spelling
 from calculon.settings import Settings
 from calculon.spelling import SpellChecker, Status, probe
 from calculon.storage import SheetStore
 from calculon.translations import tr
-from calculon.ui import icons, main_window, settings_dialog
+from calculon.ui import folder_dialog, icons, settings_dialog
+from calculon.ui import theme as themes
 from calculon.ui.about_dialog import AboutDialog
 from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu
 from calculon.ui.main_window import MainWindow
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog, key_text
 from calculon.ui.sidebar import Sidebar
+from calculon.ui.theme import GLACIER_DARK, GLACIER_LIGHT
 
 
 def pump(app) -> None:
@@ -57,6 +62,68 @@ def test_first_start_creates_welcome_sheet(window, app) -> None:
     assert "$64.00" in texts  # 20% off $80
 
 
+def drive_folder_dialog(monkeypatch, *folders: str) -> list[folder_dialog.FolderDialog]:
+    """Stand in for the user: type each folder in turn and press "Use this folder".
+    With no folders, press Quit. Returns the dialogs that opened."""
+    opened = []
+
+    def run(dialog) -> int:
+        opened.append(dialog)
+        for folder in folders:
+            dialog.folder.setText(folder)
+            dialog.try_folder()
+            if dialog.result() == folder_dialog.QDialog.DialogCode.Accepted:
+                break
+        return dialog.result()
+
+    monkeypatch.setattr(folder_dialog.FolderDialog, "exec", run)
+    return opened
+
+
+def test_first_start_asks_for_sheets_folder(app, home, tmp_path, monkeypatch) -> None:
+    qs = QSettings()
+    qs.clear()
+    blocker = tmp_path / "not-a-folder"
+    blocker.write_text("")
+    chosen = tmp_path / "My sheets"
+    opened = drive_folder_dialog(monkeypatch, str(blocker / "Calculon"), str(chosen))
+    try:
+        assert folder_dialog.choose_sheets_folder() is not None
+        dialog = opened[0]
+        assert dialog.error.text().startswith(f"Calculon can't create or write to {blocker}")
+        assert Settings.load().sheets_dir == str(chosen)
+        assert chosen.is_dir()
+    finally:
+        qs.clear()
+
+
+def test_first_start_suggests_documents(app, home, monkeypatch) -> None:
+    QSettings().clear()
+    opened = drive_folder_dialog(monkeypatch)
+    assert folder_dialog.choose_sheets_folder() is None
+    assert opened[0].folder.text() == settings.default_sheets_dir()
+    assert opened[0].error.isHidden()
+    assert Settings.load().sheets_dir == ""
+
+
+def test_chosen_folder_reaches_the_window_when_settings_cannot_be_saved(
+    app, home, tmp_path, monkeypatch
+) -> None:
+    """In a home folder Calculon can't write to, QSettings drops the save without an
+    error. So the window must get the folder from the dialog, not from the settings file."""
+    QSettings().clear()
+    monkeypatch.setattr(Settings, "save", lambda self: None)
+    monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
+    chosen = tmp_path / "My sheets"
+    drive_folder_dialog(monkeypatch, str(chosen))
+    w = MainWindow(folder_dialog.choose_sheets_folder())
+    try:
+        assert w.store.root == chosen
+    finally:
+        w.close()
+        w.deleteLater()
+
+
 def test_icons_work_when_the_cache_folder_cannot_be_written(app, tmp_path, monkeypatch) -> None:
     blocker = tmp_path / "cache"
     blocker.write_text("")  # a file where the cache folder should be
@@ -64,6 +131,83 @@ def test_icons_work_when_the_cache_folder_cannot_be_written(app, tmp_path, monke
     path = Path(icons.icon_file("caret_down", "#123456"))
     assert path.is_file() and not path.is_relative_to(blocker)
     assert icons.icon_file("caret_down", "#123456") == path.as_posix()
+
+
+def test_saved_sheets_folder_opens_without_asking(app, tmp_path, monkeypatch) -> None:
+    qs = QSettings()
+    qs.clear()
+    qs.setValue("sheets_dir", str(tmp_path / "sheets"))
+    opened = drive_folder_dialog(monkeypatch)
+    try:
+        assert folder_dialog.choose_sheets_folder() is not None
+        assert opened == []
+    finally:
+        qs.clear()
+
+
+def test_blocked_saved_folder_asks_again_and_explains(app, tmp_path, monkeypatch) -> None:
+    """Windows' Controlled folder access can block Documents. Say why and ask again,
+    with the saved folder in the box so a retry is one click."""
+    blocker = tmp_path / "not-a-folder"
+    blocker.write_text("")
+    blocked = blocker / "Calculon"
+    qs = QSettings()
+    qs.clear()
+    qs.setValue("sheets_dir", str(blocked))
+    monkeypatch.setattr(folder_dialog, "sys", SimpleNamespace(platform="win32"))
+    opened = drive_folder_dialog(monkeypatch)
+    try:
+        assert folder_dialog.choose_sheets_folder() is None
+        dialog = opened[0]
+        assert dialog.folder.text() == str(blocked)
+        assert str(blocked) in dialog.error.text()
+        assert "Controlled folder access" in dialog.error.text()
+        assert Settings.load().sheets_dir == str(blocked)
+    finally:
+        qs.clear()
+
+
+@pytest.mark.skipif(os.name == "nt" or os.geteuid() == 0, reason="needs POSIX permissions")
+def test_folder_error_names_the_reason_not_the_test_file(app, tmp_path) -> None:
+    locked = tmp_path / "locked"
+    locked.mkdir()
+    locked.chmod(0o500)
+    dialog = folder_dialog.FolderDialog(str(locked), "", "en", GLACIER_DARK)
+    try:
+        dialog.try_folder()
+    finally:
+        locked.chmod(0o700)
+    assert dialog.error.text() == (
+        f"Calculon can't create or write to {locked}. Permission denied.\n\nPick another folder."
+    )
+
+
+@pytest.mark.parametrize("theme", [GLACIER_DARK, GLACIER_LIGHT])
+def test_folder_dialog_follows_the_theme_and_fits_the_error(app, tmp_path, theme) -> None:
+    blocker = tmp_path / "not-a-folder"
+    blocker.write_text("")
+    themes.apply(app, theme)
+    dialog = folder_dialog.FolderDialog(str(blocker / "Calculon"), "", "en", theme)
+    dialog.show()
+    pump(app)
+    height = dialog.height()
+    QTest.keyClick(dialog.folder, Qt.Key.Key_Return)  # Enter means "Use this folder"
+    pump(app)
+    error = dialog.error
+    try:
+        assert dialog.isVisible() and error.isVisible()
+        assert error.palette().color(QPalette.ColorRole.WindowText).name() == theme.error
+        page = dialog.findChild(QWidget, "page")
+        assert page.palette().color(page.backgroundRole()).name() == theme.bg
+        assert dialog.use_button.objectName() == "primary"
+        assert not dialog.icon.pixmap().isNull() and dialog.icon.isVisible()
+        # the whole wrapped message shows without resizing the window by hand
+        assert dialog.height() > height
+        assert error.height() >= error.heightForWidth(error.width())
+        assert error.mapTo(dialog, error.rect().bottomLeft()).y() < dialog.height()
+    finally:
+        dialog.close()
+        themes.apply(app, GLACIER_DARK)
 
 
 def test_typing_saves_and_calculates(window, app) -> None:
@@ -679,39 +823,6 @@ def test_help_sheet_ignores_the_insert_keys(window, app) -> None:
     ed.insert_line_reference()
     assert not ed.insert_reference(0)
     assert ed.toPlainText() == before
-
-
-def test_blocked_sheets_folder_falls_back_and_explains(app, home, tmp_path, monkeypatch) -> None:
-    """Windows' Controlled folder access can block Documents. Start anyway, in a fallback
-    folder, say why, and keep the chosen folder so the next start tries it again."""
-    monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
-    blocker = tmp_path / "not-a-folder"
-    blocker.write_text("")
-    blocked = blocker / "Calculon"
-    fallback = tmp_path / "fallback"
-    monkeypatch.setattr(main_window, "fallback_sheets_dir", lambda: str(fallback))
-    warnings: list[str] = []
-    monkeypatch.setattr(
-        main_window.QMessageBox, "warning", lambda _parent, _title, text: warnings.append(text)
-    )
-    qs = QSettings()
-    qs.clear()
-    qs.setValue("sheets_dir", str(blocked))
-    qs.sync()
-    w = MainWindow()
-    w.show()
-    pump(app)
-    try:
-        assert w.store.root == fallback
-        assert (fallback / "Welcome.txt").exists()
-        assert len(warnings) == 1
-        assert str(blocked) in warnings[0]
-        assert "Controlled folder access" in warnings[0]
-        assert str(fallback) in warnings[0]
-        assert w.settings.sheets_dir == str(blocked)
-    finally:
-        w.close()
-        w.deleteLater()
 
 
 class FakeSpell(SpellChecker):

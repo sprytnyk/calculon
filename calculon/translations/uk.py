@@ -161,12 +161,14 @@ T = {
     "tab_spelling": "Правопис",
     "tab_vim": "Vim",
     "sheets_dir": "Тека аркушів:",
-    "folder_blocked": (
-        "Calculon не може створити теку {folder} або записати в неї.\n\n{error}\n\n"
-        "У Windows це може блокувати «Контрольований доступ до папок» у Безпеці Windows. "
-        "Дозвольте там Calculon або виберіть іншу теку аркушів у Налаштуваннях."
+    "folder_blocked": "Calculon не може створити теку {folder} або записати в неї. {error}.",
+    "folder_blocked_windows": (
+        "Це може блокувати «Контрольований доступ до папок» у Безпеці Windows. "
+        "Дозвольте там Calculon або виберіть іншу теку."
     ),
-    "folder_fallback": "Поки що аркуші зберігаються в {fallback}.",
+    "folder_pick_another": "Виберіть іншу теку.",
+    "folder_question": "Де Calculon зберігатиме ваші аркуші?",
+    "folder_use": "Використати цю теку",
     "browse": "Огляд…",
     "font_size": "Розмір тексту:",
     "ligatures": "Лігатури шрифту",

@@ -33,6 +33,9 @@ class SheetStore:
     def __init__(self, root: Path):
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
+        # mkdir doesn't fail on an existing folder Calculon can't write to, so write a test file
+        with tempfile.TemporaryFile(dir=self.root, prefix=".tmp-"):
+            pass
         self.meta = self._load_meta()
 
     def _load_meta(self) -> dict:

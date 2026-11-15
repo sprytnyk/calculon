@@ -52,15 +52,16 @@ from ..engine import format_value
 from ..engine.format import MONTHS_UK
 from ..paths import FONTS, HELP_DIR
 from ..rates import RatesService
-from ..settings import Settings, fallback_sheets_dir, own_words_file, read_bool
+from ..settings import Settings, own_words_file, read_bool
 from ..spelling import SpellChecker, probe
-from ..storage import SheetStore
+from ..storage import SheetStore, StorageError
 from ..translations import LANGUAGES, tr
 from . import icons
 from . import theme as themes
 from .about_dialog import AboutDialog
 from .editor import EDIT_MENU, KIND_ORDER, SheetEdit
 from .find_bar import FindBar
+from .folder_dialog import folder_error
 from .panes import PaneKeys
 from .settings_dialog import SettingsDialog
 from .shortcuts_dialog import ShortcutsDialog, key_text
@@ -101,21 +102,15 @@ def load_fonts() -> str:
 class MainWindow(QMainWindow):
     spelling_loaded = Signal(object)  # a SpellChecker, from the thread that loads it
 
-    def __init__(self) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         super().__init__()
-        self.settings = Settings.load()
+        # main() passes what choose_sheets_folder() returned: the settings file may not
+        # hold the chosen folder if Calculon can't write to it
+        self.settings = settings or Settings.load()
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, self.settings.always_on_top)
         self.theme = themes.resolve(self.settings.theme, self.settings.colours)
         self.font_family = load_fonts()
-        folder_error = ""
-        try:
-            self.store = self._open_store(self.settings.sheets_dir)
-        except OSError as exc:
-            # keep settings.sheets_dir, so the next start tries the chosen folder again
-            fallback = fallback_sheets_dir()
-            self.store = self._open_store(fallback)
-            folder_error = self._folder_error(self.settings.sheets_dir, exc)
-            folder_error += "\n\n" + self.t("folder_fallback", fallback=fallback)
+        self.store = self._open_store(self.settings.sheets_dir)
         self.current: tuple[str, str] = ("", "")  # (kind, key)
         self._saved_mtime = 0.0
         self._dirty = False
@@ -252,18 +247,16 @@ class MainWindow(QMainWindow):
         self._restore_window()
         self._open_initial()
         QTimer.singleShot(0, self.rates, self.rates.refresh_if_stale)
-        if folder_error:
-            QTimer.singleShot(
-                0, self, lambda: QMessageBox.warning(self, self.t("settings_title"), folder_error)
-            )
 
     def t(self, key: str, **kw) -> str:
         return tr(self.settings.language, key, **kw)
 
     def _folder_error(self, folder: str, exc: OSError) -> str:
-        return self.t("folder_blocked", folder=folder, error=exc)
+        return folder_error(self.settings.language, folder, exc)
 
     def _open_store(self, folder: str) -> SheetStore:
+        if not folder:
+            raise StorageError("no sheets folder chosen")
         store = SheetStore(Path(folder).expanduser())
         if not store.all_sheets() and not store.trashed() and not store.meta["order"]:
             store.create_sheet("", "Welcome", WELCOME)

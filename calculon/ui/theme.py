@@ -42,6 +42,7 @@ class Theme:
     label: str
     tag: str
     misspelled: str  # the wavy line under a misspelled word
+    error: str  # text of error messages
     icons: dict[str, str] = field(default_factory=dict, compare=False)  # menu and sidebar
 
     @property
@@ -91,6 +92,7 @@ DARK = Theme(
     label="#cfd1d8",
     tag="#6fcf97",
     misspelled="#ff6b6b",
+    error="#ff6b6b",
     icons=ICONS_DARK,
 )
 
@@ -117,6 +119,7 @@ LIGHT = Theme(
     label="#374151",
     tag="#15803d",
     misspelled="#dc2626",
+    error="#dc2626",
     icons=ICONS_LIGHT,
 )
 
@@ -156,6 +159,7 @@ GLACIER_DARK = Theme(
     label="#cbd5e1",
     tag="#34d399",
     misspelled="#fb7185",
+    error="#fb7185",
     icons=GLACIER_ICONS_DARK,
 )
 
@@ -182,6 +186,7 @@ GLACIER_LIGHT = Theme(
     label="#334155",
     tag="#047857",
     misspelled="#e11d48",
+    error="#e11d48",
     icons=GLACIER_ICONS_LIGHT,
 )
 
