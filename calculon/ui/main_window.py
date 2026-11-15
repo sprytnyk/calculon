@@ -276,6 +276,7 @@ class MainWindow(QMainWindow):
         "find": "sheet",
         "toggle_sidebar": "sidebar",
         "toggle_line_numbers": "line_numbers",
+        "toggle_spelling": "spell_add",
         "help_sheet": "help",
         "refresh_rates": "refresh",
     }
@@ -283,9 +284,11 @@ class MainWindow(QMainWindow):
     def _action(self, menu, key: str, slot, shortcut=None, checkable: bool = False) -> QAction:
         act = QAction(self.t(key), self)
         name = self.ICONS.get(key, key)
-        # checkable items keep their tick instead: Fusion hides it behind an icon
-        if name in icons.NAMES and not checkable:
-            act.setIcon(icons.icon(name))
+        if name in icons.NAMES:
+            act.setProperty("icon_name", name)  # the shortcuts window shows it for every item
+            # checkable items keep their tick instead: Fusion hides it behind an icon
+            if not checkable:
+                act.setIcon(icons.icon(name))
         if shortcut is not None:
             if isinstance(shortcut, list):
                 act.setShortcuts(shortcut)

@@ -1,4 +1,4 @@
-"""Menu and sidebar icons: Phosphor Icons (MIT), duotone style, tinted to the theme.
+"""App icons: Phosphor Icons (MIT), duotone style, tinted to the theme.
 
 The SVGs in assets/icons are named after what they do here; SOURCES maps them back.
 """
@@ -64,6 +64,17 @@ SOURCES = {
     "spell_add": "book-open-text",
     "spell_ignore": "eye-slash",
     "vim": "terminal-window",
+    "delete_back": "backspace",
+    "delete_forward": "eraser",
+    "accept": "key-return",
+    "dismiss": "x-square",
+    "move": "arrows-out-cardinal",
+    "count": "hash",
+    "type": "cursor-text",
+    "operator": "pencil-simple-line",
+    "line": "text-align-left",
+    "edit_selection": "selection-foreground",
+    "scroll": "mouse-scroll",
 }
 NAMES = frozenset(SOURCES)
 
@@ -84,6 +95,11 @@ GROUPS = {
     "spell_add": "green",
     "theme": "indigo", "colours": "violet", "theme_dark": "indigo", "shortcuts": "indigo",
     "vim": "teal",
+    "move": "cyan", "count": "cyan", "scroll": "cyan",
+    "type": "yellow", "operator": "yellow", "line": "yellow",
+    "edit_selection": "violet",
+    "delete_back": "red", "delete_forward": "red",
+    "accept": "green", "dismiss": "rose",
 }  # fmt: skip
 ICON_SIZE = 20  # menus and the sidebar
 FILL_OPACITY = "0.3"  # the soft second tone of the duotone icons

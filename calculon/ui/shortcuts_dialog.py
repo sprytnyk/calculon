@@ -70,55 +70,55 @@ class ShortcutsDialog(QDialog):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
 
+        # (title, [(icon name, action, keys)]); every row has an icon, as in the menus
         sections = [
-            (title, [(a.icon(), a.text().replace("&", ""), keys) for a, keys in rows])
+            (
+                title,
+                [(a.property("icon_name"), a.text().replace("&", ""), keys) for a, keys in rows],
+            )
             for title, rows in menu_shortcuts(bar)
         ]
-        sections.append(
+        line_keys = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+        sections += [
             (
                 tr("shortcuts_sidebar"),
                 [
-                    (icons.icon("sheet"), tr("shortcuts_open"), key_text(Qt.Key.Key_Return)),
-                    (icons.icon("rename"), tr("rename"), key_text(Qt.Key.Key_F2)),
-                    (
-                        icons.icon("trash"),
-                        tr("move_to_trash"),
-                        key_text(QKeySequence.StandardKey.Delete),
-                    ),
+                    ("sheet", tr("shortcuts_open"), key_text(Qt.Key.Key_Return)),
+                    ("rename", tr("rename"), key_text(Qt.Key.Key_F2)),
+                    ("trash", tr("move_to_trash"), key_text(QKeySequence.StandardKey.Delete)),
                 ],
-            )
-        )
-        line_keys = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
-        sections.append(
+            ),
             (
                 tr("shortcuts_editor"),
                 [
-                    (None, tr("delete_line_start"), key_text(line_keys | Qt.Key.Key_Backspace)),
-                    (None, tr("delete_line_end"), key_text(line_keys | Qt.Key.Key_Delete)),
                     (
-                        icons.icon("insert_reference"),
-                        tr("reference_answer"),
-                        tr("double_click_answer"),
+                        "delete_back",
+                        tr("delete_line_start"),
+                        key_text(line_keys | Qt.Key.Key_Backspace),
                     ),
+                    (
+                        "delete_forward",
+                        tr("delete_line_end"),
+                        key_text(line_keys | Qt.Key.Key_Delete),
+                    ),
+                    ("insert_reference", tr("reference_answer"), tr("double_click_answer")),
                 ],
-            )
-        )
-        sections.append(
+            ),
             (
                 tr("shortcuts_autocomplete"),
                 [
                     (
-                        None,
+                        "accept",
                         tr("shortcuts_insert"),
                         f"{key_text(Qt.Key.Key_Return)}, {key_text(Qt.Key.Key_Tab)}",
                     ),
-                    (None, tr("shortcuts_dismiss"), key_text(Qt.Key.Key_Escape)),
+                    ("dismiss", tr("shortcuts_dismiss"), key_text(Qt.Key.Key_Escape)),
                 ],
-            )
-        )
+            ),
+        ]
         if vim:
             sections.append(
-                (tr("shortcuts_vim"), [(None, tr(name), keys) for name, keys in vim_keys()])
+                (tr("shortcuts_vim"), [(icon, tr(name), keys) for icon, name, keys in vim_keys()])
             )
         for title, rows in sections:
             head = QTreeWidgetItem([title, ""])
@@ -130,8 +130,7 @@ class ShortcutsDialog(QDialog):
             self.tree.addTopLevelItem(head)
             for icon, text, keys in rows:
                 item = QTreeWidgetItem([text, keys])
-                if icon is not None and not icon.isNull():
-                    item.setIcon(0, icon)
+                item.setIcon(0, icons.icon(icon))
                 item.setTextAlignment(
                     1, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
                 )

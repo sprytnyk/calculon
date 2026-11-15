@@ -268,3 +268,10 @@ def test_a_message_leaves_the_vim_mode_alone(vim, app) -> None:
     pump(app)
     assert vim.message_label.isVisible()
     assert vim.vim_mode_label.isVisible() and vim.vim_mode_label.text() == "-- INSERT --"
+
+
+def test_every_shortcut_row_has_an_icon(vim) -> None:
+    tree = ShortcutsDialog(vim.menuBar(), vim.t, vim, vim=True).tree
+    items = [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())]
+    rows = [it for it in items if it.text(1)]  # section headings have no keys
+    assert [it.text(0) for it in rows if it.icon(0).isNull()] == []
