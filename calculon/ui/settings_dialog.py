@@ -32,7 +32,7 @@ from ..settings import Settings
 from ..spelling import Status, platform_key, probe
 from ..translations import LANGUAGES
 from . import icons
-from .theme import DARK, PALETTES, Theme
+from .theme import GLACIER_DARK, PALETTES, Theme
 
 NUMBER_STYLES = [
     ("auto", ""),
@@ -135,7 +135,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.t = tr
         self.original = settings
-        theme: Theme = getattr(parent, "theme", DARK)
+        theme: Theme = getattr(parent, "theme", GLACIER_DARK)
         self.setObjectName("settings")
         self.setWindowTitle(tr("settings_title"))
         self.setWindowIcon(icons.icon("settings"))

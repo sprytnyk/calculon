@@ -49,7 +49,7 @@ class Theme:
         return self.name == "dark"
 
 
-# Ember: warm greys with orange highlights, the default
+# Ember: warm greys with orange highlights
 # icon colours: bright shades on dark, deeper ones on light
 ICONS_DARK = {
     "neutral": "#a3a7b1", "blue": "#6cb6ff", "amber": "#f2b35e", "violet": "#b794f6",
@@ -116,7 +116,7 @@ LIGHT = Theme(
 )
 
 
-# Glacier: Tailwind's slate greys and accents, like the sprytnyk/ip page
+# Glacier, the default: Tailwind's slate greys and accents, like the sprytnyk/ip page
 GLACIER_ICONS_DARK = {
     "neutral": "#94a3b8", "blue": "#60a5fa", "amber": "#fbbf24", "violet": "#a78bfa",
     "green": "#34d399", "teal": "#2dd4bf", "cyan": "#22d3ee", "rose": "#fb7185",
@@ -180,8 +180,8 @@ GLACIER_LIGHT = Theme(
     icons=GLACIER_ICONS_LIGHT,
 )
 
-# Settings → Colours: (dark, light) for each
-PALETTES = {"ember": (DARK, LIGHT), "glacier": (GLACIER_DARK, GLACIER_LIGHT)}
+# the themes in Settings → Appearance and the View menu, each as (dark, light)
+PALETTES = {"glacier": (GLACIER_DARK, GLACIER_LIGHT), "ember": (DARK, LIGHT)}
 
 UI_FONT_SCALE = 1.15  # menus, sidebar and dialogs a bit larger than the system default
 _base_font: list[QFont] = []
@@ -208,8 +208,8 @@ def system_is_dark() -> bool:
     return hints.colorScheme() == Qt.ColorScheme.Dark
 
 
-def resolve(setting: str, colours: str = "ember") -> Theme:
-    dark, light = PALETTES.get(colours, PALETTES["ember"])
+def resolve(setting: str, colours: str) -> Theme:
+    dark, light = PALETTES[colours]
     if setting == "light":
         return light
     if setting == "system":

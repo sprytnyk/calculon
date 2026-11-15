@@ -1,5 +1,5 @@
-"""Make docs/demo.gif for the README: the Lviv trip sheet typed out in Ember, then Glacier.
-Also docs/screenshot.png, the website's link preview: the typed sheet in Ember.
+"""Make docs/demo.gif for the README: the Lviv trip sheet typed out in Glacier, then Ember.
+Also docs/screenshot.png, the website's link preview: the typed sheet in Glacier.
 
 Run with: make gif (needs ffmpeg)
 
@@ -121,7 +121,7 @@ def record(folder: Path) -> tuple[list[tuple[Path, float]], Path]:
         window.editor.moveCursor(QTextCursor.MoveOperation.Start)
         snap(3.0)
         still = frames[-1][0]
-        window.set_colours("glacier")
+        window.set_colours("ember")
         snap(3.5)
     finally:
         window.close()

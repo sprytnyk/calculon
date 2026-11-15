@@ -4,7 +4,7 @@ A natural-language notepad calculator. Write plain lines with numbers, money, un
 dates, and the answers show up in a column on the right. The syntax follows
 [Soulver's](https://documentation.soulver.app/), so most sheets work in both.
 
-![Typing a trip budget sheet in Calculon: the answers show up on the right as each line is written, then the theme switches from Ember to Glacier](docs/demo.gif)
+![Typing a trip budget sheet in Calculon: the answers show up on the right as each line is written, then the theme switches from Glacier to Ember](docs/demo.gif)
 
 ## Features
 
@@ -31,7 +31,7 @@ dates, and the answers show up in a column on the right. The syntax follows
 - Optional Vim mode with Normal, Insert and Visual modes, from
   [side-vim](https://github.com/sprytnyk/side-vim). To turn it on, open
   the Vim page in Settings
-- Two themes, Ember and Glacier, each dark, light or following the system
+- Two themes, Glacier and Ember, each dark, light or following the system, with Glacier by default
 - Spell check for English and Ukrainian on Linux, and on macOS after a manual setup
 
 The Help sheet in the sidebar explains the calculation syntax with examples. Open it with F1.

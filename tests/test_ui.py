@@ -107,19 +107,19 @@ def test_help_is_read_only_and_translated(window, app) -> None:
 
 def test_theme_switch(window, app) -> None:
     window.set_theme("light")
-    assert QApplication.palette().base().color().name() == "#fbfbf9"
+    assert QApplication.palette().base().color().name() == "#f8fafc"
     window.set_theme("dark")
-    assert QApplication.palette().base().color().name() == "#1a1b20"
+    assert QApplication.palette().base().color().name() == "#0f172a"
 
 
 def test_colours_switch(window, app) -> None:
-    window.set_colours("glacier")
-    assert QApplication.palette().base().color().name() == "#0f172a"
-    window.set_theme("light")
-    assert QApplication.palette().base().color().name() == "#f8fafc"
-    window.set_theme("dark")
     window.set_colours("ember")
     assert QApplication.palette().base().color().name() == "#1a1b20"
+    window.set_theme("light")
+    assert QApplication.palette().base().color().name() == "#fbfbf9"
+    window.set_theme("dark")
+    window.set_colours("glacier")
+    assert QApplication.palette().base().color().name() == "#0f172a"
 
 
 @pytest.mark.parametrize(
@@ -344,7 +344,7 @@ def test_unknown_settings_fall_back_to_defaults(app) -> None:
         "USD",
     )
     assert (s.font_size, s.max_decimals) == (14, 20)
-    assert s.colours == "ember"
+    assert s.colours == "glacier"
 
 
 def test_undo_survives_switching_sheets(window, app) -> None:
