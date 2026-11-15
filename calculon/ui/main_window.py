@@ -36,10 +36,12 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLabel,
+    QLayout,
     QMainWindow,
     QMenu,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QSplitter,
     QToolButton,
     QVBoxLayout,
@@ -177,7 +179,6 @@ class MainWindow(QMainWindow):
         left.addWidget(self.sidebar_button)
         left.addWidget(self.vim_mode_label)
         left.addStretch()
-        status.addLayout(left, 0, 0)
         status.addWidget(self.total_label, 0, 1)
         # a short note like "Copied $30.00" shows in the total's place for a moment
         self.message_label = QLabel()
@@ -190,7 +191,14 @@ class MainWindow(QMainWindow):
         right.addStretch()
         right.addWidget(self.vim_pending_label)
         right.addWidget(self.rates_label)
-        status.addLayout(right, 0, 2)
+        for column, layout in ((0, left), (2, right)):
+            side = QWidget()
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSizeConstraint(QLayout.SizeConstraint.SetNoConstraint)
+            side.setLayout(layout)
+            # Long side labels may clip, but must never push the total off centre.
+            side.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            status.addWidget(side, 0, column)
         status.setColumnStretch(0, 1)
         status.setColumnStretch(2, 1)
         status_row = QWidget()

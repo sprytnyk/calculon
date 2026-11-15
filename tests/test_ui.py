@@ -1176,13 +1176,14 @@ def test_always_on_top_rebuilt_menus_and_settings_keep_choice(window, app, theme
     assert not window.windowFlags() & TOP
 
 
-def test_total_stays_in_the_middle_of_the_window(window, app) -> None:
+@pytest.mark.parametrize("repeats", [1, 3])
+def test_total_stays_in_the_middle_of_the_window(window, app, repeats: int) -> None:
     window.new_sheet("")
     window.editor.setPlainText("rent = $900\nfood = $300")
     window.editor.recalculate()
     assert window.total_label.text()
     assert abs(off_centre(window.total_label, app)) <= 2
-    window.rates_label.setText("Rates from a very long time ago, click to refresh")
+    window.rates_label.setText("Rates from a very long time ago, click to refresh " * repeats)
     assert abs(off_centre(window.total_label, app)) <= 2
     window.resize(window.width() + 150, window.height())
     assert abs(off_centre(window.total_label, app)) <= 2

@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QEvent, Qt
+from PySide6.QtCore import QEvent, QPoint, Qt
 from PySide6.QtGui import QGuiApplication, QKeyEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
@@ -53,11 +53,12 @@ def test_off_by_default(window) -> None:
 
 def test_mode_and_pending_keys_in_the_status_bar(vim, app) -> None:
     ed, mode, pending = vim.editor, vim.vim_mode_label, vim.vim_pending_label
+    bar = vim.statusBar()
     assert mode.isHidden()  # Normal mode shows nothing, as in vim
     QTest.keyClicks(ed, "i")
     assert mode.text() == "-- INSERT --" and mode.isVisible()
     pump(app)
-    assert mode.x() < vim.total_label.x()  # far left, before the total
+    assert mode.mapTo(bar, QPoint()).x() < vim.total_label.mapTo(bar, QPoint()).x()
     esc(ed)
     assert mode.isHidden()
     QTest.keyClicks(ed, "V")
@@ -66,7 +67,9 @@ def test_mode_and_pending_keys_in_the_status_bar(vim, app) -> None:
     QTest.keyClicks(ed, "2d")
     assert pending.text() == "2d" and pending.isVisible()
     pump(app)
-    assert vim.statusBar().width() // 2 < pending.x() < vim.rates_label.x()
+    pending_x = pending.mapTo(bar, QPoint()).x()
+    rates_x = vim.rates_label.mapTo(bar, QPoint()).x()
+    assert bar.width() // 2 < pending_x < rates_x
     esc(ed)
     assert pending.isHidden()
 
@@ -271,8 +274,10 @@ def test_esc_never_brings_back_a_cursor_from_another_sheet(vim, app) -> None:
     assert ed.toPlainText() == ""
 
 
-def test_the_total_stays_put_as_vim_labels_come_and_go(vim, app) -> None:
+@pytest.mark.parametrize("repeats", [1, 3])
+def test_the_total_stays_put_as_vim_labels_come_and_go(vim, app, repeats: int) -> None:
     ed = vim.editor
+    vim.rates_label.setText("Rates from a very long time ago, click to refresh " * repeats)
     ed.recalculate()
     assert vim.total_label.text()
     where = off_centre(vim.total_label, app)
