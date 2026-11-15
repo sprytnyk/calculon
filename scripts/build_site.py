@@ -129,7 +129,7 @@ MENU = [
 # icons the page shows, besides the menu's
 PAGE_ICONS = [
     "sheet", "folder", "help", "trash", "spell_add", "spell_ignore",
-    "colours", "rates", "open_folder", "language", "numbers", "shortcuts", "pin",
+    "colours", "rates", "open_folder", "language", "numbers", "shortcuts", "pin", "sidebar",
 ]  # fmt: skip
 COPIES = {
     "assets/icon.png": "icon.png",
@@ -200,6 +200,7 @@ def page_data(lang: str, table: RateTable) -> dict[str, Any]:
             "sheets": t("sheets"),
             "help": t("help"),
             "trash": t("trash"),
+            "toggle_sidebar": f"{t('shortcuts_sidebar')} (Ctrl+\\)",
             "menu": [[[t(key), keys, icon] for key, keys, icon in group] for group in MENU],
             "spell_add": t("spell_add"),
             "spell_ignore": t("spell_ignore"),

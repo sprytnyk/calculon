@@ -225,6 +225,19 @@
     let current = new Sheet(box, DATA.sheets.hero, status);
     let picked = false;
 
+    // the status bar button hides and shows the sidebar, as in the app
+    const toggle = el("button", "side-toggle");
+    toggle.type = "button";
+    toggle.title = DATA.ui.toggle_sidebar;
+    toggle.setAttribute("aria-label", DATA.ui.toggle_sidebar);
+    toggle.setAttribute("aria-pressed", "true");
+    toggle.append(icon("sidebar"));
+    toggle.addEventListener("click", () => {
+      const hidden = win.classList.toggle("no-side");
+      toggle.setAttribute("aria-pressed", String(!hidden));
+    });
+    status.parentElement.prepend(toggle);
+
     function open(key, button) {
       picked = true;
       current.stop();

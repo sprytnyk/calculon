@@ -12,6 +12,7 @@ window.CALCULON = {
    "sheets": "Sheets",
    "help": "Help",
    "trash": "Trash",
+   "toggle_sidebar": "Sidebar (Ctrl+\\)",
    "menu": [
     [
      [
@@ -87,6 +88,7 @@ window.CALCULON = {
    "select_all": "violet",
    "sheet": "blue",
    "shortcuts": "indigo",
+   "sidebar": "neutral",
    "spell_add": "green",
    "spell_ignore": "neutral",
    "trash": "red",
@@ -1022,6 +1024,7 @@ window.CALCULON = {
    "sheets": "Аркуші",
    "help": "Довідка",
    "trash": "Кошик",
+   "toggle_sidebar": "Бічна панель (Ctrl+\\)",
    "menu": [
     [
      [
@@ -1097,6 +1100,7 @@ window.CALCULON = {
    "select_all": "violet",
    "sheet": "blue",
    "shortcuts": "indigo",
+   "sidebar": "neutral",
    "spell_add": "green",
    "spell_ignore": "neutral",
    "trash": "red",

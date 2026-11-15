@@ -310,6 +310,38 @@ p {
   white-space: nowrap;
   overflow: hidden;
 }
+/* position: absolute takes the sidebar button out of the flex row, so the total stays in the middle */
+.statusbar {
+  position: relative;
+}
+.statusbar .side-toggle {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+.statusbar .side-toggle:hover {
+  background: var(--surface);
+}
+.statusbar .side-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.statusbar .side-toggle .icon {
+  width: 18px;
+  height: 18px;
+}
+.window.no-side .window-body {
+  grid-template-columns: 1fr;
+}
+.window.no-side .side {
+  display: none;
+}
 .statusbar .total {
   color: var(--result);
   font-weight: 600;
@@ -323,7 +355,8 @@ p {
     grid-template-columns: 1fr;
   }
   .side,
-  .menubar {
+  .menubar,
+  .statusbar .side-toggle {
     display: none;
   }
 }
