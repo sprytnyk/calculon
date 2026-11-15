@@ -63,6 +63,7 @@ SOURCES = {
     "close": "x (bold)",
     "spell_add": "book-open-text",
     "spell_ignore": "eye-slash",
+    "vim": "terminal-window",
 }
 NAMES = frozenset(SOURCES)
 
@@ -82,6 +83,7 @@ GROUPS = {
     "rename": "yellow", "theme_light": "yellow",
     "spell_add": "green",
     "theme": "indigo", "colours": "violet", "theme_dark": "indigo", "shortcuts": "indigo",
+    "vim": "teal",
 }  # fmt: skip
 ICON_SIZE = 20  # menus and the sidebar
 FILL_OPACITY = "0.3"  # the soft second tone of the duotone icons

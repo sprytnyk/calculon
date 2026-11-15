@@ -207,7 +207,9 @@ def test_ligatures_form_across_coloured_operators(window, app) -> None:
 
 def test_settings_dialog_round_trip(window) -> None:
     dlg = SettingsDialog(window.settings, window.t, window)
-    assert dlg.nav.count() == 3
+    pages = [dlg.nav.item(i).text() for i in range(dlg.nav.count())]
+    assert pages == ["General", "Appearance", "Numbers", "Exchange Rates", "Spell Check", "Vim"]
+    assert dlg.pages.count() == len(pages)
     dlg.max_decimals.setValue(4)
     dlg.rates_url.setText(" https://example.invalid/rates.json ")
     dlg.dollar.setCurrentText("cad")

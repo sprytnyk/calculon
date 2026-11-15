@@ -36,6 +36,7 @@ T = {
     "find_none": "No results",
     "find_close": "Close (Esc)",
     "theme": "Appearance",
+    "theme_mode": "Mode",
     "theme_dark": "Dark",
     "theme_light": "Light",
     "theme_system": "Follow System",
@@ -128,10 +129,6 @@ T = {
     "settings_title": "Settings",
     "cancel": "Cancel",
     "save": "Save",
-    "section_sheets": "Sheets",
-    "section_appearance": "Appearance",
-    "section_spelling": "Spelling",
-    "section_editing": "Editing",
     "vim_mode": "Vim mode",
     "hint_vim_mode": (
         "Normal, Insert and Visual modes, as in Vim. The keys are in Help → Keyboard Shortcuts."
@@ -149,6 +146,9 @@ T = {
     "tab_general": "General",
     "tab_numbers": "Numbers",
     "tab_rates": "Exchange Rates",
+    "tab_appearance": "Appearance",
+    "tab_spelling": "Spell Check",
+    "tab_vim": "Vim",
     "sheets_dir": "Sheets folder:",
     "folder_blocked": (
         "Calculon can't create or write to {folder}.\n\n{error}\n\n"

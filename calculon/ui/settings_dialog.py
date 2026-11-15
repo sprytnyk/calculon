@@ -148,9 +148,15 @@ class SettingsDialog(QDialog):
         self.nav.setFixedWidth(200)
         self.pages = QStackedWidget()
 
-        self._add_page("settings", tr("tab_general"), self._general(settings))
-        self._add_page("numbers", tr("tab_numbers"), self._numbers(settings))
-        self._add_page("rates", tr("tab_rates"), self._rates(settings))
+        for icon_name, title, build in (
+            ("settings", "tab_general", self._general),
+            ("theme", "tab_appearance", self._appearance),
+            ("numbers", "tab_numbers", self._numbers),
+            ("rates", "tab_rates", self._rates),
+            ("spell_add", "tab_spelling", self._spelling),
+            ("vim", "tab_vim", self._vim),
+        ):
+            self._add_page(icon_name, tr(title), build(settings))
         self.nav.currentRowChanged.connect(self.pages.setCurrentIndex)
         self.nav.setCurrentRow(0)
 
@@ -220,7 +226,7 @@ class SettingsDialog(QDialog):
 
     def _general(self, s: Settings) -> list[tuple[str, QWidget]]:
         tr = self.t
-        sheets = Card()
+        card = Card()
         self.sheets_dir = QLineEdit(s.sheets_dir)
         browse = QPushButton(_label(tr("browse")).rstrip("…").rstrip("."))
         browse.clicked.connect(self._browse)
@@ -228,29 +234,32 @@ class SettingsDialog(QDialog):
         row.setSpacing(8)
         row.addWidget(self.sheets_dir, 1)
         row.addWidget(browse)
-        sheets.add(tr("sheets_dir"), row, tr("hint_sheets_dir"))
-
-        look = Card()
-        self.colours = QComboBox()
-        for key in PALETTES:
-            self.colours.addItem(tr(f"colours_{key}"), key)
-        self.colours.setCurrentIndex(max(0, self.colours.findData(s.colours)))
-        look.add(tr("colours"), self.colours)
-        self.theme = QComboBox()
-        for key in ("dark", "light", "system"):
-            self.theme.addItem(icons.icon(f"theme_{key}"), tr(f"theme_{key}"), key)
-        self.theme.setCurrentIndex(max(0, self.theme.findData(s.theme)))
-        look.add(tr("theme"), self.theme)
+        card.add(tr("sheets_dir"), row, tr("hint_sheets_dir"))
         self.language = QComboBox()
         for key, name in LANGUAGES.items():
             self.language.addItem(name, key)
         self.language.setCurrentIndex(max(0, self.language.findData(s.language)))
-        look.add(tr("language"), self.language)
+        card.add(tr("language"), self.language)
+        return [("", card)]
+
+    def _appearance(self, s: Settings) -> list[tuple[str, QWidget]]:
+        tr = self.t
+        card = Card()
+        self.colours = QComboBox()
+        for key in PALETTES:
+            self.colours.addItem(tr(f"colours_{key}"), key)
+        self.colours.setCurrentIndex(max(0, self.colours.findData(s.colours)))
+        card.add(tr("colours"), self.colours)
+        self.theme = QComboBox()
+        for key in ("dark", "light", "system"):
+            self.theme.addItem(icons.icon(f"theme_{key}"), tr(f"theme_{key}"), key)
+        self.theme.setCurrentIndex(max(0, self.theme.findData(s.theme)))
+        card.add(tr("theme_mode"), self.theme)
         self.font_size = QSpinBox()
         self.font_size.setRange(8, 40)
         self.font_size.setValue(s.font_size)
         self.font_size.setSuffix(" pt")
-        look.add(tr("font_size"), self.font_size)
+        card.add(tr("font_size"), self.font_size)
         self.ligatures = QCheckBox(tr("ligatures"))
         self.ligatures.setChecked(s.ligatures)
         # the example in the editor's font, ligatures on, so it shows what you get: ⇒ ≠ ≤ →
@@ -276,30 +285,29 @@ class SettingsDialog(QDialog):
         row.addWidget(self.ligatures)
         row.addWidget(sample)
         row.addStretch()
-        look.add("", row)
+        card.add("", row)
+        return [("", card)]
 
-        spelling = Card()
+    def _spelling(self, s: Settings) -> list[tuple[str, QWidget]]:
+        card = Card()
         status = getattr(self.parent(), "spell_status", None) or probe()
-        self.spell_check = QCheckBox(tr("spell_check"))
+        self.spell_check = QCheckBox(self.t("spell_check"))
         self.spell_check.setChecked(s.spell_check and status.available)
         self.spell_check.setEnabled(status.available)
-        spelling.add("", self.spell_check)
-        self.spell_hint = QLabel(spell_hint(status, tr))
+        card.add("", self.spell_check)
+        self.spell_hint = QLabel(spell_hint(status, self.t))
         self.spell_hint.setObjectName("hint")
         self.spell_hint.setWordWrap(True)
         self.spell_hint.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        spelling.add("", self.spell_hint)
-        cards = [
-            (tr("section_sheets"), sheets),
-            (tr("section_appearance"), look),
-            (tr("section_spelling"), spelling),
-        ]
-        self.vim_mode = QCheckBox(tr("vim_mode"))
+        card.add("", self.spell_hint)
+        return [("", card)]
+
+    def _vim(self, s: Settings) -> list[tuple[str, QWidget]]:
+        card = Card()
+        self.vim_mode = QCheckBox(self.t("vim_mode"))
         self.vim_mode.setChecked(s.vim_mode)
-        editing = Card()
-        editing.add("", self.vim_mode, tr("hint_vim_mode"))
-        cards.append((tr("section_editing"), editing))
-        return cards
+        card.add("", self.vim_mode, self.t("hint_vim_mode"))
+        return [("", card)]
 
     def _numbers(self, s: Settings) -> list[tuple[str, QWidget]]:
         tr = self.t

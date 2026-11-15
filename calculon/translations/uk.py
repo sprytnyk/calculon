@@ -36,6 +36,7 @@ T = {
     "find_none": "Немає збігів",
     "find_close": "Закрити (Esc)",
     "theme": "Оформлення",
+    "theme_mode": "Режим",
     "theme_dark": "Темна",
     "theme_light": "Світла",
     "theme_system": "Як у системі",
@@ -128,10 +129,6 @@ T = {
     "settings_title": "Налаштування",
     "cancel": "Скасувати",
     "save": "Зберегти",
-    "section_sheets": "Аркуші",
-    "section_appearance": "Вигляд",
-    "section_spelling": "Правопис",
-    "section_editing": "Редагування",
     "vim_mode": "Режим Vim",
     "hint_vim_mode": (
         "Режими Normal, Insert і Visual, як у Vim. Клавіші є в меню Довідка → Комбінації клавіш."
@@ -152,6 +149,9 @@ T = {
     "tab_general": "Загальні",
     "tab_numbers": "Числа",
     "tab_rates": "Курси валют",
+    "tab_appearance": "Вигляд",
+    "tab_spelling": "Правопис",
+    "tab_vim": "Vim",
     "sheets_dir": "Тека аркушів:",
     "folder_blocked": (
         "Calculon не може створити теку {folder} або записати в неї.\n\n{error}\n\n"
