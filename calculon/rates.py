@@ -6,9 +6,9 @@ import time
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QStandardPaths, QTimer, QUrl, Signal
-from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply
 
-from . import __version__
+from . import net
 from .engine import RatesError, RateTable
 from .paths import FALLBACK_RATES
 
@@ -88,10 +88,7 @@ class RatesService(QObject):
             self.status_changed.emit()
             return
         url = self._pending.pop(0)
-        req = QNetworkRequest(QUrl(url))
-        req.setHeader(QNetworkRequest.KnownHeaders.UserAgentHeader, f"Calculon/{__version__}")
-        req.setTransferTimeout(15000)
-        reply = self._net.get(req)
+        reply = self._net.get(net.request(url))
         reply.finished.connect(lambda: self._done(reply, url))
 
     def _done(self, reply: QNetworkReply, url: str) -> None:
