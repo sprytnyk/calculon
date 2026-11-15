@@ -15,4 +15,5 @@ HELP_DIR = bundle_dir() / "calculon" / "help"
 APP_ICON = ASSETS / "icon.png"
 FONTS = ASSETS / "fonts"
 ICONS = ASSETS / "icons"
+ARROWS = ASSETS / "arrows"  # made by scripts/make_arrows.py
 FALLBACK_RATES = ASSETS / "rates-fallback.json"

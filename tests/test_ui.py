@@ -124,15 +124,6 @@ def test_chosen_folder_reaches_the_window_when_settings_cannot_be_saved(
         w.deleteLater()
 
 
-def test_icons_work_when_the_cache_folder_cannot_be_written(app, tmp_path, monkeypatch) -> None:
-    blocker = tmp_path / "cache"
-    blocker.write_text("")  # a file where the cache folder should be
-    monkeypatch.setattr(icons.QStandardPaths, "writableLocation", lambda _kind: str(blocker))
-    path = Path(icons.icon_file("caret_down", "#123456"))
-    assert path.is_file() and not path.is_relative_to(blocker)
-    assert icons.icon_file("caret_down", "#123456") == path.as_posix()
-
-
 def test_saved_sheets_folder_opens_without_asking(app, tmp_path, monkeypatch) -> None:
     qs = QSettings()
     qs.clear()

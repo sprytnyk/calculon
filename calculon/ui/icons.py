@@ -3,15 +3,14 @@
 The SVGs in assets/icons are named after what they do here; SOURCES maps them back.
 """
 
-import tempfile
 from functools import cache
 from pathlib import Path
 
-from PySide6.QtCore import QByteArray, QRectF, QStandardPaths, Qt
+from PySide6.QtCore import QByteArray, QRectF, Qt
 from PySide6.QtGui import QIcon, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 
-from ..paths import ICONS
+from ..paths import ARROWS, ICONS
 
 # our name -> Phosphor name, for updating the set later
 SOURCES = {
@@ -143,33 +142,10 @@ def _icon(name: str, color: str) -> QIcon:
     return out
 
 
-def icon_file(name: str, color: str) -> str:
-    """A tinted copy of an icon on disk, for stylesheets (url() can't take a colour).
-
-    Uses the cache folder, or a private temp folder when the cache can't be written,
-    e.g. in a home folder Calculon can't open. Empty if neither works.
-    """
-    file_name = f"{name}-{color.lstrip('#')}.svg"
-    cache_dir = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation)
-    if cache_dir:
-        try:
-            return _write_icon(Path(cache_dir) / "icons" / file_name, name, color)
-        except OSError:
-            pass
-    try:
-        return _write_icon(_temp_icon_folder() / file_name, name, color)
-    except OSError:
-        return ""  # dropdowns lose their arrow, but the app still starts
+ARROW_NAMES = ("caret_down", "caret_up")
 
 
-def _write_icon(path: Path, name: str, color: str) -> str:
-    if not path.exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(svg(name, color))
-    return path.as_posix()
-
-
-@cache
-def _temp_icon_folder() -> Path:
-    """Made once per run, and only when the cache folder doesn't work."""
-    return Path(tempfile.mkdtemp(prefix="calculon-icons-"))
+def arrow_file(name: str, color: str) -> Path:
+    """A tinted arrow for dropdowns and number fields. Stylesheets can only show an image
+    file, so scripts/make_arrows.py makes one per theme colour ahead of time."""
+    return ARROWS / f"{name}-{color.lstrip('#')}.svg"

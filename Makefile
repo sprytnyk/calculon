@@ -1,4 +1,4 @@
-.PHONY: all run check lint test format icons site gif build clean docs
+.PHONY: all run check lint test format icons arrows site gif build clean docs
 
 all: check
 
@@ -22,6 +22,10 @@ format:
 
 icons:
 	QT_QPA_PLATFORM=offscreen uv run python scripts/make_icons.py
+
+# the dropdown and number field arrows, one per theme colour
+arrows:
+	uv run python -m scripts.make_arrows
 
 # the website's example sheets and colours, from the engine and the Glacier theme
 site:

@@ -20,6 +20,7 @@ datas = [
     ("assets/fonts/OFL.txt", "assets/fonts"),
     ("assets/icons/*.svg", "assets/icons"),
     ("assets/icons/LICENSE.txt", "assets/icons"),
+    ("assets/arrows/*.svg", "assets/arrows"),
     ("calculon/help/*.txt", "calculon/help"),
 ]
 

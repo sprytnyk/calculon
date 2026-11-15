@@ -324,8 +324,8 @@ def apply(app: QApplication, theme: Theme) -> None:
 
 def controls_stylesheet(t: Theme) -> str:
     """Text fields, dropdowns, number fields and buttons everywhere in the app."""
-    down = icons.icon_file("caret_down", t.muted)
-    up = icons.icon_file("caret_up", t.muted)
+    down = icons.arrow_file("caret_down", t.muted).as_posix()
+    up = icons.arrow_file("caret_up", t.muted).as_posix()
     return f"""
     QLineEdit, QComboBox, QAbstractSpinBox {{
         background: {t.bg}; color: {t.text}; border: 1px solid {t.border};
