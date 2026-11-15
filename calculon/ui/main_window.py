@@ -41,6 +41,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSplitter,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -59,7 +60,7 @@ from .about_dialog import AboutDialog
 from .editor import EDIT_MENU, KIND_ORDER, SheetEdit
 from .find_bar import FindBar
 from .settings_dialog import SettingsDialog
-from .shortcuts_dialog import ShortcutsDialog
+from .shortcuts_dialog import ShortcutsDialog, key_text
 from .sidebar import HELP, SHEET, TRASHED, Sidebar
 
 log = logging.getLogger(__name__)
@@ -167,7 +168,15 @@ class MainWindow(QMainWindow):
         status.setContentsMargins(0, 0, 0, 0)
         # no gaps: the grid drops one beside an empty column, which would move the total
         status.setHorizontalSpacing(0)
-        status.addWidget(self.vim_mode_label, 0, 0, Qt.AlignmentFlag.AlignLeft)
+        # stays on screen while the sidebar is hidden, so it can bring it back
+        self.sidebar_button = QToolButton()
+        self.sidebar_button.setObjectName("sidebarButton")
+        self.sidebar_button.clicked.connect(lambda: self._actions["toggle_sidebar"].trigger())
+        left = QHBoxLayout()
+        left.addWidget(self.sidebar_button)
+        left.addWidget(self.vim_mode_label)
+        left.addStretch()
+        status.addLayout(left, 0, 0)
         status.addWidget(self.total_label, 0, 1)
         # a short note like "Copied $30.00" shows in the total's place for a moment
         self.message_label = QLabel()
@@ -387,6 +396,9 @@ class MainWindow(QMainWindow):
         m.addSeparator()
         act = self._action(m, "toggle_sidebar", self.set_sidebar_visible, "Ctrl+\\", checkable=True)
         act.setChecked(not self.sidebar.isHidden())
+        self.sidebar_button.setIcon(icons.icon("sidebar"))
+        keys = key_text(act.shortcut())
+        self.sidebar_button.setToolTip(f"{self.t('shortcuts_sidebar')} ({keys})")
         act = self._action(
             m, "toggle_line_numbers", self._toggle_line_numbers, "Ctrl+Shift+L", checkable=True
         )

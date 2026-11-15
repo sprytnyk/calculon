@@ -195,7 +195,7 @@ def test_icons_are_coloured_from_the_start(window) -> None:
 
 def test_sidebar_toggle_keeps_the_tick_and_survives_a_restart(window, app) -> None:
     tick = window._actions["toggle_sidebar"]
-    tick.trigger()
+    window.sidebar_button.click()  # the status bar button, there with the sidebar hidden too
     assert window.sidebar.isHidden() and not tick.isChecked()
     window._focus_search()  # Ctrl+P brings it back, and the menu says so
     assert not window.sidebar.isHidden() and tick.isChecked()
