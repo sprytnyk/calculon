@@ -190,7 +190,7 @@ def test_help_sheet_allows_movement_but_no_edits(vim) -> None:
     vim.open_help()
     ed = vim.editor
     before = ed.toPlainText()
-    QTest.keyClicks(ed, "jwxddrXi")
+    QTest.keyClicks(ed, "jwxddrX~i")
     assert ed.toPlainText() == before
     assert ed.textCursor().position() > 0
 
@@ -438,6 +438,19 @@ def test_r_replaces_characters_in_the_sheet(vim, app) -> None:
     assert ed.toPlainText() == "цent" + TEXT[4:]
 
 
+def test_tilde_switches_case_in_the_sheet(vim) -> None:
+    ed = vim.editor
+    QTest.keyClicks(ed, "3~")
+    assert ed.toPlainText() == "RENt = $900" + TEXT[11:]
+    assert ed.textCursor().position() == 3  # past them, as in vim
+    QTest.keyClicks(ed, "u")
+    assert ed.toPlainText() == TEXT
+    QTest.keyClicks(ed, "jv$~")
+    assert ed.toPlainText() == "rent = $900\nFOOD = $300\nrent + food"
+    assert ed.textCursor().position() == 12  # back at the start of the selection
+    assert ed.vim.mode is Mode.NORMAL
+
+
 def test_r_does_nothing_in_the_sheet_list_or_the_answers(vim, app) -> None:
     ed, tree, results = vim.editor, vim.sidebar.tree, vim.editor.results
     all_items = Qt.MatchFlag.MatchContains | Qt.MatchFlag.MatchRecursive
@@ -445,12 +458,12 @@ def test_r_does_nothing_in_the_sheet_list_or_the_answers(vim, app) -> None:
     vim.activateWindow()
     ctrl_w(ed, "h")
     assert app.focusWidget() is tree
-    QTest.keyClicks(tree, "rX")
+    QTest.keyClicks(tree, "rX~")
     type_ukrainian(tree, "кц")
     ctrl_w(tree, "l")
     ctrl_w(ed, "l")
     assert app.focusWidget() is results
-    QTest.keyClicks(results, "rX")
+    QTest.keyClicks(results, "rX~")
     type_ukrainian(results, "кц")
     assert ed.toPlainText() == TEXT
     assert vim.vim_pending_label.isHidden()
