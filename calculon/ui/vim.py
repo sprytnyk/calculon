@@ -38,4 +38,7 @@ def key_rows() -> list[tuple[str, str, str]]:
         ("scroll", "vim_scroll_half", f"{ctrl('D')}, {ctrl('U')}"),
         ("scroll", "vim_scroll_page", f"{ctrl('F')}, {ctrl('B')}"),
         ("vim", "vim_normal", f"Esc, {ctrl('[')}"),
+        ("sidebar", "vim_panes", f"{ctrl('W')} h, {ctrl('W')} l"),
+        ("move", "vim_list_move", "j k"),
+        ("accept", "vim_list_enter", "Enter"),
     ]

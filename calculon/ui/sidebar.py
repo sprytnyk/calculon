@@ -388,6 +388,16 @@ class Sidebar(QWidget):
         elif kind in (FOLDER, TRASH):
             item.setExpanded(not item.isExpanded())
 
+    def open_current(self) -> bool:
+        """Enter in vim mode: open the selected item, or open or close a folder.
+        True if it opened a sheet, help or a trashed sheet."""
+        item = self.tree.currentItem()
+        if item is None:
+            return False
+        self._clicked(item)
+        data = item.data(0, ROLE)
+        return bool(data) and data[0] in (SHEET, PINNED, HELP, TRASHED)
+
     def _selected(self) -> tuple[str, str] | None:
         it = self.tree.currentItem()
         return it.data(0, ROLE) if it else None

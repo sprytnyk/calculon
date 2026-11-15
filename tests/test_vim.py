@@ -275,3 +275,135 @@ def test_every_shortcut_row_has_an_icon(vim) -> None:
     items = [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())]
     rows = [it for it in items if it.text(1)]  # section headings have no keys
     assert [it.text(0) for it in rows if it.icon(0).isNull()] == []
+
+
+def ctrl_w(widget, key: str) -> None:
+    QTest.keyClick(widget, Qt.Key.Key_W, CTRL)
+    QTest.keyClicks(widget, key)
+
+
+def test_ctrl_w_moves_between_the_list_the_sheet_and_the_answers(vim, app) -> None:
+    ed, tree, results = vim.editor, vim.sidebar.tree, vim.editor.results
+    pending = vim.vim_pending_label
+    vim.activateWindow()
+    QTest.keyClick(ed, Qt.Key.Key_W, CTRL)
+    assert pending.text() == "^W"  # waits for the next key, as in vim
+    QTest.keyClicks(ed, "h")
+    assert pending.isHidden()
+    assert app.focusWidget() is tree
+    ctrl_w(tree, "h")  # nothing further left
+    assert app.focusWidget() is tree
+    ctrl_w(tree, "l")
+    assert app.focusWidget() is ed
+    ctrl_w(ed, "l")
+    assert app.focusWidget() is results
+    ctrl_w(results, "l")  # nothing further right
+    assert app.focusWidget() is results
+    ctrl_w(results, "h")
+    assert app.focusWidget() is ed
+    assert ed.toPlainText() == TEXT
+    assert ed.textCursor().position() == 0  # h and l went to Ctrl+W, not the cursor
+
+
+def test_leaving_the_list_drops_a_ctrl_w(vim, app) -> None:
+    ed, tree, pending = vim.editor, vim.sidebar.tree, vim.vim_pending_label
+    vim.activateWindow()
+    ctrl_w(ed, "h")
+    QTest.keyClick(tree, Qt.Key.Key_W, CTRL)
+    assert pending.text() == "^W"
+    ed.setFocus()
+    pump(app)
+    assert pending.isHidden()
+    tree.setFocus()
+    pump(app)
+    QTest.keyClicks(tree, "l")  # no Ctrl+W waiting: l doesn't jump
+    assert app.focusWidget() is tree
+
+
+def test_turning_vim_off_in_the_answers_goes_back_to_the_sheet(vim, app) -> None:
+    ed = vim.editor
+    vim.activateWindow()
+    ctrl_w(ed, "l")
+    assert app.focusWidget() is ed.results
+    vim.settings.vim_mode = False
+    vim.apply_settings()
+    assert app.focusWidget() is ed
+
+
+def test_ctrl_w_ctrl_l_isnt_the_insert_reference_shortcut(vim, app) -> None:
+    ed, tree = vim.editor, vim.sidebar.tree
+    vim.activateWindow()
+    QTest.keyClick(ed, Qt.Key.Key_W, CTRL)
+    QTest.keyClick(ed, Qt.Key.Key_H, CTRL)
+    assert app.focusWidget() is tree
+    QTest.keyClick(tree, Qt.Key.Key_W, CTRL)
+    QTest.keyClick(tree, Qt.Key.Key_L, CTRL)
+    assert app.focusWidget() is ed
+    assert ed.toPlainText() == TEXT
+
+
+def test_ctrl_w_h_stays_put_while_the_sidebar_is_hidden(vim, app) -> None:
+    ed = vim.editor
+    vim.set_sidebar_visible(False)
+    ctrl_w(ed, "h")
+    assert app.focusWidget() is ed
+    assert ed.textCursor().position() == 0
+
+
+def test_ctrl_w_is_typing_in_insert_mode(vim, app) -> None:
+    ed = vim.editor
+    QTest.keyClicks(ed, "i")
+    ctrl_w(ed, "h")
+    assert app.focusWidget() is ed
+    assert ed.vim.mode is Mode.INSERT
+    assert ed.toPlainText().startswith("h")
+
+
+def test_j_k_and_enter_in_the_sheet_list(vim, app) -> None:
+    store, sidebar, ed = vim.store, vim.sidebar, vim.editor
+    store.create_folder("", "Work")
+    other = store.create_sheet("Work", "Plans", "1 + 1")
+    sidebar.rebuild()
+    pump(app)
+    ctrl_w(ed, "h")
+    tree = sidebar.tree
+    folder = tree.findItems("Work", Qt.MatchFlag.MatchRecursive)[0]
+    folder.setExpanded(False)
+    tree.setCurrentItem(folder)
+    QTest.keyClick(tree, Qt.Key.Key_Return)  # Enter opens a folder
+    assert folder.isExpanded()
+    QTest.keyClicks(tree, "j")
+    assert tree.currentItem().text(0) == "Plans"
+    QTest.keyClicks(tree, "k")
+    assert tree.currentItem() is folder
+    QTest.keyClicks(tree, "j")
+    QTest.keyClick(tree, Qt.Key.Key_Return)  # Enter opens a sheet and goes to it
+    assert vim.current == ("sheet", other)
+    assert app.focusWidget() is ed
+
+
+def test_j_k_and_enter_in_the_answers(vim, app) -> None:
+    ed, results = vim.editor, vim.editor.results
+    ed.setPlainText("rent = $900\n\n// food\nfood = $300")
+    ed.recalculate()
+    ctrl_w(ed, "l")
+    QTest.keyClicks(results, "j")  # past the empty line and the comment
+    assert ed.textCursor().blockNumber() == 3
+    QTest.keyClicks(results, "j")  # no answer below: stays
+    assert ed.textCursor().blockNumber() == 3
+    QTest.keyClick(results, Qt.Key.Key_Return)
+    assert QGuiApplication.clipboard().text() == ed.result_text(3)
+    QTest.keyClicks(results, "kx")  # x does nothing here, it's not the sheet
+    assert ed.textCursor().blockNumber() == 0
+    assert ed.toPlainText() == "rent = $900\n\n// food\nfood = $300"
+
+
+def test_pane_keys_are_off_without_vim_mode(window, app) -> None:
+    ed = window.editor
+    window.activateWindow()
+    ed.setFocus()
+    pump(app)
+    ed.setPlainText("")
+    ctrl_w(ed, "h")
+    assert app.focusWidget() is ed
+    assert ed.toPlainText() == "h"  # a plain editor types the h

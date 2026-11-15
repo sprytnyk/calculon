@@ -80,6 +80,9 @@ T = {
     "vim_scroll_half": "Scroll half a screen",
     "vim_scroll_page": "Scroll a screen",
     "vim_normal": "Back to Normal mode",
+    "vim_panes": "Go to the sheet list, the sheet or the answers",
+    "vim_list_move": "Move in the sheet list and the answers",
+    "vim_list_enter": "Open a sheet or folder, copy an answer",
     "refresh_rates": "Refresh Exchange Rates",
     "about": "About Calculon",
     # autocomplete: what kind of word a suggestion is

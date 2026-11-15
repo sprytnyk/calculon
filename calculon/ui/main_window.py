@@ -59,6 +59,7 @@ from . import theme as themes
 from .about_dialog import AboutDialog
 from .editor import EDIT_MENU, KIND_ORDER, SheetEdit
 from .find_bar import FindBar
+from .panes import PaneKeys
 from .settings_dialog import SettingsDialog
 from .shortcuts_dialog import ShortcutsDialog, key_text
 from .sidebar import HELP, SHEET, TRASHED, Sidebar
@@ -200,6 +201,11 @@ class MainWindow(QMainWindow):
             lambda text: self._show_vim(self.vim_pending_label, text)
         )
         self.editor.vim_search.connect(lambda forward: self.find_bar.open(backward=not forward))
+        # vim mode's Ctrl+W h/l between the sheet list, the sheet and its answers
+        self.pane_keys = PaneKeys(self.sidebar, self.editor, self)
+        self.pane_keys.pending_changed.connect(
+            lambda text: self._show_vim(self.vim_pending_label, text)
+        )
         self.statusBar().setSizeGripEnabled(False)
 
         self._save_timer = QTimer(self)

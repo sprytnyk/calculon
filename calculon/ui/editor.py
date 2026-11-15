@@ -230,13 +230,42 @@ class ResultsArea(QWidget):
             self._drag_x = x
             return
         if event.button() == Qt.MouseButton.LeftButton:
-            n = self._block_at(int(event.position().y()))
-            text = self.editor.result_text(n)
-            if text:
-                self.flash_block = n
-                self._flash_timer.start(700)
-                self.copied.emit(text)
-                self.update()
+            self.copy_line(self._block_at(int(event.position().y())))
+
+    def copy_line(self, n: int) -> None:
+        """Copy line n's answer, flashing it."""
+        text = self.editor.result_text(n)
+        if text:
+            self.flash_block = n
+            self._flash_timer.start(700)
+            self.copied.emit(text)
+            self.update()
+
+    def step(self, forward: bool) -> None:
+        """j or k in vim mode, with the focus on the answers. Moves the sheet's cursor to
+        the next or previous line that has an answer."""
+        ed = self.editor
+        block = ed.textCursor().block()
+        while True:
+            block = block.next() if forward else block.previous()
+            if not block.isValid():
+                return
+            if block.isVisible() and ed.result_text(block.blockNumber()):
+                break
+        cursor = ed.textCursor()
+        cursor.setPosition(block.position())
+        ed.setTextCursor(cursor)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
+        # Keys stop here. Passed on to the sheet, they would run as vim commands.
+        # panes.py reads vim mode's j, k and Enter before this.
+        event.accept()
+
+    def focusInEvent(self, event) -> None:  # noqa: N802
+        self.update()
+
+    def focusOutEvent(self, event) -> None:  # noqa: N802
+        self.update()
 
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:  # noqa: N802
         x = int(event.position().x())
@@ -275,12 +304,17 @@ class ResultsArea(QWidget):
         block = ed.firstVisibleBlock()
         offset = ed.contentOffset()
         current = ed.textCursor().blockNumber()
+        focused = self.hasFocus()  # after vim mode's Ctrl+W l: mark the cursor's line
         pad = 12
         while block.isValid():
             geo = ed.blockBoundingGeometry(block).translated(offset)
             if geo.top() > event.rect().bottom():
                 break
             n = block.blockNumber()
+            if focused and n == current and block.isVisible():
+                painter.fillRect(
+                    QRect(1, int(geo.top()), self.width(), fm.height()), QColor(theme.selection)
+                )
             if n < len(result.lines) and block.isVisible():
                 line = result.lines[n]
                 if line.text:
@@ -506,6 +540,7 @@ class SheetEdit(QPlainTextEdit):
     vim_mode_changed = Signal(str)  # what the status bar shows: "" or "-- INSERT --"
     vim_pending_changed = Signal(str)  # keys typed so far, like "2d"
     vim_search = Signal(bool)  # / (True, forward) or ? (False)
+    vim_window = Signal(str)  # the key after Ctrl+W, like "h"
 
     def __init__(self, theme: Theme, parent: QWidget | None = None):
         super().__init__(parent)
@@ -638,10 +673,13 @@ class SheetEdit(QPlainTextEdit):
             self.vim.clipboard = True
             self.vim.escape_hook = self._vim_escape
             self.vim.search_hook = self.vim_search.emit
+            self.vim.window_hook = self.vim_window.emit
             self.vim.mode_changed.connect(lambda mode: self.vim_mode_changed.emit(vim.label(mode)))
             self.vim.pending_changed.connect(self.vim_pending_changed)
         if self.vim.enabled != on:
             self.vim.set_enabled(on)
+        if not on and self.results.hasFocus():
+            self.setFocus()  # only vim mode's keys work in the answers
         # set_enabled(False) leaves vim's mode as it was, so the label goes here
         self.vim_mode_changed.emit(vim.label(self.vim.mode) if on else "")
 
