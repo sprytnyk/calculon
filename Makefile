@@ -6,7 +6,7 @@ run:
 	uv run python -m calculon
 
 docs:
-	uv run python -m http.server -d docs
+	uv run python -m http.server -b 127.0.0.1 -d docs
 
 check: lint test
 
