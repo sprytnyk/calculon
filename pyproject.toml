@@ -10,7 +10,7 @@ dependencies = [
     "PySide6-Essentials>=6.12",
     "pint>=0.26",
     "python-dateutil>=4.0",
-    "side-vim>=0.2.0",
+    "side-vim>=0.2.1",
     "tzdata>=2026.6",
 ]
 

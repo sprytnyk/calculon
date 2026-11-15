@@ -63,7 +63,7 @@ requires-dist = [
     { name = "pint", specifier = ">=0.26" },
     { name = "pyside6-essentials", specifier = ">=6.12" },
     { name = "python-dateutil", specifier = ">=4.0" },
-    { name = "side-vim", specifier = ">=0.2.0" },
+    { name = "side-vim", specifier = ">=0.2.1" },
     { name = "tzdata", specifier = ">=2026.6" },
 ]
 
@@ -674,14 +674,14 @@ wheels = [
 
 [[package]]
 name = "side-vim"
-version = "0.2.0"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyside6-essentials" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6a/5d/9781e057e37dd4a96883f16fa836679f03aff2ddc4e49fa9996d080b22de/side_vim-0.2.0.tar.gz", hash = "sha256:95dc1490263f7d98d8f6f405a6bc5d1dea82c301de8715cb6688544e32054b10", size = 69814, upload-time = "2026-11-15T16:49:13.848Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/62/0f/fb7f90e51792730a403ea6f4ec30659389b0e9042ac766c1c6761964e1a4/side_vim-0.2.1.tar.gz", hash = "sha256:f7cfc94830475b64bece229dc3cd408079d5ed779e30065174634937ac8b5947", size = 70110, upload-time = "2026-11-15T21:49:03.362Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ec/61/3c69085e7433e268b6d7d27bd3c9c36bf50d843498e0a27f8414e3d17405/side_vim-0.2.0-py3-none-any.whl", hash = "sha256:5f7d0c737d85db8e10082ff159810d5e25128da4a63550e886b37c12aad73c8c", size = 73046, upload-time = "2026-11-15T16:49:12.668Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/4d/e61a8ea3280a19d3607c30c4219da5d6d7a3df39a2543a9918aff9d4ac90/side_vim-0.2.1-py3-none-any.whl", hash = "sha256:cffff712e933c232d96e00b2631f705c195d5fbfd21cd1030733b95769c448ee", size = 73309, upload-time = "2026-11-15T21:49:02.041Z" },
 ]
 
 [[package]]
