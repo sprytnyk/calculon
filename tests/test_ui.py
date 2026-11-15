@@ -1,5 +1,6 @@
 """UI smoke tests: the real window, offscreen, with every user folder in a temp dir."""
 
+import subprocess
 import sys
 import time
 from functools import partial
@@ -289,6 +290,58 @@ def test_settings_dialog_round_trip(window) -> None:
         "CAD",
     )
     assert new.money_decimals == window.settings.money_decimals
+
+
+@pytest.mark.parametrize("same_name", [False, True])
+def test_settings_switch_to_folder_with_directory_link(
+    window, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, same_name: bool
+) -> None:
+    old_store = window.store
+    old_sheet = window.current[1]
+    documents = tmp_path / "Documents"
+    store = SheetStore(documents)
+    store.create_folder(name="Work")
+    new_sheet = old_sheet if same_name else "Work/Budget.txt"
+    store.write(new_sheet, "5 + 6")
+    music = tmp_path / "Music"
+    music.mkdir()
+    (music / "Other.txt").write_text("outside the sheets folder", encoding="utf-8")
+    link = documents / "My Music"
+    if sys.platform == "win32":
+        subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(music)],
+            check=True,
+            capture_output=True,
+        )
+        assert link.is_junction()
+    else:
+        link.symlink_to(music, target_is_directory=True)
+
+    window.editor.setPlainText("7 + 8")
+    monkeypatch.setattr(
+        settings_dialog.QFileDialog, "getExistingDirectory", lambda *_: str(documents)
+    )
+
+    def accept(dialog):
+        dialog._browse()
+        return SettingsDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(SettingsDialog, "exec", accept)
+    window.open_settings()
+
+    assert old_store.read(old_sheet) == "7 + 8"
+    assert window.store.root == documents
+    assert window.sidebar.store is window.store
+    assert window.settings.sheets_dir == str(documents)
+    assert Settings.load().sheets_dir == str(documents)
+    assert window.current == ("sheet", new_sheet)
+    assert window.editor.toPlainText() == "5 + 6"
+    assert window.store.read(new_sheet) == "5 + 6"
+    assert window.store.all_sheets() == [new_sheet]
+    assert {Path(p) for p in window.sidebar.watcher.directories()} == {
+        documents,
+        documents / "Work",
+    }
 
 
 def test_dialog_buttons_have_no_stock_icons(app) -> None:

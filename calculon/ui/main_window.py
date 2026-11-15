@@ -543,9 +543,10 @@ class MainWindow(QMainWindow):
                 )
                 new.sheets_dir = self.settings.sheets_dir
             else:
+                self._forget_documents(lambda _rel: True)
+                self.current = ("", "")
                 self.store = store
                 self.sidebar.set_store(store)
-                self._forget_documents(lambda _rel: True)
         self.settings = new
         self.settings.save()
         self.rates.set_sources(new.rates_sources())
