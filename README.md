@@ -12,6 +12,9 @@ dates, and the answers show up in a column on the right. The syntax follows
   `100 EUR in USD`, `10 km in miles`, `today + 3 weeks`
 - Variables, totals of the lines above, and answers from earlier lines. A line with just
   `housing =` names the subtotal above it, so you can use `housing` further down
+- The sheet's total is in the middle of the status bar. Each answer counts once: a line
+  that adds up lines above takes their place, so `housing = rent + food` isn't counted
+  twice
 - List numbers like `1.`, `1)` and `•` at the start of a line are skipped
 - Sheets exported from Soulver keep their line references, like `[$1 000,00](line2)`
 - Big answers are shortened in the answers column, like $386.8M. Copying gives the full
