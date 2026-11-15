@@ -53,12 +53,13 @@ def self_test() -> int:
             bad.append(n)
     if bad:
         failed.append(f"icons: {', '.join(bad)}")
-    # spell check uses the system's Hunspell, so a missing one is news, not a failure
+    # spell check uses the system's spell checker, so a missing one is news, not a failure
     spell = probe()
     if spell.available:
-        found = ", ".join(f"{lang} ({path.name})" for lang, path in spell.dictionaries.items())
+        # en_US for a Hunspell file, en-US for a Windows language
+        found = ", ".join(f"{lang} ({Path(src).name})" for lang, src in spell.dictionaries.items())
         say(f"spell check: {found}")
-        # a build carries its own libraries; make sure the system's Hunspell still works
+        # a build carries its own libraries; make sure the system's spell checker still works
         checker = SpellChecker.load(spell)
         samples = {"en": ("hotel", "hotell"), "uk": ("оренда", "оредна")}
         for lang in checker.languages:

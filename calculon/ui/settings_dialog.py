@@ -80,17 +80,21 @@ def spell_hint(status: Status, tr) -> str:
     def names(langs) -> str:
         return ", ".join(tr(f"spell_lang_{lang}") for lang in langs)
 
-    if not status.supported:
-        return tr("hint_spell_other")
+    system = platform_key()
     if not status.library:
-        if platform_key() == "darwin":
+        if system == "win32":
+            return tr("hint_spell_windows")
+        if system == "darwin":
             return tr("hint_spell_macos")
         return tr("hint_spell_linux", command=status.install_command())
     parts = []
     if status.dictionaries:
-        parts.append(tr("hint_spell_ok", languages=names(status.dictionaries)))
+        found = "hint_spell_ok_windows" if system == "win32" else "hint_spell_ok"
+        parts.append(tr(found, languages=names(status.dictionaries)))
     if status.missing:
-        if platform_key() == "darwin":
+        if system == "win32":
+            parts.append(tr("hint_spell_windows_missing", languages=names(status.missing)))
+        elif system == "darwin":
             parts.append(tr("hint_spell_macos_dicts", languages=names(status.missing)))
         else:
             command = status.install_command()

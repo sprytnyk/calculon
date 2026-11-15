@@ -1,11 +1,13 @@
-"""Spell check with the system's Hunspell, for English and Ukrainian words.
+"""Spell check for English and Ukrainian words, with the spell checker the system has.
 
-Nothing is bundled: Calculon uses the Hunspell library and dictionaries already on the
-system, through ctypes.
+Nothing is bundled:
 
-- Linux: `libhunspell-1.7-0`, `hunspell-en-us` and `hunspell-uk` (Debian/Ubuntu names).
-- macOS: `brew install hunspell`, plus .aff/.dic dictionaries in ~/Library/Spelling.
-- Windows: not yet.
+- Linux: the Hunspell library and dictionaries, through ctypes. `libhunspell-1.7-0`,
+  `hunspell-en-us` and `hunspell-uk` (Debian/Ubuntu names).
+- macOS: Hunspell too. `brew install hunspell`, plus .aff/.dic dictionaries in
+  ~/Library/Spelling.
+- Windows: Windows' own spell checker, see windows_spelling.py. A language's dictionary
+  comes with the language, added in Windows Settings.
 
 A word with Cyrillic letters goes to the Ukrainian dictionary, any other word to the
 English one. No Qt here: the editor decides which words to check and when.
@@ -21,11 +23,14 @@ import sys
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Protocol
+
+from . import windows_spelling
 
 log = logging.getLogger(__name__)
 
 LANGUAGES = ("en", "uk")
-# dictionary file names to look for, best first
+# dictionary file names to look for, best first; Windows calls them en-US and so on
 DICTIONARY_NAMES = {
     "en": ("en_US", "en_GB", "en_CA", "en_AU", "en"),
     "uk": ("uk_UA", "uk"),
@@ -79,13 +84,18 @@ def dictionary_dirs() -> list[Path]:
 
 
 def find_dictionary(lang: str, dirs: Iterable[Path] | None = None) -> Path | None:
-    """The .aff/.dic pair for `lang`, as a path without the extension."""
+    """The Hunspell .aff/.dic pair for `lang`, as a path without the extension."""
     for folder in dictionary_dirs() if dirs is None else dirs:
         for name in DICTIONARY_NAMES[lang]:
             base = folder / name
             if base.with_suffix(".aff").is_file() and base.with_suffix(".dic").is_file():
                 return base
     return None
+
+
+def windows_tags(lang: str) -> list[str]:
+    """The language tags Windows may know `lang` by, best first: en-US, en-GB, ..."""
+    return [name.replace("_", "-") for name in DICTIONARY_NAMES[lang]]
 
 
 _lib: ctypes.CDLL | None = None
@@ -135,13 +145,14 @@ def _declare(lib: ctypes.CDLL) -> None:
 class Status:
     """What this system has, found without loading any dictionary."""
 
-    supported: bool  # the OS: Linux or macOS
-    library: bool
-    dictionaries: dict[str, Path] = field(default_factory=dict)
+    library: bool  # Hunspell, or Windows' spell checker on Windows
+    # what to load for each language found, either a Hunspell .aff/.dic pair as a path
+    # without the extension or a Windows language tag such as en-US
+    dictionaries: dict[str, str] = field(default_factory=dict)
 
     @property
     def available(self) -> bool:
-        return self.supported and self.library and bool(self.dictionaries)
+        return self.library and bool(self.dictionaries)
 
     @property
     def missing(self) -> list[str]:
@@ -157,14 +168,41 @@ class Status:
 
 
 def probe() -> Status:
-    supported = platform_key() in LIBRARIES
-    if not supported:
-        return Status(supported=False, library=False)
-    dicts = {lang: path for lang in LANGUAGES if (path := find_dictionary(lang))}
-    return Status(supported=True, library=load_library() is not None, dictionaries=dicts)
+    if platform_key() == "win32":
+        found: dict[str, str] = {}
+        try:
+            for lang in LANGUAGES:
+                if tag := windows_spelling.first_supported(windows_tags(lang)):
+                    found[lang] = tag
+        except OSError as exc:
+            log.info("spell check: %s", exc)
+            return Status(library=False)
+        return Status(library=True, dictionaries=found)
+    dicts = {lang: str(path) for lang in LANGUAGES if (path := find_dictionary(lang))}
+    return Status(library=load_library() is not None, dictionaries=dicts)
 
 
-class Dictionary:
+class Dictionary(Protocol):
+    """One language's dictionary."""
+
+    def check(self, word: str) -> bool: ...
+
+    def suggest(self, word: str) -> list[str]: ...
+
+    def close(self) -> None: ...
+
+
+def open_dictionary(source: str) -> Dictionary:
+    """The dictionary for a `Status.dictionaries` value. Raises OSError if it won't load."""
+    if platform_key() == "win32":
+        return windows_spelling.WindowsDictionary(source)
+    lib = load_library()
+    if lib is None:
+        raise OSError("no Hunspell library")
+    return HunspellDictionary(lib, Path(source))
+
+
+class HunspellDictionary:
     """One Hunspell dictionary. Loading takes a moment (~0.2 s for Ukrainian)."""
 
     def __init__(self, lib: ctypes.CDLL, base: Path):
@@ -237,12 +275,9 @@ class SpellChecker:
     ) -> SpellChecker:
         """Load every dictionary `status` found. Safe to run off the main thread."""
         checker = cls(own_words, extra)
-        lib = load_library()
-        if lib is None:
-            return checker
-        for lang, base in status.dictionaries.items():
+        for lang, source in status.dictionaries.items():
             try:
-                checker.dictionaries[lang] = Dictionary(lib, base)
+                checker.dictionaries[lang] = open_dictionary(source)
             except OSError as exc:
                 log.warning("spell check: %s", exc)
         return checker

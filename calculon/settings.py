@@ -53,7 +53,7 @@ class Settings:
     ligatures: bool = True
     line_numbers: bool = True
     always_on_top: bool = False
-    spell_check: bool = False  # needs the system's Hunspell, see calculon/spelling.py
+    spell_check: bool = False  # needs the system's spell checker, see calculon/spelling.py
     vim_mode: bool = False
     results_width: int = 260
     last_sheet: str = ""

@@ -180,7 +180,12 @@ T = {
         "No dictionary for {languages}. To add one, put the .aff and .dic files in "
         "~/Library/Spelling. The README has the steps."
     ),
-    "hint_spell_other": "Not available on this system yet.",
+    "hint_spell_ok_windows": "{languages}, with the Windows spell checker.",
+    "hint_spell_windows": "This Windows has no spell checker.",
+    "hint_spell_windows_missing": (
+        "No dictionary for {languages}. Add the language in Windows Settings, under "
+        "Time & language > Language & region."
+    ),
     "number_style": "Number format:",
     "number_style_auto": "Same as the language",
     "date_order": "Dates like 01/02/2026:",

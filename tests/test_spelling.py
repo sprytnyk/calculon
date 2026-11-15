@@ -1,5 +1,9 @@
-"""Spell check: picking words out of a line, the user's own words, and real Hunspell."""
+"""Spell check: picking words out of a line, the user's own words, and real Hunspell.
 
+Windows' spell checker has its own tests in test_windows_spelling.py.
+"""
+
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -46,17 +50,17 @@ def test_without_dictionaries_everything_passes() -> None:
     assert checker.suggest("hotell") == []
 
 
-class Fake(spelling.Dictionary):
+class Fake:
     """Knows only "rent"; no Hunspell needed."""
-
-    def __init__(self) -> None:
-        self.encoding = "utf-8"
 
     def check(self, word: str) -> bool:
         return word == "rent"
 
     def suggest(self, word: str) -> list[str]:
         return ["rent"]
+
+    def close(self) -> None:
+        pass
 
 
 def test_own_words_ignore_and_vocabulary(tmp_path: Path) -> None:
@@ -91,20 +95,33 @@ def test_find_dictionary_prefers_us_english(tmp_path: Path) -> None:
 
 def test_install_hint_names_what_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(spelling, "platform_key", lambda: "linux")
-    nothing = Status(supported=True, library=False)
+    nothing = Status(library=False)
     assert nothing.install_command() == (
         "sudo apt install libhunspell-1.7-0 hunspell-en-us hunspell-uk"
     )
-    no_uk = Status(supported=True, library=True, dictionaries={"en": Path("/x/en_US")})
+    no_uk = Status(library=True, dictionaries={"en": "/x/en_US"})
     assert no_uk.available and no_uk.missing == ["uk"]
     assert no_uk.install_command() == "sudo apt install hunspell-uk"
     monkeypatch.setattr(spelling, "platform_key", lambda: "darwin")
     assert nothing.install_command() == ""  # macOS: Homebrew, see the README
+    monkeypatch.setattr(spelling, "platform_key", lambda: "win32")
+    assert nothing.install_command() == ""  # Windows: Settings, see the hint
+
+
+def test_probe_finds_hunspell_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("en_US", "uk_UA"):
+        (tmp_path / f"{name}.aff").write_text("SET UTF-8\n")
+        (tmp_path / f"{name}.dic").write_text("0\n")
+    monkeypatch.setattr(spelling, "platform_key", lambda: "linux")
+    monkeypatch.setattr(spelling, "dictionary_dirs", lambda: [tmp_path])
+    status = spelling.probe()
+    assert status.dictionaries == {"en": str(tmp_path / "en_US"), "uk": str(tmp_path / "uk_UA")}
 
 
 SYSTEM = spelling.probe()
 needs_hunspell = pytest.mark.skipif(
-    SYSTEM.missing != [] or not SYSTEM.library, reason="needs Hunspell with en and uk"
+    sys.platform == "win32" or SYSTEM.missing != [] or not SYSTEM.library,
+    reason="needs Hunspell with en and uk",
 )
 
 

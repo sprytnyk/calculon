@@ -183,7 +183,12 @@ T = {
         "Немає словника для мов: {languages}. Щоб додати, покладіть файли .aff і .dic "
         "у ~/Library/Spelling. Кроки є в README."
     ),
-    "hint_spell_other": "На цій системі поки недоступно.",
+    "hint_spell_ok_windows": "Мови: {languages}. Перевірка правопису Windows.",
+    "hint_spell_windows": "У цій Windows немає перевірки правопису.",
+    "hint_spell_windows_missing": (
+        "Немає словника для мов: {languages}. Додайте мову в Параметрах Windows, у розділі "
+        "Час і мова > Мова та регіон."
+    ),
     "number_style": "Формат чисел:",
     "number_style_auto": "Як у мові інтерфейсу",
     "date_order": "Дати на кшталт 01/02/2026:",

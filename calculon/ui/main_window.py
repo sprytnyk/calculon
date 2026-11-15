@@ -626,8 +626,9 @@ class MainWindow(QMainWindow):
             return
         if self._spell_loading:
             return
-        # Ukrainian takes ~0.2 s to load: do it off the main thread, so the window opens
-        # straight away. Hunspell runs in C, so the UI keeps going meanwhile.
+        # Hunspell takes ~0.2 s to load Ukrainian, so it loads off the main thread and the
+        # window opens straight away. Hunspell runs in C, so the UI keeps going meanwhile.
+        # Windows' spell checker opens later, on this thread, when it checks the first word.
         self._spell_loading = True
         status, own, vocabulary = self.spell_status, own_words_file(), self.editor.vocabulary
 

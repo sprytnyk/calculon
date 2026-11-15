@@ -731,7 +731,7 @@ def pretend_os(monkeypatch: pytest.MonkeyPatch, key: str) -> None:
 
 def test_spelling_toggle_and_settings(window, app, monkeypatch: pytest.MonkeyPatch) -> None:
     pretend_os(monkeypatch, "linux")
-    status = Status(supported=True, library=True, dictionaries={"en": Path("/x/en_US")})
+    status = Status(library=True, dictionaries={"en": "/x/en_US"})
     window.spell_status = status
     window._spell = FakeSpell()
     window.build_menus()
@@ -758,12 +758,12 @@ def test_spelling_toggle_and_settings(window, app, monkeypatch: pytest.MonkeyPat
     ("status", "hint"),
     [
         pytest.param(
-            Status(supported=True, library=False),
+            Status(library=False),
             "sudo apt install libhunspell-1.7-0",
             id="no hunspell",
         ),
         pytest.param(
-            Status(supported=True, library=True),
+            Status(library=True),
             "sudo apt install hunspell-en-us hunspell-uk",
             id="no dictionaries",
         ),
@@ -797,42 +797,55 @@ MAC_DICTS = (
     [
         pytest.param(
             "linux",
-            Status(supported=True, library=False),
+            Status(library=False),
             "Needs Hunspell. To install it: "
             "sudo apt install libhunspell-1.7-0 hunspell-en-us hunspell-uk",
             id="linux no hunspell",
         ),
         pytest.param(
             "linux",
-            Status(supported=True, library=True),
+            Status(library=True),
             "No dictionary for English, Ukrainian. "
             "To add it: sudo apt install hunspell-en-us hunspell-uk",
             id="linux no dictionaries",
         ),
         pytest.param(
             "darwin",
-            Status(supported=True, library=False),
+            Status(library=False),
             "Needs Hunspell: run brew install hunspell, then put the .aff and .dic "
             "dictionary files in ~/Library/Spelling. The README has the steps.",
             id="macos no hunspell",
         ),
         pytest.param(
             "darwin",
-            Status(supported=True, library=True),
+            Status(library=True),
             f"No dictionary for English, Ukrainian. {MAC_DICTS}",
             id="macos no dictionaries",
         ),
         pytest.param(
             "darwin",
-            Status(supported=True, library=True, dictionaries={"en": Path("/x/en_US")}),
+            Status(library=True, dictionaries={"en": "/x/en_US"}),
             "English, with the system's Hunspell dictionaries. "
             f"No dictionary for Ukrainian. {MAC_DICTS}",
             id="macos no ukrainian",
         ),
         pytest.param(
             "win32",
-            Status(supported=False, library=False),
-            "Not available on this system yet.",
+            Status(library=False),
+            "This Windows has no spell checker.",
+            id="windows no spell checker",
+        ),
+        pytest.param(
+            "win32",
+            Status(library=True, dictionaries={"en": "en-US"}),
+            "English, with the Windows spell checker. No dictionary for Ukrainian. Add the "
+            "language in Windows Settings, under Time & language > Language & region.",
+            id="windows no ukrainian",
+        ),
+        pytest.param(
+            "win32",
+            Status(library=True, dictionaries={"en": "en-US", "uk": "uk-UA"}),
+            "English, Ukrainian, with the Windows spell checker.",
             id="windows",
         ),
     ],
