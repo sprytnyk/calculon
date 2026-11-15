@@ -88,8 +88,8 @@ return JSON like this:
 - Optional: `time_last_update_unix` in seconds, or `date` as `YYYY-MM-DD`. Calculon
   shows it as the time of the last update.
 
-A self-hosted Frankfurter works as is. Calculon makes no network requests other than
-for exchange rates.
+A self-hosted Frankfurter works as is. Besides exchange rates, Calculon goes online only
+when you open About, to ask GitHub whether a newer version is out.
 
 ## Spell check
 
