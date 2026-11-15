@@ -1,5 +1,7 @@
 """Vim mode through side-vim: how Calculon hooks it up. side-vim's own keys are tested there."""
 
+from pathlib import Path
+
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
@@ -8,7 +10,7 @@ from side_vim import Mode
 
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog
-from tests.test_ui import off_centre, pump
+from tests.test_ui import off_centre, pump, spell_window, underlined
 
 CTRL = Qt.KeyboardModifier.ControlModifier
 TEXT = "rent = $900\nfood = $300\nrent + food"
@@ -419,3 +421,18 @@ def test_pane_keys_are_off_without_vim_mode(window, app) -> None:
     ctrl_w(ed, "h")
     assert app.focusWidget() is ed
     assert ed.toPlainText() == "h"  # a plain editor types the h
+
+
+def test_only_insert_mode_hides_the_word_being_typed(vim, app, tmp_path: Path) -> None:
+    spell_window(vim, app, "pay teh", tmp_path)
+    ed = vim.editor
+    ed.setFocus()
+    QTest.keyClicks(ed, "$")
+    pump(app)
+    assert underlined(ed, 0) == ["teh"]  # Normal mode: the cursor is on it, not typing it
+    QTest.keyClicks(ed, "a")
+    pump(app)
+    assert underlined(ed, 0) == []
+    esc(ed)
+    pump(app)
+    assert underlined(ed, 0) == ["teh"]

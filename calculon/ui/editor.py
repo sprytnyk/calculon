@@ -675,6 +675,7 @@ class SheetEdit(QPlainTextEdit):
             self.vim.search_hook = self.vim_search.emit
             self.vim.window_hook = self.vim_window.emit
             self.vim.mode_changed.connect(lambda mode: self.vim_mode_changed.emit(vim.label(mode)))
+            self.vim.mode_changed.connect(self._update_typing)
             self.vim.pending_changed.connect(self.vim_pending_changed)
         if self.vim.enabled != on:
             self.vim.set_enabled(on)
@@ -682,6 +683,7 @@ class SheetEdit(QPlainTextEdit):
             self.setFocus()  # only vim mode's keys work in the answers
         # set_enabled(False) leaves vim's mode as it was, so the label goes here
         self.vim_mode_changed.emit(vim.label(self.vim.mode) if on else "")
+        self._update_typing()
 
     def vim_on(self) -> bool:
         return self.vim is not None and self.vim.enabled
@@ -717,7 +719,10 @@ class SheetEdit(QPlainTextEdit):
             self._refresh_spelling()
 
     def _typing_word(self) -> tuple[int, int]:
-        """(block, start) of the word the cursor touches, or NO_WORD."""
+        """(block, start) of the word being typed, the one the cursor touches. NO_WORD
+        if there's none, or vim mode is outside Insert mode."""
+        if not self.vim_insert():
+            return NO_WORD
         cur = self.textCursor()
         at = cur.positionInBlock()
         for start, end, _word in words(cur.block().text()):
@@ -832,13 +837,17 @@ class SheetEdit(QPlainTextEdit):
             self.results.update(0, rect.y(), self.results.width(), rect.height())
             self.gutter.update(0, rect.y(), self.gutter.width(), rect.height())
 
+    def _update_typing(self) -> None:
+        """Leaving a word, or Insert mode, shows whether the word is misspelled."""
+        if self.highlighter.check is None:
+            return
+        old, new = self.highlighter.typing, self._typing_word()
+        if new != old:
+            self.highlighter.typing = new
+            self._rehighlight_blocks(old[0], new[0])
+
     def _cursor_moved(self) -> None:
-        if self.highlighter.check is not None:
-            # leaving a word shows whether it's misspelled
-            old, new = self.highlighter.typing, self._typing_word()
-            if new != old:
-                self.highlighter.typing = new
-                self._rehighlight_blocks(old[0], new[0])
+        self._update_typing()
         sel = QTextEdit.ExtraSelection()
         sel.format.setBackground(QColor(self.theme.current_line))
         sel.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
