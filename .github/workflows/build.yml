@@ -112,11 +112,11 @@ jobs:
           curl -fsSLO "$DICTS/en/en_US.aff" -fsSLO "$DICTS/en/en_US.dic"
           curl -fsSLO "$DICTS/uk_UA/uk_UA.aff" -fsSLO "$DICTS/uk_UA/uk_UA.dic"
           ls -l
-      - name: Spell check against Windows' own spell checker (Windows)
+      - name: Tests, including Windows' own spell checker (Windows)
         if: runner.os == 'Windows'
         run: |
           # the windowed build prints nothing, so test the same code from source
-          uv run --no-sync pytest tests/test_windows_spelling.py -v -rs 2>&1 | tee "$RUNNER_TEMP/windows-spelling.log"
+          uv run --no-sync pytest -v -rs 2>&1 | tee "$RUNNER_TEMP/windows-spelling.log"
           # a runner without Windows' English dictionary would skip it, not fail it
           grep -q "test_real_windows_english PASSED" "$RUNNER_TEMP/windows-spelling.log"
       - name: Self-test the build
