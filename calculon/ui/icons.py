@@ -144,16 +144,32 @@ def _icon(name: str, color: str) -> QIcon:
 
 
 def icon_file(name: str, color: str) -> str:
-    """A tinted copy of an icon on disk, for stylesheets (url() can't take a colour)."""
-    folder = (
-        Path(
-            QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation)
-            or tempfile.gettempdir()
-        )
-        / "icons"
-    )
-    path = folder / f"{name}-{color.lstrip('#')}.svg"
+    """A tinted copy of an icon on disk, for stylesheets (url() can't take a colour).
+
+    Uses the cache folder, or a private temp folder when the cache can't be written,
+    e.g. in a home folder Calculon can't open. Empty if neither works.
+    """
+    file_name = f"{name}-{color.lstrip('#')}.svg"
+    cache_dir = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation)
+    if cache_dir:
+        try:
+            return _write_icon(Path(cache_dir) / "icons" / file_name, name, color)
+        except OSError:
+            pass
+    try:
+        return _write_icon(_temp_icon_folder() / file_name, name, color)
+    except OSError:
+        return ""  # dropdowns lose their arrow, but the app still starts
+
+
+def _write_icon(path: Path, name: str, color: str) -> str:
     if not path.exists():
-        folder.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(svg(name, color))
     return path.as_posix()
+
+
+@cache
+def _temp_icon_folder() -> Path:
+    """Made once per run, and only when the cache folder doesn't work."""
+    return Path(tempfile.mkdtemp(prefix="calculon-icons-"))

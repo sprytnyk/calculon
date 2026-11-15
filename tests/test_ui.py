@@ -57,6 +57,15 @@ def test_first_start_creates_welcome_sheet(window, app) -> None:
     assert "$64.00" in texts  # 20% off $80
 
 
+def test_icons_work_when_the_cache_folder_cannot_be_written(app, tmp_path, monkeypatch) -> None:
+    blocker = tmp_path / "cache"
+    blocker.write_text("")  # a file where the cache folder should be
+    monkeypatch.setattr(icons.QStandardPaths, "writableLocation", lambda _kind: str(blocker))
+    path = Path(icons.icon_file("caret_down", "#123456"))
+    assert path.is_file() and not path.is_relative_to(blocker)
+    assert icons.icon_file("caret_down", "#123456") == path.as_posix()
+
+
 def test_typing_saves_and_calculates(window, app) -> None:
     window.new_sheet("")
     window.editor.setPlainText("a = 5\na * 2")
