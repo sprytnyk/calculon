@@ -1,0 +1,2 @@
+# made by scripts/make_arrows.py; the test compares bytes, so no CRLF on Windows checkouts
+assets/arrows/*.svg text eol=lf
