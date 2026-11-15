@@ -1,9 +1,12 @@
-.PHONY: all run check lint test format icons site gif build clean
+.PHONY: all run check lint test format icons site gif build clean docs
 
 all: check
 
 run:
 	uv run python -m calculon
+
+docs:
+	uv run python -m http.server -d docs
 
 check: lint test
 
