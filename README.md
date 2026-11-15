@@ -25,8 +25,9 @@ dates, and the answers show up in a column on the right. The syntax follows
 - Sheets in folders, with search, pins and a trash
 - Keep the window above other apps with Always on Top in the View menu. A crossed-out
   pin means it's off
-- Optional Vim mode with Normal, Insert and Visual modes. Turn it on under Editing on
-  the General page of Settings
+- Optional Vim mode with Normal, Insert and Visual modes, from
+  [side-vim](https://github.com/sprytnyk/side-vim). Turn it on under Editing on the
+  General page of Settings
 - Two themes, Ember and Glacier, each dark, light or following the system
 - Spell check for English and Ukrainian on Linux, and on macOS after a manual setup
 
