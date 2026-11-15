@@ -3,9 +3,10 @@
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtCore import QEvent, Qt
+from PySide6.QtGui import QGuiApplication, QKeyEvent
 from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication
 from side_vim import Mode
 
 from calculon.ui.settings_dialog import SettingsDialog
@@ -32,6 +33,15 @@ def vim(window, app):
 
 def esc(widget) -> None:
     QTest.keyClick(widget, Qt.Key.Key_Escape)
+
+
+def type_ukrainian(widget, text: str) -> None:
+    """Key presses with Cyrillic text, as the Ukrainian layout sends them. QTest's
+    keyClicks aborts the test run on anything past Latin-1."""
+    for ch in text:
+        for kind in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease):
+            event = QKeyEvent(kind, ord(ch.upper()), Qt.KeyboardModifier.NoModifier, ch)
+            QApplication.sendEvent(widget, event)
 
 
 def test_off_by_default(window) -> None:
@@ -180,7 +190,7 @@ def test_help_sheet_allows_movement_but_no_edits(vim) -> None:
     vim.open_help()
     ed = vim.editor
     before = ed.toPlainText()
-    QTest.keyClicks(ed, "jwxddi")
+    QTest.keyClicks(ed, "jwxddrXi")
     assert ed.toPlainText() == before
     assert ed.textCursor().position() > 0
 
@@ -410,6 +420,56 @@ def test_j_k_and_enter_in_the_answers(vim, app) -> None:
     QTest.keyClicks(results, "kx")  # x does nothing here, it's not the sheet
     assert ed.textCursor().blockNumber() == 0
     assert ed.toPlainText() == "rent = $900\n\n// food\nfood = $300"
+
+
+def test_r_replaces_characters_in_the_sheet(vim, app) -> None:
+    ed = vim.editor
+    QTest.keyClicks(ed, "3rX")
+    assert ed.toPlainText() == "XXXt = $900" + TEXT[11:]
+    assert ed.textCursor().position() == 2  # on the last one, as in vim
+    QTest.keyClicks(ed, "u")
+    assert ed.toPlainText() == TEXT
+    type_ukrainian(ed, "кц")  # the Ukrainian r, and the character stays as typed
+    assert ed.toPlainText() == "цent" + TEXT[4:]
+    QTest.keyClicks(ed, "r")
+    assert vim.vim_pending_label.text() == "r"
+    esc(ed)  # Esc cancels r
+    assert vim.vim_pending_label.isHidden()
+    assert ed.toPlainText() == "цent" + TEXT[4:]
+
+
+def test_r_does_nothing_in_the_sheet_list_or_the_answers(vim, app) -> None:
+    ed, tree, results = vim.editor, vim.sidebar.tree, vim.editor.results
+    all_items = Qt.MatchFlag.MatchContains | Qt.MatchFlag.MatchRecursive
+    names = [it.text(0) for it in tree.findItems("", all_items)]
+    vim.activateWindow()
+    ctrl_w(ed, "h")
+    assert app.focusWidget() is tree
+    QTest.keyClicks(tree, "rX")
+    type_ukrainian(tree, "кц")
+    ctrl_w(tree, "l")
+    ctrl_w(ed, "l")
+    assert app.focusWidget() is results
+    QTest.keyClicks(results, "rX")
+    type_ukrainian(results, "кц")
+    assert ed.toPlainText() == TEXT
+    assert vim.vim_pending_label.isHidden()
+    assert [it.text(0) for it in tree.findItems("", all_items)] == names  # nothing renamed
+
+
+def test_pending_r_in_the_sheet_ends_when_it_loses_the_focus(vim, app) -> None:
+    ed, tree = vim.editor, vim.sidebar.tree
+    vim.activateWindow()
+    QTest.keyClicks(ed, "r")
+    tree.setFocus()
+    pump(app)
+    QTest.keyClicks(tree, "X")
+    ed.setFocus()
+    pump(app)
+    QTest.keyClicks(ed, "l")  # a motion again, not r's character
+    assert ed.toPlainText() == TEXT
+    assert ed.textCursor().position() == 1
+    assert vim.vim_pending_label.isHidden()
 
 
 def test_pane_keys_are_off_without_vim_mode(window, app) -> None:

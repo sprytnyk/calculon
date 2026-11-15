@@ -72,6 +72,7 @@ T = {
     "vim_operators": "Delete, change, copy, then a motion",
     "vim_whole": "Whole line, one character, to the line end",
     "vim_paste": "Paste, join lines",
+    "vim_replace": "Replace characters with the one typed next",
     "vim_undo": "Undo, redo",
     "vim_select": "Select characters, whole lines",
     "vim_selection": "Edit the selection, swap its ends",
