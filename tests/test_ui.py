@@ -89,6 +89,26 @@ def test_search_filters_sheets(window, app) -> None:
     assert [tree.topLevelItem(i).text(0) for i in range(tree.topLevelItemCount())] == ["Holiday"]
 
 
+def test_sidebar_watches_only_real_sheet_folders(window, tmp_path: Path) -> None:
+    root = window.store.root
+    window.store.create_folder(name="Work")
+    (root / ".hidden").mkdir()
+    window.store.trash_dir.mkdir()
+    outside = tmp_path / "Music"
+    outside.mkdir()
+    try:
+        (root / "linked").symlink_to(outside, target_is_directory=True)
+        (root / "cycle").symlink_to(root, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symbolic links unavailable: {exc}")
+    window.sidebar.rebuild()
+    assert {Path(p) for p in window.sidebar.watcher.directories()} == {
+        root,
+        root / "Work",
+        window.store.trash_dir,
+    }
+
+
 def test_comment_toggle_and_copy(window, app) -> None:
     window.new_sheet("")
     window.editor.setPlainText("2 + 2")

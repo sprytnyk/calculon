@@ -67,24 +67,39 @@ class SheetStore:
     def tree(self) -> Node:
         return Node("", "", True, self._children(""))
 
+    def _entries(self, folder: str) -> list[Node]:
+        nodes = []
+        try:
+            with os.scandir(self.path(folder)) as entries:
+                for entry in entries:
+                    if entry.name.startswith("."):
+                        continue
+                    try:
+                        # Links can point outside the folder or back into it. A Windows
+                        # junction is a link too, but is_symlink() doesn't count it.
+                        if entry.is_symlink() or entry.is_junction():
+                            continue
+                        is_dir = entry.is_dir()
+                        if not is_dir and not (entry.is_file() and entry.name.endswith(EXT)):
+                            continue
+                    except OSError:
+                        continue
+                    rel = f"{folder}/{entry.name}" if folder else entry.name
+                    name = entry.name if is_dir else self.display_name(rel)
+                    nodes.append(Node(name, rel, is_dir))
+        except OSError:
+            pass
+        return nodes
+
     def _children(self, folder: str) -> list[Node]:
-        base = self.path(folder) if folder else self.root
         pinned = set(self.meta["pinned"])
         nodes: dict[str, Node] = {}
-        try:
-            entries = list(os.scandir(base))
-        except OSError:
-            return []
-        for entry in entries:
-            if entry.name.startswith("."):
+        for node in self._entries(folder):
+            if node.is_dir:
+                node.children = self._children(node.rel)
+            elif node.rel in pinned:
                 continue
-            rel = f"{folder}/{entry.name}" if folder else entry.name
-            if entry.is_dir(follow_symlinks=False):
-                node = Node(entry.name, rel, True)
-                node.children = self._children(rel)
-                nodes[entry.name] = node
-            elif entry.name.endswith(EXT) and rel not in pinned:
-                nodes[entry.name] = Node(self.display_name(rel), rel, False)
+            nodes[node.rel.rsplit("/", 1)[-1]] = node
         order = [n for n in self.meta["order"].get(folder, []) if n in nodes]
         rest = sorted(
             (n for n in nodes if n not in order),
@@ -101,10 +116,13 @@ class SheetStore:
 
     def all_sheets(self) -> list[str]:
         out = []
-        for path in self.root.rglob("*" + EXT):
-            rel = self.rel(path)
-            if not any(part.startswith(".") for part in rel.split("/")):
-                out.append(rel)
+        folders = [""]
+        while folders:
+            for node in self._entries(folders.pop()):
+                if node.is_dir:
+                    folders.append(node.rel)
+                else:
+                    out.append(node.rel)
         return sorted(out, key=str.lower)
 
     def search(self, query: str) -> list[str]:

@@ -195,12 +195,12 @@ class Sidebar(QWidget):
         self.changed.emit()
 
     def _watch(self) -> None:
-        dirs = [str(self.store.root)]
-        for path in self.store.root.rglob("*"):
-            if path.is_dir() and not any(
-                p.startswith(".") for p in path.relative_to(self.store.root).parts
-            ):
-                dirs.append(str(path))
+        dirs = []
+        folders = [self.store.tree()]
+        while folders:
+            folder = folders.pop()
+            dirs.append(str(self.store.root / folder.rel))
+            folders.extend(node for node in folder.children if node.is_dir)
         if self.store.trash_dir.is_dir():
             dirs.append(str(self.store.trash_dir))
         old = self.watcher.directories()
