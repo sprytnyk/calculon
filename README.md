@@ -26,8 +26,9 @@ dates, and the answers show up in a column on the right. The syntax follows
 - English and Ukrainian, in sheets and in the interface
 - Linux and Windows x64, and macOS on Intel and Apple Silicon
 - Sheets in folders, with search, pins and a trash
-- Keep the window above other apps with Always on Top in the View menu. A crossed-out
-  pin means it's off
+- Focus Mode hides the menu, the sidebar and the date of the last rates update, so only
+  the sheet is left. Turn it on with Ctrl+Shift+F. Always on Top keeps the window above
+  other apps. Both are in the View menu
 - Optional Vim mode with Normal, Insert and Visual modes, from
   [side-vim](https://github.com/sprytnyk/side-vim). To turn it on, open
   the Vim page in Settings

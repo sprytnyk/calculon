@@ -119,6 +119,8 @@ class MainWindow(QMainWindow):
         self._docs: dict[str, QTextDocument] = {}
         self._positions: dict[str, tuple[int, int]] = {}  # cursor and scroll per sheet
         self._loose_doc: QTextDocument | None = None  # help or trash: not kept
+        self._focus = False
+        self._sidebar_before_focus = True  # whether to show the sidebar when focus mode ends
 
         self.rates = RatesService(self.settings.rates_sources(), self)
         self.rates.changed.connect(self._engine_changed)
@@ -273,6 +275,7 @@ class MainWindow(QMainWindow):
         if state is not None:
             self.splitter.restoreState(state)
         self.set_sidebar_visible(read_bool(qs.value("window/sidebar", True)))
+        self.set_focus_mode(read_bool(qs.value("window/focus", False)))
 
     def _open_initial(self) -> None:
         last = self.settings.last_sheet
@@ -294,6 +297,7 @@ class MainWindow(QMainWindow):
         "find_previous": "caret_up",
         "find": "sheet",
         "toggle_sidebar": "sidebar",
+        "focus_mode": "focus",
         "toggle_line_numbers": "line_numbers",
         "toggle_spelling": "spell_add",
         "help_sheet": "help",
@@ -322,6 +326,8 @@ class MainWindow(QMainWindow):
     def build_menus(self) -> None:
         bar = self.menuBar()
         bar.clear()
+        for act in self.actions():  # added to the window by the last build, see the end
+            self.removeAction(act)
         self._actions: dict[str, QAction] = {}
         standard_key = QKeySequence.StandardKey
         m = bar.addMenu(self.t("menu_file"))
@@ -406,6 +412,8 @@ class MainWindow(QMainWindow):
         self.sidebar_button.setIcon(icons.icon("sidebar"))
         keys = key_text(act.shortcut())
         self.sidebar_button.setToolTip(f"{self.t('shortcuts_sidebar')} ({keys})")
+        act = self._action(m, "focus_mode", self.set_focus_mode, "Ctrl+Shift+F", checkable=True)
+        act.setChecked(self._focus)
         act = self._action(
             m, "toggle_line_numbers", self._toggle_line_numbers, "Ctrl+Shift+L", checkable=True
         )
@@ -429,6 +437,8 @@ class MainWindow(QMainWindow):
         about.setMenuRole(QAction.MenuRole.AboutRole)
         for menu in bar.findChildren(QMenu):
             menu.installEventFilter(self)
+        # Qt turns off a hidden menu bar's shortcuts. The window keeps them working in focus mode.
+        self.addActions(list(self._actions.values()))
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # noqa: N802
         """Shortcuts work while a menu is open too; Qt ignores them there by default."""
@@ -581,6 +591,19 @@ class MainWindow(QMainWindow):
     def set_sidebar_visible(self, visible: bool) -> None:
         self.sidebar.setVisible(visible)
         self._actions["toggle_sidebar"].setChecked(visible)
+
+    def set_focus_mode(self, on: bool) -> None:
+        """Hide the menu bar, the sidebar and the rates date, so only the sheet and its total show.
+        When focus mode ends, the sidebar comes back if it was open before."""
+        if on and not self._focus:
+            self._sidebar_before_focus = not self.sidebar.isHidden()
+            self.set_sidebar_visible(False)
+        elif self._focus and not on:
+            self.set_sidebar_visible(self._sidebar_before_focus)
+        self._focus = on
+        self.menuBar().setHidden(on)
+        self.rates_label.setHidden(on)
+        self._actions["focus_mode"].setChecked(on)
 
     def _toggle_always_on_top(self) -> None:
         self.settings.always_on_top = not self.settings.always_on_top
@@ -1003,6 +1026,8 @@ class MainWindow(QMainWindow):
         qs = QSettings()
         qs.setValue("window/geometry", self.saveGeometry())
         qs.setValue("window/splitter", self.splitter.saveState())
-        qs.setValue("window/sidebar", not self.sidebar.isHidden())
+        sidebar = self._sidebar_before_focus if self._focus else not self.sidebar.isHidden()
+        qs.setValue("window/sidebar", sidebar)
+        qs.setValue("window/focus", self._focus)
         self.settings.save()
         super().closeEvent(event)

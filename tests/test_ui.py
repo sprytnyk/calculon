@@ -381,6 +381,42 @@ def test_sidebar_toggle_keeps_the_tick_and_survives_a_restart(window, app) -> No
     w.close()
 
 
+def test_focus_mode_hides_everything_but_the_sheet(window, app) -> None:
+    keys = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+    window.activateWindow()
+    assert QTest.qWaitForWindowActive(window)
+    hidden_in_focus = (window.menuBar(), window.sidebar, window.rates_label)
+    QTest.keyClick(window.editor, Qt.Key.Key_F, keys)
+    assert all(w.isHidden() for w in hidden_in_focus) and window._actions["focus_mode"].isChecked()
+    assert window.editor.isVisible() and window.total_label.isVisible()
+    window.set_language("uk")  # rebuilding the menus keeps focus mode and its shortcut
+    assert window.menuBar().isHidden() and window._actions["focus_mode"].isChecked()
+    QTest.keyClick(window.editor, Qt.Key.Key_F, keys)  # works with the menu bar hidden
+    assert not any(w.isHidden() for w in hidden_in_focus)
+    window.set_language("en")
+
+
+def test_focus_mode_brings_the_sidebar_back_as_it_was(window, app) -> None:
+    window.set_sidebar_visible(False)
+    window.set_focus_mode(True)
+    window.close()
+    w = MainWindow()  # focus mode survives a restart
+    w.show()
+    pump(app)
+    assert w.menuBar().isHidden() and w.sidebar.isHidden()
+    w.set_focus_mode(False)
+    assert not w.menuBar().isHidden() and w.sidebar.isHidden()  # it was hidden before
+    w.set_sidebar_visible(True)
+    w.set_focus_mode(True)
+    w.close()
+    w = MainWindow()
+    w.show()
+    pump(app)
+    w.set_focus_mode(False)
+    assert not w.sidebar.isHidden()
+    w.close()
+
+
 def test_shortcuts_dialog_lists_menu_and_sidebar_keys(window) -> None:
     rows = dict(ShortcutsDialog(window.menuBar(), window.t, window).rows())
     assert rows["New Sheet"] == key_text(QKeySequence.StandardKey.New)

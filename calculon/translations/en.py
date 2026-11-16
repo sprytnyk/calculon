@@ -48,6 +48,7 @@ T = {
     "zoom_out": "Smaller Text",
     "zoom_reset": "Default Text Size",
     "toggle_sidebar": "Show Sidebar",
+    "focus_mode": "Focus Mode",
     "always_on_top": "Always on Top",
     "toggle_line_numbers": "Line Numbers",
     "toggle_spelling": "Check Spelling",
