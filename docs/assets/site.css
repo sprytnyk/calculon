@@ -596,22 +596,14 @@ section.alt {
   font-size: 14px;
   color: var(--muted);
 }
+/* On narrow screens the tabs go one under another, above the sheet. */
 @media (max-width: 860px) {
   .examples {
     grid-template-columns: 1fr;
-  }
-  .tabs {
-    flex-direction: row;
-    overflow-x: auto;
-    padding-bottom: 4px;
+    gap: 20px;
   }
   .tab {
-    flex: none;
-    width: auto;
     padding: 10px 14px;
-  }
-  .tab span.text {
-    display: none;
   }
 }
 
