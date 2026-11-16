@@ -514,6 +514,10 @@ def test_settings_switch_to_folder_with_directory_link(
         link.symlink_to(music, target_is_directory=True)
 
     window.editor.setPlainText("7 + 8")
+    assert window._dirty, (
+        f"edit was not marked for saving: current={window.current}, "
+        f"read_only={window.editor.isReadOnly()}, signals_blocked={window.editor.signalsBlocked()}"
+    )
     monkeypatch.setattr(
         settings_dialog.QFileDialog, "getExistingDirectory", lambda *_: str(documents)
     )
@@ -525,7 +529,7 @@ def test_settings_switch_to_folder_with_directory_link(
     monkeypatch.setattr(SettingsDialog, "exec", accept)
     window.open_settings()
 
-    assert old_store.read(old_sheet) == "7 + 8"
+    assert old_store.read(old_sheet) == "7 + 8", window.message_label.text()
     assert window.store.root == documents
     assert window.sidebar.store is window.store
     assert window.settings.sheets_dir == str(documents)
@@ -538,6 +542,55 @@ def test_settings_switch_to_folder_with_directory_link(
         documents,
         documents / "Work",
     }
+
+
+def test_settings_keeps_unsaved_sheet_when_save_fails(
+    window, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    old_store = window.store
+    old_sheet = window.current[1]
+    old_text = old_store.read(old_sheet)
+    old_settings = window.settings
+    window.editor.setPlainText("7 + 8")
+    document = window.editor.document()
+    destination = tmp_path / "other-sheets"
+    store = SheetStore(destination)
+    store.write(old_sheet, "5 + 6")
+
+    def accept(dialog):
+        dialog.sheets_dir.setText(str(destination))
+        return SettingsDialog.DialogCode.Accepted
+
+    def fail_save(rel, text):
+        raise PermissionError("sheet is locked")
+
+    monkeypatch.setattr(SettingsDialog, "exec", accept)
+    with monkeypatch.context() as blocked:
+        blocked.setattr(old_store, "write", fail_save)
+        window.open_settings()
+
+    assert window.store is old_store
+    assert window.sidebar.store is old_store
+    assert window.settings is old_settings
+    assert Settings.load().sheets_dir == str(old_store.root)
+    assert window.current == ("sheet", old_sheet)
+    assert window.editor.document() is document
+    assert window.editor.toPlainText() == "7 + 8"
+    assert window._dirty
+    assert old_store.read(old_sheet) == old_text
+    assert store.read(old_sheet) == "5 + 6"
+    assert window.message_label.text() == "sheet is locked"
+
+    window.open_settings()
+
+    assert old_store.read(old_sheet) == "7 + 8"
+    assert window.store.root == destination
+    assert window.sidebar.store is window.store
+    assert Settings.load().sheets_dir == str(destination)
+    assert window.current == ("sheet", old_sheet)
+    assert window.editor.toPlainText() == "5 + 6"
+    assert window.store.read(old_sheet) == "5 + 6"
+    assert not window._dirty
 
 
 def test_dialog_buttons_have_no_stock_icons(app) -> None:

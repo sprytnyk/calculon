@@ -541,6 +541,8 @@ class MainWindow(QMainWindow):
         )
         if folder_changed:
             self.save_current()
+            if self._dirty:
+                return
             try:
                 store = self._open_store(new.sheets_dir)
             except OSError as exc:
@@ -771,6 +773,7 @@ class MainWindow(QMainWindow):
             self._saved_mtime = self.store.mtime(rel)
             self._dirty = False
         except OSError as exc:
+            log.exception("could not save sheet %s", rel)
             self.show_message(str(exc), 5000)
         path = str(self.store.path(rel))
         if path not in self.file_watcher.files():
