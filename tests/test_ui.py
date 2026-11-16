@@ -30,7 +30,7 @@ from calculon.settings import Settings
 from calculon.spelling import SpellChecker, Status, probe
 from calculon.storage import SheetStore
 from calculon.translations import tr
-from calculon.ui import folder_dialog, icons, settings_dialog
+from calculon.ui import folder_dialog, icons, main_window, settings_dialog
 from calculon.ui import theme as themes
 from calculon.ui.about_dialog import AboutDialog
 from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu
@@ -412,25 +412,44 @@ def test_focus_mode_brings_the_sidebar_back_as_it_was(window, app, reopen) -> No
     assert not w.sidebar.isHidden()
 
 
-def test_f1_opens_the_help_sheet_on_every_system(window, app) -> None:
-    """F1 is the Help key on Windows and Linux, but macOS's is Cmd+?. Both work."""
-    keys = [k.toString() for k in window._actions["help_sheet"].shortcuts()]
-    assert "F1" in keys and QKeySequence(QKeySequence.StandardKey.HelpContents).toString() in keys
-    assert len(keys) == len(set(keys))  # a key listed twice would make Qt ignore it
-    window.activateWindow()
-    assert QTest.qWaitForWindowActive(window)
-    QTest.keyClick(window.editor, Qt.Key.Key_F1)
-    assert window.current[0] == HELP
-
-
-def test_shift_f1_opens_keyboard_shortcuts(window, app, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize(
+    ("platform", "help_key", "shortcuts_key", "spelling_key"),
+    [
+        ("darwin", "Ctrl+Shift+H", "Ctrl+Shift+K", "Ctrl+Alt+S"),
+        ("linux", "F1", "Shift+F1", "F7"),
+        ("win32", "F1", "Shift+F1", "F7"),
+    ],
+)
+def test_platform_help_shortcuts_and_spelling(
+    window, app, monkeypatch: pytest.MonkeyPatch, platform, help_key, shortcuts_key, spelling_key
+) -> None:
+    monkeypatch.setattr(main_window, "sys", SimpleNamespace(platform=platform))
+    window.spell_status = Status(library=True, dictionaries={"en": "/x/en_US"})
+    window._spell = FakeSpell()
+    window.build_menus()
+    keys = {
+        "help_sheet": help_key,
+        "shortcuts": shortcuts_key,
+        "toggle_spelling": spelling_key,
+    }
+    for name, key in keys.items():
+        assert window._actions[name].shortcuts() == [QKeySequence(key)]  # no extra aliases
     opened: list[ShortcutsDialog] = []
-    # the real exec waits for a click
     monkeypatch.setattr(ShortcutsDialog, "exec", lambda dialog: opened.append(dialog) or 0)
     window.activateWindow()
     assert QTest.qWaitForWindowActive(window)
-    QTest.keyClick(window.editor, Qt.Key.Key_F1, Qt.KeyboardModifier.ShiftModifier)
+    QTest.keySequence(window.editor, QKeySequence(help_key))
+    assert window.current[0] == HELP
+    QTest.keySequence(window.editor, QKeySequence(shortcuts_key))
     assert len(opened) == 1
+    window.new_sheet("")
+    QTest.keySequence(window.editor, QKeySequence(spelling_key))
+    assert window.settings.spell_check and window.editor.spell is window._spell
+    window.set_language("uk")
+    for name, key in keys.items():
+        assert window._actions[name].shortcuts() == [QKeySequence(key)]
+    QTest.keySequence(window.editor, QKeySequence(spelling_key))
+    assert not window.settings.spell_check and window.editor.spell is None
 
 
 def test_shortcuts_dialog_lists_menu_and_sidebar_keys(window) -> None:
@@ -439,7 +458,9 @@ def test_shortcuts_dialog_lists_menu_and_sidebar_keys(window) -> None:
     assert rows["Comment Line"] == key_text("Ctrl+/")
     assert rows["Line Numbers"] == key_text("Ctrl+Shift+L")
     assert rows["Rename"] == "F2"
-    assert "Keyboard Shortcuts" in rows
+    mac = sys.platform == "darwin"
+    assert rows["Help Sheet"] == key_text("Ctrl+Shift+H" if mac else "F1")
+    assert rows["Keyboard Shortcuts"] == key_text("Ctrl+Shift+K" if mac else "Shift+F1")
 
 
 def test_qt_buttons_follow_language(window) -> None:
@@ -880,7 +901,9 @@ def test_every_shortcut_belongs_to_one_action(window) -> None:
                 assert seen.setdefault(text, action.text()) == action.text(), text
     by_name = {a.text(): a for m in window.menuBar().findChildren(QMenu) for a in m.actions()}
     assert by_name["Settings…"].shortcut() == QKeySequence("Ctrl+,")  # shown in the menu
-    assert by_name["Keyboard Shortcuts"].shortcut() == QKeySequence("Shift+F1")
+    assert by_name["Keyboard Shortcuts"].shortcut() == QKeySequence(
+        "Ctrl+Shift+K" if sys.platform == "darwin" else "Shift+F1"
+    )
 
 
 def test_ctrl_shift_backspace_deletes_to_the_line_start(window, app) -> None:
@@ -1104,7 +1127,7 @@ def test_spelling_toggle_and_settings(window, app, monkeypatch: pytest.MonkeyPat
     view = window.menuBar().actions()[2].menu()
     act = next(a for a in view.actions() if a.text() == "Check Spelling")
     assert act.isEnabled() and not act.isChecked()
-    assert act.shortcut() == QKeySequence("F7")
+    assert act.shortcut() == QKeySequence("Ctrl+Alt+S" if sys.platform == "darwin" else "F7")
 
     window._toggle_spelling()
     assert window.settings.spell_check and window.editor.spell is window._spell

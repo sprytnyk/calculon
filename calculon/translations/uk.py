@@ -173,7 +173,7 @@ T = {
     "browse": "Огляд…",
     "font_size": "Розмір тексту:",
     "ligatures": "Лігатури шрифту",
-    "spell_check": "Підкреслювати слова з помилками (F7)",
+    "spell_check": "Підкреслювати слова з помилками",
     "spell_lang_en": "англійська",
     "spell_lang_uk": "українська",
     "hint_spell_ok": "Мови: {languages}. Словники Hunspell із системи.",

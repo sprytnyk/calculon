@@ -36,8 +36,14 @@ dates, and the answers show up in a column on the right. The syntax follows
 - Two themes, Glacier and Ember, each dark, light or following the system, with Glacier by default
 - Spell check for English and Ukrainian on Linux and Windows, and on macOS after a manual setup
 
-The Help sheet in the sidebar explains the calculation syntax with examples. Open it with F1.
+The Help sheet in the sidebar explains the calculation syntax with examples.
 Keyboard Shortcuts in the Help menu lists the keys, including Vim keys when Vim mode is on.
+
+| Action | Windows / Linux | macOS |
+| --- | --- | --- |
+| Open Help Sheet | F1 | Cmd+Shift+H |
+| Open Keyboard Shortcuts | Shift+F1 | Cmd+Shift+K |
+| Toggle spell checking | F7 | Cmd+Option+S |
 
 ## Install
 
@@ -98,7 +104,7 @@ when you open About, to ask GitHub whether a newer version is out.
 
 ## Spell check
 
-Turn it on with Check Spelling in the View menu (F7), or in Settings. Calculon draws a wavy line
+Turn it on with Check Spelling in the View menu, or in Settings. Calculon draws a wavy line
 under misspelled words. Right-click one for suggestions, Add to Dictionary or Ignore.
 It skips numbers, units, currencies and variable names, and checks only the words
 around them. Words you add go to `words.txt` in Calculon's app data folder, one per

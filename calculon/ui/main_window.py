@@ -1,6 +1,7 @@
 """Main window."""
 
 import logging
+import sys
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -72,7 +73,7 @@ FONT_FAMILY = "Fira Code"
 SAVE_DELAY_MS = 500
 
 WELCOME = """# My first sheet
-// Type a line, get an answer on the right. Help is in the sidebar (F1).
+// Type a line, get an answer on the right. Help is in the sidebar.
 
 groceries = $45
 rent = €900 in USD
@@ -330,6 +331,7 @@ class MainWindow(QMainWindow):
             self.removeAction(act)
         self._actions: dict[str, QAction] = {}
         standard_key = QKeySequence.StandardKey
+        mac = sys.platform == "darwin"
         m = bar.addMenu(self.t("menu_file"))
         self._action(
             m, "new_sheet", lambda: self.new_sheet(self.sidebar.current_folder()), standard_key.New
@@ -418,21 +420,25 @@ class MainWindow(QMainWindow):
             m, "toggle_line_numbers", self._toggle_line_numbers, "Ctrl+Shift+L", checkable=True
         )
         act.setChecked(self.settings.line_numbers)
-        act = self._action(m, "toggle_spelling", self._toggle_spelling, "F7", checkable=True)
+        act = self._action(
+            m,
+            "toggle_spelling",
+            self._toggle_spelling,
+            "Ctrl+Alt+S" if mac else "F7",
+            checkable=True,
+        )
         act.setChecked(self.settings.spell_check and self.spell_status.available)
         act.setEnabled(self.spell_status.available)
         self.editor.menu_actions = {key: self._actions[key] for group in EDIT_MENU for key in group}
 
         m = bar.addMenu(self.t("menu_help"))
-        # F1 too, since the help sheet and the site say F1, but macOS's own Help key is
-        # Cmd+?. On Windows and Linux the Help key is F1, and Qt ignores a key listed twice.
-        help_keys = [QKeySequence(standard_key.HelpContents), QKeySequence("F1")]
-        self._action(m, "help_sheet", self.open_help, list(dict.fromkeys(help_keys)))
+        # Qt maps Ctrl to Command on macOS; Cmd+? belongs to the system Help menu.
+        self._action(m, "help_sheet", self.open_help, "Ctrl+Shift+H" if mac else "F1")
         self._action(
             m,
             "shortcuts",
             self.show_shortcuts,
-            "Shift+F1",  # next to F1 for help; Ctrl+? sat on top of Ctrl+/ for comments
+            "Ctrl+Shift+K" if mac else "Shift+F1",
         )
         self._action(m, "refresh_rates", self.rates.refresh, "Ctrl+R")
         m.addSeparator()

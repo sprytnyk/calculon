@@ -170,7 +170,7 @@ T = {
     "browse": "Browse…",
     "font_size": "Text size:",
     "ligatures": "Font ligatures",
-    "spell_check": "Underline misspelled words (F7)",
+    "spell_check": "Underline misspelled words",
     "spell_lang_en": "English",
     "spell_lang_uk": "Ukrainian",
     "hint_spell_ok": "{languages}, with the system's Hunspell dictionaries.",
