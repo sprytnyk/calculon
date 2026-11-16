@@ -160,6 +160,9 @@ when it isn't obvious. Start with a one-line summary, then use only the sections
 something in them. Save them to `dist/vX.Y.Z/RELEASE_NOTES.md`, next to the archives and
 checksums, without the fence below. They aren't in `SHA256SUMS`.
 
+Check Install against README's Install and Sheets sections before each release. Keep the
+platform security prompts and folder-access guidance current.
+
 ````markdown
 One-line summary of the release.
 
@@ -182,7 +185,9 @@ One-line summary of the release.
 ### Install
 - Linux: unpack and run `./calculon`.
 - Windows: unpack and run `calculon.exe`. It isn't code-signed, so SmartScreen may ask
-  to confirm the first start (More info → Run anyway).
+  to confirm the first start. Click More info, then Run anyway. If Windows Security's
+  Controlled folder access blocks saving sheets, allow Calculon there or pick a sheets
+  folder outside Documents.
 - macOS: pick `macos_arm64` for Apple Silicon, `macos_x64` for Intel, and drag
   `Calculon.app` into Applications. It isn't notarized, so macOS blocks it the first time.
   Try to open it, then go to System Settings, open Privacy & Security and click Open
