@@ -422,7 +422,10 @@
       ["mac_arm64", TEXT.mac_arm64],
       ["mac_x64", TEXT.mac_x64],
     ];
-    const when = new Date(release.date).toLocaleDateString(lang === "uk" ? "uk-UA" : "en-GB", TEXT.date);
+    // Ukrainian dates end in "р.". The sentence adds its own full stop, so drop this one.
+    const when = new Date(release.date)
+      .toLocaleDateString(lang === "uk" ? "uk-UA" : "en-GB", TEXT.date)
+      .replace(/\.$/, "");
     for (const box of boxes) {
       const buttons = box.querySelector(".downloads");
       buttons.textContent = "";
