@@ -112,6 +112,12 @@ jobs:
           curl -fsSLO "$DICTS/en/en_US.aff" -fsSLO "$DICTS/en/en_US.dic"
           curl -fsSLO "$DICTS/uk_UA/uk_UA.aff" -fsSLO "$DICTS/uk_UA/uk_UA.dic"
           ls -l
+      - name: Tests, including Hunspell with the dictionaries above (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          uv run --no-sync pytest -v -rs 2>&1 | tee "$RUNNER_TEMP/macos-tests.log"
+          # without the dictionaries, pytest would skip the real spelling test instead of failing
+          grep -q "test_spelling_loads_real_dictionaries_in_background PASSED" "$RUNNER_TEMP/macos-tests.log"
       - name: Tests, including Windows' own spell checker (Windows)
         if: runner.os == 'Windows'
         run: |
