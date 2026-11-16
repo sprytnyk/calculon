@@ -52,13 +52,6 @@ class FolderDialog(QDialog):
         self.language = language
         self.setObjectName("settings")  # the Settings window's look
         self.setWindowTitle(self.t("app_name"))
-        self.setStyleSheet(
-            stylesheet(theme)
-            + f"""
-            QLabel#error {{ color: {theme.error}; background: {theme.surface};
-                border: 1px solid {theme.error}; border-radius: 6px; padding: 8px 10px; }}
-            """
-        )
         self.setMinimumWidth(640)
 
         heading = QLabel(self.t("folder_question"))
@@ -120,6 +113,14 @@ class FolderDialog(QDialog):
         layout.addWidget(page, 1)
         layout.addWidget(footer)
         self.use_button.setDefault(True)  # only sticks once the button is in the dialog
+        # Apply the selectors once every child has its final parent and object name.
+        self.setStyleSheet(
+            stylesheet(theme)
+            + f"""
+            QLabel#error {{ color: {theme.error}; background: {theme.surface};
+                border: 1px solid {theme.error}; border-radius: 6px; padding: 8px 10px; }}
+            """
+        )
 
     def t(self, key: str, **kw) -> str:
         return tr(self.language, key, **kw)
