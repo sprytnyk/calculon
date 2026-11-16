@@ -549,3 +549,16 @@ def test_only_insert_mode_hides_the_word_being_typed(vim, app, tmp_path: Path) -
     esc(ed)
     pump(app)
     assert underlined(ed, 0) == ["teh"]
+
+
+def test_focus_mode_key_gets_past_vim(vim) -> None:
+    """Vim keeps Ctrl+F for itself. Ctrl+Shift+F must still reach focus mode, or Normal
+    mode would leave you in focus mode with the menu bar hidden."""
+    keys = CTRL | Qt.KeyboardModifier.ShiftModifier
+    vim.activateWindow()
+    assert QTest.qWaitForWindowActive(vim)
+    assert vim.vim_mode_label.isHidden()  # Normal mode
+    QTest.keyClick(vim.editor, Qt.Key.Key_F, keys)
+    assert vim.menuBar().isHidden()
+    QTest.keyClick(vim.editor, Qt.Key.Key_F, keys)
+    assert not vim.menuBar().isHidden()
