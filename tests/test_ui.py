@@ -37,7 +37,7 @@ from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu
 from calculon.ui.main_window import MainWindow
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog, key_text
-from calculon.ui.sidebar import Sidebar
+from calculon.ui.sidebar import HELP, Sidebar
 from calculon.ui.theme import GLACIER_DARK, GLACIER_LIGHT
 
 
@@ -410,6 +410,17 @@ def test_focus_mode_brings_the_sidebar_back_as_it_was(window, app, reopen) -> No
     pump(app)
     w.set_focus_mode(False)
     assert not w.sidebar.isHidden()
+
+
+def test_f1_opens_the_help_sheet_on_every_system(window, app) -> None:
+    """F1 is the Help key on Windows and Linux, but macOS's is Cmd+?. Both work."""
+    keys = [k.toString() for k in window._actions["help_sheet"].shortcuts()]
+    assert "F1" in keys and QKeySequence(QKeySequence.StandardKey.HelpContents).toString() in keys
+    assert len(keys) == len(set(keys))  # a key listed twice would make Qt ignore it
+    window.activateWindow()
+    assert QTest.qWaitForWindowActive(window)
+    QTest.keyClick(window.editor, Qt.Key.Key_F1)
+    assert window.current[0] == HELP
 
 
 def test_shortcuts_dialog_lists_menu_and_sidebar_keys(window) -> None:

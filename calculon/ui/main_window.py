@@ -424,7 +424,10 @@ class MainWindow(QMainWindow):
         self.editor.menu_actions = {key: self._actions[key] for group in EDIT_MENU for key in group}
 
         m = bar.addMenu(self.t("menu_help"))
-        self._action(m, "help_sheet", self.open_help, standard_key.HelpContents)
+        # F1 too, since the help sheet and the site say F1, but macOS's own Help key is
+        # Cmd+?. On Windows and Linux the Help key is F1, and Qt ignores a key listed twice.
+        help_keys = [QKeySequence(standard_key.HelpContents), QKeySequence("F1")]
+        self._action(m, "help_sheet", self.open_help, list(dict.fromkeys(help_keys)))
         self._action(
             m,
             "shortcuts",
