@@ -363,7 +363,7 @@ def test_icons_are_coloured_from_the_start(window) -> None:
     assert icons.color_for("quit") in colours
 
 
-def test_sidebar_toggle_keeps_the_tick_and_survives_a_restart(window, app) -> None:
+def test_sidebar_toggle_keeps_the_tick_and_survives_a_restart(window, app, reopen) -> None:
     tick = window._actions["toggle_sidebar"]
     window.sidebar_button.click()
     assert window.sidebar.isHidden() and not tick.isChecked()
@@ -371,14 +371,12 @@ def test_sidebar_toggle_keeps_the_tick_and_survives_a_restart(window, app) -> No
     assert not window.sidebar.isHidden() and tick.isChecked()
     tick.trigger()
     window.close()
-    w = MainWindow()
-    w.show()
+    w = reopen()
     pump(app)
     assert w.sidebar.isHidden() and not w._actions["toggle_sidebar"].isChecked()
     w.set_sidebar_visible(True)
     w.splitter.moveSplitter(0, 1)  # the divider dragged all the way left
     assert w.splitter.sizes()[0] > 0
-    w.close()
 
 
 def test_focus_mode_hides_everything_but_the_sheet(window, app) -> None:
@@ -396,12 +394,11 @@ def test_focus_mode_hides_everything_but_the_sheet(window, app) -> None:
     window.set_language("en")
 
 
-def test_focus_mode_brings_the_sidebar_back_as_it_was(window, app) -> None:
+def test_focus_mode_brings_the_sidebar_back_as_it_was(window, app, reopen) -> None:
     window.set_sidebar_visible(False)
     window.set_focus_mode(True)
     window.close()
-    w = MainWindow()  # focus mode survives a restart
-    w.show()
+    w = reopen()  # focus mode survives a restart
     pump(app)
     assert w.menuBar().isHidden() and w.sidebar.isHidden()
     w.set_focus_mode(False)
@@ -409,12 +406,10 @@ def test_focus_mode_brings_the_sidebar_back_as_it_was(window, app) -> None:
     w.set_sidebar_visible(True)
     w.set_focus_mode(True)
     w.close()
-    w = MainWindow()
-    w.show()
+    w = reopen()
     pump(app)
     w.set_focus_mode(False)
     assert not w.sidebar.isHidden()
-    w.close()
 
 
 def test_shortcuts_dialog_lists_menu_and_sidebar_keys(window) -> None:
@@ -565,7 +560,7 @@ def test_sidebar_draws_one_highlight_per_row(window, app) -> None:
 
 
 def test_switching_sheets_between_folders_keeps_the_sidebar_still(
-    app, home, tmp_path, monkeypatch
+    app, home, tmp_path, monkeypatch, reopen
 ) -> None:
     """Startup: folder A closed, B open, last sheet in A. Switching between them must not
     close A again or move any row (it used to collapse A, so the list jumped)."""
@@ -582,8 +577,7 @@ def test_switching_sheets_between_folders_keeps_the_sidebar_still(
     qs.setValue("last_sheet", "A/A1.txt")
     qs.setValue("sidebar/expanded", ["B"])
     qs.sync()
-    w = MainWindow()
-    w.show()
+    w = reopen()
     pump(app)
     tree = w.sidebar.tree
 
@@ -603,7 +597,6 @@ def test_switching_sheets_between_folders_keeps_the_sidebar_still(
     # the same row objects: nothing was rebuilt
     assert [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())] == items_before
     assert "A" in w.sidebar.expanded
-    w.close()
 
 
 def test_unknown_settings_fall_back_to_defaults(app) -> None:

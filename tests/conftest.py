@@ -41,8 +41,30 @@ def window(app, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     w = MainWindow()
     w.show()
     yield w
+    dispose(w)
+
+
+@pytest.fixture
+def reopen(app):
+    """Open the window again on the saved settings, as starting the app again does.
+    Every window it opens is deleted after the test."""
+    opened: list[MainWindow] = []
+
+    def open_again() -> MainWindow:
+        w = MainWindow()
+        w.show()
+        opened.append(w)
+        return w
+
+    yield open_again
+    for w in opened:
+        dispose(w)
+
+
+def dispose(w: MainWindow) -> None:
+    """Close the window and delete it now. Qt only frees it once the event loop runs,
+    which tests never reach. Left alive, old windows pile up and slow every new one,
+    because each theme change repaints them all."""
     w.close()
     w.deleteLater()
-    # Qt only frees it once the event loop runs, which tests never reach. Left alive,
-    # old windows pile up and slow every new one: the theme repaints them all.
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
