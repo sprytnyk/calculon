@@ -31,8 +31,10 @@ arrows:
 site:
 	QT_QPA_PLATFORM=offscreen uv run python -m scripts.build_site
 
-# docs/demo.gif, the README demo of typing a sheet and switching themes, and
-# docs/screenshot.png, the website's link preview (needs ffmpeg)
+# docs/demo.gif, the README demo of typing a sheet and switching themes,
+# docs/screenshot.png and screenshot-uk.png, the link previews of the English and
+# Ukrainian pages, and docs/screenshot-small.png, a small square window in focus mode
+# (needs ffmpeg)
 gif:
 	QT_QPA_PLATFORM=offscreen uv run python -m scripts.make_gif
 
