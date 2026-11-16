@@ -9,12 +9,14 @@ import json
 import os
 import shutil
 import tempfile
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
 META_FILE = ".calculon.json"
 TRASH_DIR = ".trash"
 EXT = ".txt"
+_REPLACE_ATTEMPTS = 6
 
 
 @dataclass
@@ -329,7 +331,18 @@ def _atomic_write(path: Path, text: str) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
             f.write(text)
-        os.replace(tmp, path)
+        # Windows can briefly deny replacement while another process has a file open.
+        for attempt in range(_REPLACE_ATTEMPTS):
+            try:
+                os.replace(tmp, path)
+                break
+            except PermissionError as exc:
+                if (
+                    getattr(exc, "winerror", None) not in (5, 32, 33)
+                    or attempt == _REPLACE_ATTEMPTS - 1
+                ):
+                    raise
+                time.sleep(0.01 * 2**attempt)
     except BaseException:
         with contextlib.suppress(OSError):
             os.unlink(tmp)

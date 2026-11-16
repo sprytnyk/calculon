@@ -1,3 +1,4 @@
+import errno
 import os
 import subprocess
 from contextlib import contextmanager
@@ -6,6 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from calculon import storage
 from calculon.storage import SheetStore, StorageError
 
 
@@ -21,6 +23,83 @@ def test_create_read_write(tmp_path: Path) -> None:
     assert store.create_sheet() == "Untitled 2.txt"
     store.write(rel, "2 + 2")
     assert (tmp_path / "Untitled.txt").read_text() == "2 + 2"
+
+
+@pytest.mark.parametrize("winerror", [5, 32, 33])
+def test_write_retries_windows_replace_errors(tmp_path, monkeypatch, winerror) -> None:
+    store = SheetStore(tmp_path)
+    rel = store.create_sheet(text="1 + 1")
+    error = PermissionError(errno.EACCES, "file is busy")
+    error.winerror = winerror
+    original_replace = os.replace
+
+    def replace(src, dst):
+        if replacement.call_count <= 2:
+            raise error
+        original_replace(src, dst)
+
+    replacement = Mock(side_effect=replace)
+    sleep = Mock()
+    monkeypatch.setattr(storage.os, "replace", replacement)
+    monkeypatch.setattr(storage.time, "sleep", sleep)
+
+    store.write(rel, "2 + 2")
+
+    assert store.read(rel) == "2 + 2"
+    assert replacement.call_count == 3
+    assert sleep.call_count == 2
+    assert not list(tmp_path.glob(".tmp-*"))
+
+
+@pytest.mark.parametrize("winerror", [None, 5, 32, 33, 123])
+def test_failed_write_preserves_file_and_cleans_up(tmp_path, monkeypatch, winerror) -> None:
+    store = SheetStore(tmp_path)
+    rel = store.create_sheet(text="1 + 1")
+    error = PermissionError(errno.EACCES, "access denied")
+    if winerror is not None:
+        error.winerror = winerror
+    replacement = Mock(side_effect=error)
+    sleep = Mock()
+    monkeypatch.setattr(storage.os, "replace", replacement)
+    monkeypatch.setattr(storage.time, "sleep", sleep)
+
+    with pytest.raises(PermissionError) as caught:
+        store.write(rel, "2 + 2")
+
+    assert caught.value is error
+    assert store.read(rel) == "1 + 1"
+    assert not list(tmp_path.glob(".tmp-*"))
+    if winerror in (5, 32, 33):
+        assert replacement.call_count == 6
+        assert sleep.call_count == 5
+        assert sum(call.args[0] for call in sleep.call_args_list) <= 0.5
+    else:
+        replacement.assert_called_once()
+        sleep.assert_not_called()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows file sharing")
+def test_write_retries_real_windows_replace_errors(tmp_path, monkeypatch) -> None:
+    store = SheetStore(tmp_path)
+    rel = store.create_sheet(text="1 + 1")
+    original_replace = os.replace
+
+    with store.path(rel).open(encoding="utf-8") as reader:
+
+        def replace(src, dst):
+            try:
+                original_replace(src, dst)
+            except PermissionError:
+                reader.close()
+                raise
+
+        replacement = Mock(side_effect=replace)
+        monkeypatch.setattr(storage.os, "replace", replacement)
+        store.write(rel, "2 + 2")
+
+    assert replacement.call_count == 2
+    assert store.read(rel) == "2 + 2"
+    assert not list(tmp_path.glob(".tmp-*"))
 
 
 def test_folders_and_tree(tmp_path: Path) -> None:
