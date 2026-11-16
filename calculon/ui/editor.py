@@ -101,6 +101,29 @@ def fit_menu(click: QPoint, size: QSize, screen: QRect) -> QPoint:
     return QPoint(click.x(), y)
 
 
+class NumberedMenu(QMenu):
+    """A menu whose first nine items also go by the keys 1 to 9, as vim's z= list does.
+    Qt's &1 menu shortcuts would do this, but macOS turns them off."""
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.numbered: list[QAction] = []
+
+    def number(self, actions: list[QAction]) -> None:
+        self.numbered = actions[:9]
+        for n, act in enumerate(self.numbered, 1):
+            act.setText(f"{n} {act.text()}")
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
+        text = event.text()
+        number = int(text) if len(text) == 1 and text in "123456789" else 0
+        if 1 <= number <= len(self.numbered):
+            self.close()
+            self.numbered[number - 1].trigger()
+            return
+        super().keyPressEvent(event)
+
+
 class Highlighter(QSyntaxHighlighter):
     def __init__(self, parent: QObject, theme: Theme):
         # parented to the editor, not a document: documents come and go with sheets
@@ -1125,15 +1148,14 @@ class SheetEdit(QPlainTextEdit):
     def _suggest(self, word: QTextCursor, count: int | None) -> None:
         """z= shows the suggestions; 1 to 9 picks one. 2z= takes the second straight
         away, as in vim."""
-        menu = QMenu(self)
+        menu = NumberedMenu(self)
         suggestions = self.add_spelling(menu, word)
         if count is not None:
             if count <= len(suggestions):
                 suggestions[count - 1].trigger()
             menu.deleteLater()
             return
-        for n, act in enumerate(suggestions[:9], 1):
-            act.setText(f"&{n} {act.text()}")
+        menu.number(suggestions)
         self.show_menu(menu, self.viewport().mapToGlobal(self.cursorRect().bottomLeft()))
 
     def _replace_word(self, word: QTextCursor, text: str) -> None:

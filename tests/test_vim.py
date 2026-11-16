@@ -1,10 +1,11 @@
 """Vim mode through side-vim: how Calculon hooks it up. side-vim's own keys are tested there."""
 
+import sys
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QEvent, QPoint, Qt
-from PySide6.QtGui import QGuiApplication, QKeyEvent
+from PySide6.QtCore import QEvent, QPoint, Qt, QTimer
+from PySide6.QtGui import QGuiApplication, QKeyEvent, qt_set_sequence_auto_mnemonic
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 from side_vim import Mode
@@ -525,7 +526,7 @@ def test_spelling_keys(vim, app, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert [keys("]s"), keys("2]s"), keys("]s"), keys("[s")] == [4, 15, 4, 15]  # round past the end
     assert keys("2[s") == 4
     keys("z=")
-    assert menus == [["&1 the", "&2 tech", "", "Add to Dictionary", "Ignore"]]
+    assert menus == [["1 the", "2 tech", "", "Add to Dictionary", "Ignore"]]
     keys("2z=")  # the second suggestion, without the menu
     assert (ed.toPlainText(), len(menus)) == ("pay tech rnet\n# оредна plan", 1)
     keys("u")
@@ -540,6 +541,31 @@ def test_spelling_keys(vim, app, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ed.set_spell_checker(None)
     assert keys("0]sz=") == 0  # spell check is off: nothing to find
     assert len(menus) == 1
+
+
+@pytest.mark.parametrize("mnemonics", [True, False], ids=["menu shortcuts", "macOS"])
+def test_z_equals_picks_a_suggestion_by_its_number(
+    vim, app, tmp_path: Path, mnemonics: bool
+) -> None:
+    """1 to 9 pick from the z= list. macOS turns off Qt's &1 menu shortcuts."""
+    spell_window(vim, app, "pay teh rent", tmp_path)
+    ed = vim.editor
+    ed.setFocus()
+    QTest.keyClicks(ed, "]s")
+
+    def press_two() -> None:
+        menu = QApplication.activePopupWidget()
+        if menu is not None:
+            QTest.keyClicks(menu, "2")
+            menu.close()  # when 2 didn't pick, the test then fails instead of waiting
+
+    qt_set_sequence_auto_mnemonic(mnemonics)
+    try:
+        QTimer.singleShot(0, press_two)
+        QTest.keyClicks(ed, "z=")
+    finally:
+        qt_set_sequence_auto_mnemonic(sys.platform != "darwin")  # Qt's own default
+    assert ed.toPlainText() == "pay tech rent"
 
 
 def test_only_insert_mode_hides_the_word_being_typed(vim, app, tmp_path: Path) -> None:
