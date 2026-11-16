@@ -27,9 +27,9 @@ dates, and the answers show up in a column on the right. The syntax follows
 - Linux and Windows x64, and macOS on Intel and Apple Silicon
 - Sheets in folders, with search, pins and a trash
 - Focus Mode hides the menu bar, the sidebar and the date of the last rates update, so
-  only the sheet is left. Turn it on with Ctrl+Shift+F. On macOS the menu bar stays at the
-  top of the screen. Always on Top keeps the window above other apps. Both are in the View
-  menu
+  only the sheet is left. Turn it on with Ctrl+Shift+F, or Cmd+Shift+F on macOS. On macOS
+  the menu bar stays at the top of the screen. Always on Top keeps the window above other
+  apps. Both are in the View menu
 - Optional Vim mode with Normal, Insert and Visual modes, from
   [side-vim](https://github.com/sprytnyk/side-vim). To turn it on, open
   the Vim page in Settings
@@ -78,6 +78,10 @@ Windows junctions, such as `My Music` in Documents.
 Calculon checks the folder by creating it and writing a test file. If that fails, it says
 why and asks for another folder. On Windows the usual cause is Controlled folder access in
 Windows Security. Allow Calculon there, or pick a folder outside Documents.
+
+If saving fails, Calculon keeps your edits open and stops you from closing the window,
+switching sheets or changing the sheets folder until it can save. On Windows it retries
+brief file-access errors before reporting a failure.
 
 ## Exchange rates
 
