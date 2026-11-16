@@ -540,8 +540,7 @@ class MainWindow(QMainWindow):
             Path(new.sheets_dir).expanduser() != Path(self.settings.sheets_dir).expanduser()
         )
         if folder_changed:
-            self.save_current()
-            if self._dirty:
+            if not self.save_current():
                 return
             try:
                 store = self._open_store(new.sheets_dir)
@@ -688,7 +687,6 @@ class MainWindow(QMainWindow):
         return app
 
     def _load(self, kind: str, key: str, text: str, read_only: bool, banner: str = "") -> None:
-        self.save_current()
         if self.file_watcher.files():
             self.file_watcher.removePaths(self.file_watcher.files())
         if self.current[0] == SHEET:
@@ -728,6 +726,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(self._title())
 
     def open_sheet(self, rel: str, focus: bool = False) -> None:
+        if not self.save_current():
+            return
         try:
             text = self.store.read(rel)
         except (OSError, UnicodeDecodeError) as exc:
@@ -742,6 +742,8 @@ class MainWindow(QMainWindow):
             self.editor.setFocus()
 
     def open_help(self) -> None:
+        if not self.save_current():
+            return
         path = HELP_DIR / f"help_{self.settings.language}.txt"
         if not path.exists():
             path = HELP_DIR / "help_en.txt"
@@ -752,6 +754,8 @@ class MainWindow(QMainWindow):
         self._load(HELP, "", text, read_only=True, banner=self.t("read_only_help"))
 
     def open_trashed(self, name: str) -> None:
+        if not self.save_current():
+            return
         try:
             text = self.store.read_trashed(name)
         except OSError, UnicodeDecodeError:
@@ -763,21 +767,23 @@ class MainWindow(QMainWindow):
             self._dirty = True
             self._save_timer.start()
 
-    def save_current(self) -> None:
+    def save_current(self) -> bool:
         self._save_timer.stop()
         kind, rel = self.current
         if kind != SHEET or not self._dirty:
-            return
+            return True
         try:
             self.store.write(rel, self.editor.toPlainText())
-            self._saved_mtime = self.store.mtime(rel)
-            self._dirty = False
         except OSError as exc:
             log.exception("could not save sheet %s", rel)
             self.show_message(str(exc), 5000)
+        else:
+            self._saved_mtime = self.store.mtime(rel)
+            self._dirty = False
         path = str(self.store.path(rel))
         if path not in self.file_watcher.files():
             self.file_watcher.addPath(path)
+        return not self._dirty
 
     def _file_changed(self, path: str) -> None:
         kind, rel = self.current
@@ -814,7 +820,8 @@ class MainWindow(QMainWindow):
                 self.open_help()
 
     def new_sheet(self, folder: str = "") -> None:
-        self.save_current()
+        if not self.save_current():
+            return
         try:
             rel = self.store.create_sheet(folder, self.t("untitled"))
         except OSError as exc:
@@ -864,7 +871,8 @@ class MainWindow(QMainWindow):
         name, ok = self._ask_text(self.t("rename"), old)
         if not ok or not name.strip() or name == old:
             return
-        self.save_current()
+        if not self.save_current():
+            return
         try:
             new_rel = self.store.rename(rel, name)
         except OSError as exc:
@@ -881,7 +889,8 @@ class MainWindow(QMainWindow):
             self.sidebar.rebuild()
 
     def trash(self, rel: str) -> None:
-        self.save_current()
+        if not self.save_current():
+            return
         kind, key = self.current
         try:
             self.store.trash(rel)
@@ -1028,7 +1037,9 @@ class MainWindow(QMainWindow):
         AboutDialog(self.t, self.theme, self.windowIcon().pixmap(64, 64), self).exec()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
-        self.save_current()
+        if not self.save_current():
+            event.ignore()
+            return
         qs = QSettings()
         qs.setValue("window/geometry", self.saveGeometry())
         qs.setValue("window/splitter", self.splitter.saveState())

@@ -702,6 +702,70 @@ def test_unknown_settings_fall_back_to_defaults(app) -> None:
     assert s.colours == "glacier"
 
 
+@pytest.mark.parametrize(
+    "action", ["other_sheet", "same_sheet", "help", "trashed", "new", "rename", "trash", "close"]
+)
+def test_failed_save_keeps_edited_sheet_open(window, monkeypatch, action) -> None:
+    store = window.store
+    first = store.create_sheet("", "First", "1 + 1")
+    second = store.create_sheet("", "Second", "2 + 2")
+    trashed = store.trash(store.create_sheet("", "Discard", "3 + 3"))
+    window.open_sheet(first)
+    window.editor.moveCursor(QTextCursor.MoveOperation.End)
+    window.editor.insertPlainText(" + 5")
+    document = window.editor.document()
+    watched = window.file_watcher.files()
+    sheets = store.all_sheets()
+    actions = {
+        "other_sheet": partial(window.open_sheet, second),
+        "same_sheet": partial(window.open_sheet, first),
+        "help": window.open_help,
+        "trashed": partial(window.open_trashed, trashed),
+        "new": window.new_sheet,
+        "rename": partial(window.rename, first),
+        "trash": partial(window.trash, first),
+        "close": window.close,
+    }
+
+    def fail_save(rel, text):
+        raise PermissionError("sheet is locked")
+
+    with monkeypatch.context() as blocked:
+        blocked.setattr(store, "write", fail_save)
+        blocked.setattr(window, "_ask_text", lambda *_: ("Renamed", True))
+        actions[action]()
+
+    assert window.isVisible()
+    assert window.current == ("sheet", first)
+    assert window.editor.document() is document
+    assert window.editor.toPlainText() == "1 + 1 + 5"
+    assert window._dirty
+    assert window.file_watcher.files() == watched
+    assert window.settings.last_sheet == first
+    assert store.all_sheets() == sheets
+    assert store.read(first) == "1 + 1"
+    assert window.message_label.text() == "sheet is locked"
+    window.editor.undo()
+    assert window.editor.toPlainText() == "1 + 1"
+    window.editor.redo()
+    window.save_current()
+    assert store.read(first) == "1 + 1 + 5"
+
+
+def test_reopening_current_sheet_keeps_edits_and_undo(window) -> None:
+    first = window.store.create_sheet("", "First", "1 + 1")
+    window.open_sheet(first)
+    window.editor.moveCursor(QTextCursor.MoveOperation.End)
+    window.editor.insertPlainText(" + 5")
+
+    window.open_sheet(first)
+
+    assert window.editor.toPlainText() == "1 + 1 + 5"
+    assert window.store.read(first) == "1 + 1 + 5"
+    window.editor.undo()
+    assert window.editor.toPlainText() == "1 + 1"
+
+
 def test_undo_survives_switching_sheets(window, app) -> None:
     store = window.store
     first = store.create_sheet("", "First", "1 + 1")
