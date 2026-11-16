@@ -1207,6 +1207,7 @@ class SheetEdit(QPlainTextEdit):
     def show_menu(self, menu: QMenu, where: QPoint) -> None:
         """Open `menu` at `where` (screen coordinates) and wait for a pick."""
         screen = QGuiApplication.screenAt(where) or self.screen()
+        icons.show_in_menu(menu)
         menu.exec(fit_menu(where, menu.sizeHint(), screen.availableGeometry()))
         menu.deleteLater()
 

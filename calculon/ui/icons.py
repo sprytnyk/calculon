@@ -9,6 +9,7 @@ from pathlib import Path
 from PySide6.QtCore import QByteArray, QRectF, Qt
 from PySide6.QtGui import QIcon, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import QMenu
 
 from ..paths import ARROWS, ICONS
 
@@ -111,6 +112,13 @@ def set_palette(palette: dict[str, str]) -> None:
     """Called when the theme changes; icons made afterwards use these colours."""
     _palette.clear()
     _palette.update(palette)
+
+
+def show_in_menu(menu: QMenu) -> None:
+    """Show the icons of a right-click menu on macOS too, where Qt hides menu icons by
+    default. The menu bar at the top of the screen still has none, as in other Mac apps."""
+    for action in menu.actions():
+        action.setIconVisibleInMenu(True)
 
 
 def color_for(name: str) -> str:

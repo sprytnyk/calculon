@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 import shiboken6
-from PySide6.QtCore import QByteArray, QPoint, QRect, QSettings, QSize, Qt
+from PySide6.QtCore import QByteArray, QPoint, QRect, QSettings, QSize, Qt, QTimer
 from PySide6.QtGui import (
     QColor,
     QContextMenuEvent,
@@ -1191,6 +1191,35 @@ def test_right_click_menu_puts_spelling_first(window, app, tmp_path: Path) -> No
     assert rows[5:7] == ["---", "Undo"]
     assert not menu.actions()[3].icon().isNull() and not menu.actions()[4].icon().isNull()
     assert menu_rows(ed.context_menu(line_pos(ed, 0, 9)))[0] == "Undo"  # "rent" is fine
+
+
+def test_right_click_menus_show_icons_on_macos(window, app, tmp_path: Path) -> None:
+    # Qt hides every menu icon on macOS by default. Do the same here.
+    app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, True)
+    try:
+        icons_shown: list[list[bool]] = []  # for each menu, whether each icon shows
+
+        def look_and_close() -> None:
+            # No assert here. Qt only prints a failure inside a timer, and the menu would stay open.
+            menu = QApplication.activePopupWidget()
+            if isinstance(menu, QMenu):
+                icons_shown.append(
+                    [a.isIconVisibleInMenu() for a in menu.actions() if not a.icon().isNull()]
+                )
+            if menu is not None:
+                menu.close()
+
+        spell_window(window, app, "pay teh rent", tmp_path)
+        ed = window.editor
+        QTimer.singleShot(0, look_and_close)
+        ed.show_menu(ed.context_menu(line_pos(ed, 0, 5)), QPoint())  # on a misspelled word
+        QTimer.singleShot(0, look_and_close)
+        window.sidebar._menu(QPoint(5, 5))
+        assert len(icons_shown) == 2
+        assert all(icons and all(icons) for icons in icons_shown)
+        assert not window._actions["new_sheet"].isIconVisibleInMenu()  # the menu bar still has none
+    finally:
+        app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, False)
 
 
 def test_right_click_moves_the_cursor_unless_on_the_selection(

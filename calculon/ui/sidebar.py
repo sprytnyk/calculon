@@ -446,6 +446,7 @@ class Sidebar(QWidget):
         elif kind == TRASH and self.store.trashed():
             add("empty_trash", self.empty_trash.emit)
         if not menu.isEmpty():
+            icons.show_in_menu(menu)
             menu.exec(self.tree.viewport().mapToGlobal(pos))
 
     def _pin(self, rel: str) -> None:
