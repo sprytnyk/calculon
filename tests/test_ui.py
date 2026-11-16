@@ -423,6 +423,16 @@ def test_f1_opens_the_help_sheet_on_every_system(window, app) -> None:
     assert window.current[0] == HELP
 
 
+def test_shift_f1_opens_keyboard_shortcuts(window, app, monkeypatch: pytest.MonkeyPatch) -> None:
+    opened: list[ShortcutsDialog] = []
+    # the real exec waits for a click
+    monkeypatch.setattr(ShortcutsDialog, "exec", lambda dialog: opened.append(dialog) or 0)
+    window.activateWindow()
+    assert QTest.qWaitForWindowActive(window)
+    QTest.keyClick(window.editor, Qt.Key.Key_F1, Qt.KeyboardModifier.ShiftModifier)
+    assert len(opened) == 1
+
+
 def test_shortcuts_dialog_lists_menu_and_sidebar_keys(window) -> None:
     rows = dict(ShortcutsDialog(window.menuBar(), window.t, window).rows())
     assert rows["New Sheet"] == key_text(QKeySequence.StandardKey.New)
