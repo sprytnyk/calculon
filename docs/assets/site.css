@@ -131,8 +131,10 @@ p {
 }
 
 /* Hero */
+/* Top and bottom only. The sides keep .wrap's gutter, so the window doesn't touch the screen edges. */
 .hero {
-  padding: 72px 0 40px;
+  padding-top: 72px;
+  padding-bottom: 40px;
   text-align: center;
 }
 .hero .lead {
