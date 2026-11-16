@@ -1092,8 +1092,18 @@ def test_spell_hint(
     assert settings_dialog.spell_hint(status, partial(tr, "en")) == hint
 
 
-@pytest.mark.skipif(not probe().available, reason="needs the system's Hunspell")
-def test_spelling_loads_real_dictionaries_in_background(window, app) -> None:
+# Look for dictionaries before the tests move HOME. On macOS they're in ~/Library/Spelling.
+SYSTEM_SPELLING = probe()
+
+
+@pytest.mark.skipif(not SYSTEM_SPELLING.available, reason="needs the system's Hunspell")
+def test_spelling_loads_real_dictionaries_in_background(
+    window, app, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # the window looks in the test's HOME, so point it at the dictionaries found above
+    folders = {str(Path(base).parent) for base in SYSTEM_SPELLING.dictionaries.values()}
+    monkeypatch.setenv("DICPATH", os.pathsep.join(sorted(folders)))
+    window.spell_status = probe()
     window.new_sheet("")
     window.editor.setPlainText("Taxi to airprot\n")
     window._toggle_spelling()

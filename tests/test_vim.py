@@ -8,12 +8,16 @@ from PySide6.QtGui import QGuiApplication, QKeyEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 from side_vim import Mode
+from side_vim.keys import control_modifier
 
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog
+from calculon.ui.vim import ctrl
 from tests.test_ui import off_centre, pump, spell_window, underlined
 
-CTRL = Qt.KeyboardModifier.ControlModifier
+# Qt's Ctrl, for the app's shortcuts, is Cmd on macOS. Vim's Ctrl is the Control key there.
+APP_CTRL = Qt.KeyboardModifier.ControlModifier
+VIM_CTRL = control_modifier()
 TEXT = "rent = $900\nfood = $300\nrent + food"
 
 
@@ -146,10 +150,10 @@ def test_esc_in_the_find_bar_puts_the_cursor_back(vim, app) -> None:
 
 def test_ctrl_f_is_vims_in_normal_mode_and_find_in_insert(vim, app) -> None:
     ed, bar = vim.editor, vim.find_bar
-    QTest.keyClick(ed, Qt.Key.Key_F, CTRL)
+    QTest.keyClick(ed, Qt.Key.Key_F, VIM_CTRL)
     assert not bar.isVisible()  # page down, as in vim
     QTest.keyClicks(ed, "ggi")
-    QTest.keyClick(ed, Qt.Key.Key_F, CTRL)
+    QTest.keyClick(ed, Qt.Key.Key_F, APP_CTRL)
     assert bar.isVisible()
     QTest.keyClicks(bar.field, "food")
     QTest.keyClick(bar.field, Qt.Key.Key_Return)
@@ -162,7 +166,7 @@ def test_calculon_commands_still_work_in_normal_mode(vim, app) -> None:
     ed = vim.editor
     QTest.keyClicks(ed, "G$")
     vim.activateWindow()
-    QTest.keyClick(ed, Qt.Key.Key_T, CTRL)  # insert total
+    QTest.keyClick(ed, Qt.Key.Key_T, APP_CTRL)  # insert total
     assert "total" in ed.toPlainText()
     assert ed.vim.mode is Mode.NORMAL
 
@@ -215,7 +219,7 @@ def test_shortcuts_window_lists_vim_keys_only_when_on(vim) -> None:
     rows = dict(ShortcutsDialog(vim.menuBar(), vim.t, vim, vim=True).rows())
     assert rows["Vim mode"] == ""  # the section heading
     assert rows["Move"].startswith("h j k l")
-    assert rows["Back to Normal mode"] == "Esc, Ctrl+["
+    assert rows["Back to Normal mode"] == f"Esc, {ctrl('[')}"
     rows = dict(ShortcutsDialog(vim.menuBar(), vim.t, vim).rows())
     assert "Vim mode" not in rows
 
@@ -307,7 +311,9 @@ def test_every_shortcut_row_has_an_icon(vim) -> None:
 
 
 def ctrl_w(widget, key: str) -> None:
-    QTest.keyClick(widget, Qt.Key.Key_W, CTRL)
+    """Press Ctrl+W, then key. A keyboard sends a control character with Ctrl+W, but QTest
+    would send a "w", and an editor types it when Ctrl is the Control key, as on macOS."""
+    QTest.sendKeyEvent(QTest.KeyAction.Click, widget, Qt.Key.Key_W, "\x17", VIM_CTRL)
     QTest.keyClicks(widget, key)
 
 
@@ -315,7 +321,7 @@ def test_ctrl_w_moves_between_the_list_the_sheet_and_the_answers(vim, app) -> No
     ed, tree, results = vim.editor, vim.sidebar.tree, vim.editor.results
     pending = vim.vim_pending_label
     vim.activateWindow()
-    QTest.keyClick(ed, Qt.Key.Key_W, CTRL)
+    QTest.keyClick(ed, Qt.Key.Key_W, VIM_CTRL)
     assert pending.text() == "^W"  # waits for the next key, as in vim
     QTest.keyClicks(ed, "h")
     assert pending.isHidden()
@@ -338,7 +344,7 @@ def test_leaving_the_list_drops_a_ctrl_w(vim, app) -> None:
     ed, tree, pending = vim.editor, vim.sidebar.tree, vim.vim_pending_label
     vim.activateWindow()
     ctrl_w(ed, "h")
-    QTest.keyClick(tree, Qt.Key.Key_W, CTRL)
+    QTest.keyClick(tree, Qt.Key.Key_W, VIM_CTRL)
     assert pending.text() == "^W"
     ed.setFocus()
     pump(app)
@@ -362,11 +368,11 @@ def test_turning_vim_off_in_the_answers_goes_back_to_the_sheet(vim, app) -> None
 def test_ctrl_w_ctrl_l_isnt_the_insert_reference_shortcut(vim, app) -> None:
     ed, tree = vim.editor, vim.sidebar.tree
     vim.activateWindow()
-    QTest.keyClick(ed, Qt.Key.Key_W, CTRL)
-    QTest.keyClick(ed, Qt.Key.Key_H, CTRL)
+    QTest.keyClick(ed, Qt.Key.Key_W, VIM_CTRL)
+    QTest.keyClick(ed, Qt.Key.Key_H, VIM_CTRL)
     assert app.focusWidget() is tree
-    QTest.keyClick(tree, Qt.Key.Key_W, CTRL)
-    QTest.keyClick(tree, Qt.Key.Key_L, CTRL)
+    QTest.keyClick(tree, Qt.Key.Key_W, VIM_CTRL)
+    QTest.keyClick(tree, Qt.Key.Key_L, VIM_CTRL)
     assert app.focusWidget() is ed
     assert ed.toPlainText() == TEXT
 
@@ -554,7 +560,7 @@ def test_only_insert_mode_hides_the_word_being_typed(vim, app, tmp_path: Path) -
 def test_focus_mode_key_gets_past_vim(vim) -> None:
     """Vim keeps Ctrl+F for itself. Ctrl+Shift+F must still reach focus mode, or Normal
     mode would leave you in focus mode with the menu bar hidden."""
-    keys = CTRL | Qt.KeyboardModifier.ShiftModifier
+    keys = APP_CTRL | Qt.KeyboardModifier.ShiftModifier
     vim.activateWindow()
     assert QTest.qWaitForWindowActive(vim)
     assert vim.vim_mode_label.isHidden()  # Normal mode
