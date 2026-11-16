@@ -109,6 +109,8 @@ pi × 2
 # Totals
 // "total" or "sum" adds the lines above it, up to the previous total or heading.
 // "average", "median" and "count" work the same way.
+// The bottom bar shows the sheet total without counting subtotals again.
+// You can name a subtotal and continue calculating from it.
 $20 lunch #food
 $35 dinner #food
 $15 taxi #travel
@@ -122,7 +124,7 @@ average of 36, 42, 19 and 81
 
 # Earlier lines
 100
-line124 * 2 // the line number is shown on the left; or double-click an answer
+line126 * 2 // the line number is shown on the left; or double-click an answer
 prev + 1 // the answer just above; Ctrl+L types it
 + 10 // an operator at the start continues the answer just above; - does too
 Refund: -5 // anything in front stops that: this is just -5

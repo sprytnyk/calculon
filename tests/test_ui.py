@@ -1614,6 +1614,14 @@ def test_total_stays_in_the_middle_of_the_window(window, app, repeats: int) -> N
     assert abs(off_centre(window.total_label, app)) <= 2
 
 
+def test_total_tooltip_follows_the_ui_language(window) -> None:
+    for lang in ("en", "uk", "en"):
+        window.set_language(lang)
+        tip = window.total_label.toolTip()
+        assert tip == tr(lang, "total_tip")
+        assert tip and tip != "total_tip"
+
+
 def test_a_message_takes_the_place_of_the_total(window, app) -> None:
     window.new_sheet("")
     window.editor.setPlainText("$10\n$20")

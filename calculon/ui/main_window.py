@@ -506,6 +506,7 @@ class MainWindow(QMainWindow):
         self.editor.words = {k: self.t(f"word_{k}") for k in ("total", "prev", "line")}
         self.editor.spell_texts = {k: self.t(f"spell_{k}") for k in ("add", "ignore", "none")}
         self._apply_spelling()
+        self.total_label.setToolTip(self.t("total_tip"))
         self._update_rates_label()
         self.setWindowTitle(self._title())
         self.build_menus()
