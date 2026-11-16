@@ -10,14 +10,23 @@ from types import SimpleNamespace
 
 import pytest
 import shiboken6
-from PySide6.QtCore import QByteArray, QPoint, QRect, QSettings, QSize, Qt, QTimer
+from PySide6.QtCore import (
+    QByteArray,
+    QCoreApplication,
+    QEvent,
+    QPoint,
+    QRect,
+    QSettings,
+    QSize,
+    Qt,
+    QTimer,
+)
 from PySide6.QtGui import (
     QColor,
     QContextMenuEvent,
     QFont,
     QGuiApplication,
     QKeySequence,
-    QPalette,
     QTextCharFormat,
     QTextCursor,
 )
@@ -39,6 +48,7 @@ from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog, key_text
 from calculon.ui.sidebar import HELP, Sidebar
 from calculon.ui.theme import GLACIER_DARK, GLACIER_LIGHT
+from tests.test_folder_dialog import assert_error_colour
 
 
 def pump(app) -> None:
@@ -187,7 +197,7 @@ def test_folder_dialog_follows_the_theme_and_fits_the_error(app, tmp_path, theme
     error = dialog.error
     try:
         assert dialog.isVisible() and error.isVisible()
-        assert error.palette().color(QPalette.ColorRole.WindowText).name() == theme.error
+        assert_error_colour(error, theme.error)
         page = dialog.findChild(QWidget, "page")
         assert page.palette().color(page.backgroundRole()).name() == theme.bg
         assert dialog.use_button.objectName() == "primary"
@@ -198,6 +208,8 @@ def test_folder_dialog_follows_the_theme_and_fits_the_error(app, tmp_path, theme
         assert error.mapTo(dialog, error.rect().bottomLeft()).y() < dialog.height()
     finally:
         dialog.close()
+        dialog.deleteLater()
+        QCoreApplication.sendPostedEvents(dialog, QEvent.Type.DeferredDelete)
         themes.apply(app, GLACIER_DARK)
 
 
