@@ -27,9 +27,10 @@ dates, and the answers show up in a column on the right. The syntax follows
 - Linux and Windows x64, and macOS on Intel and Apple Silicon
 - Sheets in folders, with search, pins and a trash
 - Focus Mode hides the menu bar, the sidebar and the date of the last rates update, so
-  only the sheet is left. Turn it on with Ctrl+Shift+F, or Cmd+Shift+F on macOS. On macOS
-  the menu bar stays at the top of the screen. Always on Top keeps the window above other
-  apps. Both are in the View menu
+  only the sheet is left. Turn it on with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>,
+  or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> on macOS. On macOS the menu bar stays
+  at the top of the screen. Always on Top keeps the window above other apps. Both are in
+  the View menu
 - Optional Vim mode with Normal, Insert and Visual modes, from
   [side-vim](https://github.com/sprytnyk/side-vim). To turn it on, open
   the Vim page in Settings
@@ -41,9 +42,8 @@ Keyboard Shortcuts in the Help menu lists the keys, including Vim keys when Vim 
 
 | Action | Windows / Linux | macOS |
 | --- | --- | --- |
-| Open Help Sheet | F1 | Cmd+Shift+H |
-| Open Keyboard Shortcuts | Shift+F1 | Cmd+Shift+K |
-| Toggle spell checking | F7 | Cmd+Option+S |
+| Open Help Sheet | <kbd>F1</kbd> | <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> |
+| Open Keyboard Shortcuts | <kbd>Shift</kbd>+<kbd>F1</kbd> | <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> |
 
 ## Install
 
