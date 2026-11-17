@@ -39,6 +39,7 @@ def window(app, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     qs.setValue("sheets_dir", str(tmp_path / "sheets"))
     qs.sync()
     w = MainWindow()
+    monkeypatch.setattr(w, "_ask_text", lambda title, default: (default, True))
     w.show()
     yield w
     dispose(w)

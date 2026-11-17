@@ -827,10 +827,13 @@ class MainWindow(QMainWindow):
                 self.open_help()
 
     def new_sheet(self, folder: str = "") -> None:
+        name, ok = self._ask_text(self.t("new_sheet"), self.t("untitled"))
+        if not ok or not name.strip():
+            return
         if not self.save_current():
             return
         try:
-            rel = self.store.create_sheet(folder, self.t("untitled"))
+            rel = self.store.create_sheet(folder, name)
         except OSError as exc:
             QMessageBox.warning(self, self.t("app_name"), str(exc))
             return
