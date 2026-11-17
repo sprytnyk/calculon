@@ -32,6 +32,77 @@ def one(text: str, **opts) -> str:
 
 
 @pytest.mark.parametrize(
+    ("text", "expected"), [("11 Dec", "11 December"), ("11 Oct", "11 October")]
+)
+def test_abbreviated_month_after_day(text: str, expected: str) -> None:
+    assert one(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "style", "expected"),
+    [
+        ("$1000,1", "comma_dot", "$1,000.10"),
+        ("1000,1", "comma_dot", "1,000.1"),
+        ("100 500", "comma_dot", "100,500"),
+        ("1) 100 500 500", "comma_dot", "100,500,500"),
+        ("1. 100 500 500", "comma_dot", "100,500,500"),
+        ("• 100 500 500", "comma_dot", "100,500,500"),
+        ("$75.000,00", "dot_comma", "$75.000,00"),
+    ],
+)
+def test_pasted_number_formats(text: str, style: str, expected: str) -> None:
+    result = evaluate_sheet(text, RATES, CONFIG, FormatOptions(number_style=style)).lines[0]
+    assert result.text == expected
+    start = text.index("100") if "100" in text else text.index("75")
+    assert (start, len(text), "number") in result.spans
+
+
+def test_date_with_two_digit_year() -> None:
+    assert one("11.12.26") == "11 December"
+
+
+def test_comma_still_separates_function_arguments() -> None:
+    assert one("round(1,9)") == "1"
+
+
+def test_switch_to_dot_comma_with_mixed_sheet() -> None:
+    text = """# Testing
+ohx travelling
+yes - we do
+salary = $100k
+tax = $5k
+net = salary - tax
+sadffsaf
+sadffsaf
+// $1000.1
+$1000,1
+1000,1
+100 500
+
+1000.123
+1000.100
+
+1) 100 500 500
+1. 100 500 500
+• 100 500 500
+1, 1234 1000
+
+10.1111
+11 december 2027
+01/02/2026
+01.02.2026
+01-02-2026
+11 November
+
+1 CAD in USD
+1 USD in CAD
+1.43 CAD in USD"""
+    result = evaluate_sheet(text, RATES, CONFIG, FormatOptions(number_style="dot_comma"))
+    assert len(result.lines) == len(text.splitlines())
+    assert result.lines[9].text == "$1.000,10"
+
+
+@pytest.mark.parametrize(
     ("line", "expected"),
     [
         # operators

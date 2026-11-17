@@ -396,6 +396,8 @@ def _classify_word(t: Tok, toks: list[Tok], i: int, items: list[Item]) -> Item:
         return Item("lineref", m.group(1), t, t)
     # "5 ft 3 in in cm": "in" right after a number, then "in"/"to" or nothing, is inches
     nxt = toks[i + 1] if i + 1 < len(toks) else None
+    if low in ("dec", "oct") and items and items[-1].kind == "num":
+        return Item("month", low, t, t)
     if (
         low == "in"
         and items

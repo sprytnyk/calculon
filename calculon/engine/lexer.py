@@ -40,7 +40,7 @@ GENERAL_SCALES = {"k", "K", "к", "К", "M", "G", "T"}
 _PREFIX_SYMS = sorted(PREFIX_SYMBOLS, key=len, reverse=True)
 _DATE_RE = re.compile(
     r"(?P<iso>(?P<y1>\d{4})-(?P<m1>\d{1,2})-(?P<d1>\d{1,2}))"
-    r"|(?P<a>\d{1,2})(?P<sep>[/.])(?P<b>\d{1,2})(?P=sep)(?P<y2>\d{4})"
+    r"|(?P<a>\d{1,2})(?P<sep>[/.])(?P<b>\d{1,2})(?P=sep)(?P<y2>\d{4}|\d{2})"
 )
 _TIME_RE = re.compile(
     r"(?P<h>\d{1,2}):(?P<m>\d{2})(?::(?P<s>\d{2}))?(?:\s?(?P<ap>[aApP])\.?[mM]\.?)?(?![\w:])"
@@ -86,7 +86,10 @@ def tokenize(line: str, number_style: str = "comma_dot") -> list[Tok]:
                 if m.group("iso"):
                     val = (int(m.group("y1")), int(m.group("m1")), int(m.group("d1")), "ymd")
                 else:
-                    val = (int(m.group("a")), int(m.group("b")), int(m.group("y2")), "ab")
+                    year = int(m.group("y2"))
+                    if len(m.group("y2")) == 2:
+                        year += 2000 if year <= 68 else 1900
+                    val = (int(m.group("a")), int(m.group("b")), year, "ab")
                 toks.append(Tok("DATE", m.group(), i, m.end(), val))
                 i = m.end()
                 continue
@@ -104,7 +107,8 @@ def tokenize(line: str, number_style: str = "comma_dot") -> list[Tok]:
                     toks.append(Tok("TIME", m.group(), i, m.end(), (h, mi, s)))
                     i = m.end()
                     continue
-            tok, i = _number(line, i, thousands, point)
+            in_call = bool(re.search(r"\b[^\W\d_]\w*\s*\([^()]*$", line[:i]))
+            tok, i = _number(line, i, thousands, point, allow_comma=not in_call)
             toks.append(tok)
             # attached scale suffix: 2.5k, 5к, $5m, 7bn
             m = re.compile(r"(bn|tn|[kKкКMGTmbBt])(?![\w])").match(line, i)
@@ -154,7 +158,9 @@ def tokenize(line: str, number_style: str = "comma_dot") -> list[Tok]:
 _NUM_PREFIX = re.compile(r"0([xX][0-9a-fA-F_]+|[bB][01_]+|[oO][0-7_]+)")
 
 
-def _number(line: str, i: int, thousands: str, point: str) -> tuple[Tok, int]:
+def _number(
+    line: str, i: int, thousands: str, point: str, allow_comma: bool = True
+) -> tuple[Tok, int]:
     m = _NUM_PREFIX.match(line, i)
     if m and not (m.end() < len(line) and line[m.end()].isalnum()):
         body = m.group(1)
@@ -172,7 +178,7 @@ def _number(line: str, i: int, thousands: str, point: str) -> tuple[Tok, int]:
         i += 1
     while i < n:
         sep = line[i]
-        is_group = sep == thousands or (thousands == " " and sep in "   ")
+        is_group = sep == thousands or sep in "    "
         if is_group and _three_digits(line, i + 1):
             digits.extend(line[i + 1 : i + 4])
             i += 4
@@ -180,10 +186,14 @@ def _number(line: str, i: int, thousands: str, point: str) -> tuple[Tok, int]:
         break
     if (
         i < n
-        and line[i] in (point, ".")
+        and line[i] in (point, ".", ",")
         and i + 1 < n
         and line[i + 1].isdecimal()
-        and (line[i] == point or thousands == " ")
+        and (
+            line[i] == point
+            or (line[i] == "." and thousands in (" ", "."))
+            or (allow_comma and line[i] == "," and thousands == ",")
+        )
     ):
         digits.append(".")
         i += 1
