@@ -110,7 +110,7 @@ class SheetStore:
             (n for n in nodes if n not in order),
             key=lambda n: (not nodes[n].is_dir, n.lower()),
         )
-        return [nodes[n] for n in order + rest]
+        return sorted((nodes[n] for n in order + rest), key=lambda node: not node.is_dir)
 
     def pinned(self) -> list[Node]:
         out = []

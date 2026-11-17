@@ -302,6 +302,16 @@ def test_trashed_directory_shows_its_sheets(window, app) -> None:
     assert window.editor.toPlainText() == "123"
 
 
+def test_trash_directories_stay_above_sheets(window) -> None:
+    store = window.store
+    store.create_sheet("", "A", "1")
+    store.create_folder("", "Z")
+    window.trash("A.txt")
+    window.trash("Z")
+    trash = window.sidebar.tree.topLevelItem(window.sidebar.tree.topLevelItemCount() - 1)
+    assert [trash.child(i).text(0) for i in range(trash.childCount())] == ["Z", "A"]
+
+
 def test_trashed_directories_with_same_name_show_original_locations(window) -> None:
     store = window.store
     store.create_folder("", "New folder")

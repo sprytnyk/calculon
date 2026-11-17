@@ -306,6 +306,16 @@ class Sidebar(QWidget):
 
             parents: dict[str, QTreeWidgetItem] = {}
 
+            def add_trash_item(
+                parent: QTreeWidgetItem, item: QTreeWidgetItem, is_dir: bool
+            ) -> None:
+                if is_dir:
+                    for index in range(parent.childCount()):
+                        if parent.child(index).data(0, ROLE)[0] == TRASHED:
+                            parent.insertChild(index, item)
+                            return
+                parent.addChild(item)
+
             def add_trashed(parent: QTreeWidgetItem, path, key: str, original: str) -> None:
                 nonlocal selected
                 try:
@@ -331,7 +341,7 @@ class Sidebar(QWidget):
                         it = self._item(
                             label, kind, child_key, folder_icon if is_dir else sheet_icon
                         )
-                        parent.addChild(it)
+                        add_trash_item(parent, it, is_dir)
                     if is_dir:
                         parents.setdefault(child_original, it)
                         add_trashed(it, child, child_key, child_original)
@@ -348,7 +358,7 @@ class Sidebar(QWidget):
                     parent_key = "/".join(parts[: index + 1])
                     if parent_key not in parents:
                         folder = self._item(parts[index], TRASH_PATH, parent_key, folder_icon)
-                        parent.addChild(folder)
+                        add_trash_item(parent, folder, True)
                         folder.setExpanded(True)
                         parents[parent_key] = folder
                     parent = parents[parent_key]
@@ -358,7 +368,7 @@ class Sidebar(QWidget):
                 else:
                     label = parts[-1] if is_dir else self.store.display_name(original)
                     it = self._item(label, kind, name, folder_icon if is_dir else sheet_icon)
-                    parent.addChild(it)
+                    add_trash_item(parent, it, is_dir)
                 if is_dir:
                     parents.setdefault(original, it)
                 it.setToolTip(0, original)

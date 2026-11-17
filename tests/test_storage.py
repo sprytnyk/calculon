@@ -143,7 +143,7 @@ def test_reorder_and_move(tmp_path: Path) -> None:
     folder = store.create_folder(name="F")
     moved = store.move("A.txt", folder)
     assert moved == "F/A.txt"
-    assert names(store.tree().children) == ["C", "B", "F"]
+    assert names(store.tree().children) == ["F", "C", "B"]
     with pytest.raises(StorageError):
         store.move(folder, folder)
 
@@ -154,6 +154,18 @@ def test_order_survives_reload(tmp_path: Path) -> None:
         store.create_sheet(name=n)
     store.move("C.txt", "", 0)
     assert names(SheetStore(tmp_path).tree().children) == ["C", "A", "B"]
+
+
+def test_directories_stay_above_sheets(tmp_path: Path) -> None:
+    store = SheetStore(tmp_path)
+    store.create_sheet(name="B")
+    store.create_sheet(name="A")
+    store.move("B.txt", "", 0)
+    store.create_folder(name="Work")
+    assert names(store.tree().children) == ["Work", "B", "A"]
+    store.create_folder(name="Archive")
+    store.move("Archive", "", 0)
+    assert names(SheetStore(tmp_path).tree().children) == ["Archive", "Work", "B", "A"]
 
 
 def test_trash_restore_delete(tmp_path: Path) -> None:
