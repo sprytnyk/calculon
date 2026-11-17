@@ -222,6 +222,49 @@ def test_typing_saves_and_calculates(window, app) -> None:
     assert window.store.read(window.current[1]) == "a = 5\na * 2"
 
 
+@pytest.mark.parametrize(("size", "step"), [(8, -1), (40, 1)])
+def test_zoom_does_not_reapply_at_limit(window, monkeypatch, size, step) -> None:
+    window.settings.font_size = size
+    saved = []
+    applied = []
+    monkeypatch.setattr(window.settings, "save", lambda: saved.append(True))
+    monkeypatch.setattr(window, "apply_settings", lambda: applied.append(True))
+
+    for _ in range(10):
+        window.zoom(step)
+
+    assert window.settings.font_size == size
+    assert not saved
+    assert not applied
+
+
+def test_new_sheet_prompts_for_name(window, monkeypatch) -> None:
+    prompts = []
+
+    def ask(title, default):
+        prompts.append((title, default))
+        return "Budget", True
+
+    monkeypatch.setattr(window, "_ask_text", ask)
+    window.new_sheet()
+    assert prompts == [(window.t("new_sheet"), window.t("untitled"))]
+    assert window.current == ("sheet", "Budget.txt")
+
+    monkeypatch.setattr(window, "_ask_text", lambda *_: ("", False))
+    window.new_sheet()
+    assert window.current == ("sheet", "Budget.txt")
+    assert window.store.all_sheets().count("Budget.txt") == 1
+
+
+def test_switch_number_style_with_money_in_sheet(window, app) -> None:
+    window.editor.setPlainText("$75.000,00\n10.1111\n1.43 CAD in USD")
+    window.settings.number_style = "dot_comma"
+    window.apply_settings()
+    pump(app)
+    assert window.editor.result_text(0) == "$75.000,00"
+    assert window.editor.result_text(1) == "10,111"
+
+
 def test_folders_pins_trash_restore(window, app) -> None:
     store = window.store
     folder = store.create_folder("", "Work")
@@ -635,6 +678,11 @@ def test_shortcuts_dialog_lists_menu_and_sidebar_keys(window) -> None:
     mac = sys.platform == "darwin"
     assert rows["Help Sheet"] == key_text("Ctrl+Shift+H" if mac else "F1")
     assert rows["Keyboard Shortcuts"] == key_text("Ctrl+Shift+K" if mac else "Shift+F1")
+
+
+def test_find_next_and_previous_have_no_extra_shortcuts(window) -> None:
+    assert not window._actions["find_next"].shortcuts()
+    assert not window._actions["find_previous"].shortcuts()
 
 
 def test_qt_buttons_follow_language(window) -> None:
