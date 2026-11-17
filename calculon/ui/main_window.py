@@ -365,8 +365,8 @@ class MainWindow(QMainWindow):
         m.addSeparator()
         fb = self.find_bar
         self._action(m, "find_in_sheet", lambda: fb.open(), standard_key.Find)
-        self._action(m, "find_next", fb.step, standard_key.FindNext)
-        self._action(m, "find_previous", lambda: fb.step(backward=True), standard_key.FindPrevious)
+        self._action(m, "find_next", fb.step)
+        self._action(m, "find_previous", lambda: fb.step(backward=True))
         self._action(m, "find", self._focus_search, "Ctrl+P")
 
         m = bar.addMenu(self.t("menu_view"))
