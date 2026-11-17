@@ -591,7 +591,10 @@ class MainWindow(QMainWindow):
 
     def zoom(self, step: int) -> None:
         size = 14 if step == 0 else self.settings.font_size + step
-        self.settings.font_size = max(8, min(size, 40))
+        size = max(8, min(size, 40))
+        if size == self.settings.font_size:
+            return
+        self.settings.font_size = size
         self.settings.save()
         self.apply_settings()
 
