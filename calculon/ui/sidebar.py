@@ -37,6 +37,8 @@ PINNED = "pinned"
 HELP = "help"
 TRASH = "trash"
 TRASHED = "trashed"
+TRASHED_DIR = "trashed_dir"
+TRASH_PATH = "trash_path"
 
 
 class SheetTree(QTreeWidget):
@@ -301,11 +303,68 @@ class Sidebar(QWidget):
                 icons.icon("trash"),
             )
             tree.addTopLevelItem(trash)
+
+            parents: dict[str, QTreeWidgetItem] = {}
+
+            def add_trashed(parent: QTreeWidgetItem, path, key: str, original: str) -> None:
+                nonlocal selected
+                try:
+                    children = sorted(
+                        path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())
+                    )
+                except OSError:
+                    return
+                for child in children:
+                    if child.is_symlink() or child.is_junction() or child.name.startswith("."):
+                        continue
+                    is_dir = child.is_dir()
+                    if not is_dir and (not child.is_file() or child.suffix != ".txt"):
+                        continue
+                    child_key = f"{key}/{child.name}"
+                    child_original = f"{original}/{child.name}"
+                    kind = TRASHED_DIR if is_dir else TRASHED
+                    it = parents.get(child_original) if is_dir else None
+                    if it is not None and it.data(0, ROLE)[0] == TRASH_PATH:
+                        it.setData(0, ROLE, (kind, child_key))
+                    else:
+                        label = child.name if is_dir else self.store.display_name(child.name)
+                        it = self._item(
+                            label, kind, child_key, folder_icon if is_dir else sheet_icon
+                        )
+                        parent.addChild(it)
+                    if is_dir:
+                        parents.setdefault(child_original, it)
+                        add_trashed(it, child, child_key, child_original)
+                    elif self.current == (TRASHED, child_key):
+                        selected = it
+
             for name, original in trashed:
-                it = self._item(self.store.display_name(name), TRASHED, name, sheet_icon)
+                path = self.store.trash_dir / name
+                is_dir = path.is_dir() and not path.is_symlink() and not path.is_junction()
+                kind = TRASHED_DIR if is_dir else TRASHED
+                parts = original.split("/")
+                parent = trash
+                for index in range(len(parts) - 1):
+                    parent_key = "/".join(parts[: index + 1])
+                    if parent_key not in parents:
+                        folder = self._item(parts[index], TRASH_PATH, parent_key, folder_icon)
+                        parent.addChild(folder)
+                        folder.setExpanded(True)
+                        parents[parent_key] = folder
+                    parent = parents[parent_key]
+                it = parents.get(original) if is_dir else None
+                if it is not None and it.data(0, ROLE)[0] == TRASH_PATH:
+                    it.setData(0, ROLE, (kind, name))
+                else:
+                    label = parts[-1] if is_dir else self.store.display_name(original)
+                    it = self._item(label, kind, name, folder_icon if is_dir else sheet_icon)
+                    parent.addChild(it)
+                if is_dir:
+                    parents.setdefault(original, it)
                 it.setToolTip(0, original)
-                trash.addChild(it)
-                if self.current == (TRASHED, name):
+                if is_dir:
+                    add_trashed(it, path, name, original)
+                elif self.current == (TRASHED, name):
                     selected = it
             trash.setExpanded(TRASH_DIR in self.expanded)
         if selected is not None:
@@ -385,7 +444,7 @@ class Sidebar(QWidget):
             self.open_help.emit()
         elif kind == TRASHED:
             self.open_trashed.emit(key)
-        elif kind in (FOLDER, TRASH):
+        elif kind in (FOLDER, TRASH, TRASHED_DIR, TRASH_PATH):
             item.setExpanded(not item.isExpanded())
 
     def open_current(self) -> bool:
@@ -411,7 +470,7 @@ class Sidebar(QWidget):
         data = self._selected()
         if data and data[0] in (SHEET, PINNED, FOLDER):
             self.trash.emit(data[1])
-        elif data and data[0] == TRASHED:
+        elif data and data[0] in (TRASHED, TRASHED_DIR) and "/" not in data[1]:
             self.delete_forever.emit(data[1])
 
     def _menu(self, pos: QPoint) -> None:
@@ -419,9 +478,11 @@ class Sidebar(QWidget):
         data = item.data(0, ROLE) if item else None
         kind, key = data if data else (SECTION, "")
         menu = QMenu(self)
+        actions = {}
 
         def add(name: str, slot, icon_name: str | None = None) -> None:
-            menu.addAction(icons.icon(icon_name or name), self.t(name), slot)
+            action = menu.addAction(icons.icon(icon_name or name), self.t(name))
+            actions[action] = slot
 
         if kind in (SHEET, PINNED, FOLDER, SECTION):
             folder = key if kind == FOLDER else (key.rsplit("/", 1)[0] if "/" in key else "")
@@ -440,14 +501,16 @@ class Sidebar(QWidget):
             add("show_in_folder", lambda: self.show_in_folder.emit(key), "open_folder")
             menu.addSeparator()
             add("move_to_trash", lambda: self.trash.emit(key), "trash")
-        elif kind == TRASHED:
+        elif kind in (TRASHED, TRASHED_DIR) and "/" not in key:
             add("restore", lambda: self.restore.emit(key))
             add("delete_forever", lambda: self.delete_forever.emit(key))
         elif kind == TRASH and self.store.trashed():
             add("empty_trash", self.empty_trash.emit)
         if not menu.isEmpty():
             icons.show_in_menu(menu)
-            menu.exec(self.tree.viewport().mapToGlobal(pos))
+            chosen = menu.exec(self.tree.viewport().mapToGlobal(pos))
+            if chosen in actions:
+                QTimer.singleShot(0, self, actions[chosen])
 
     def _pin(self, rel: str) -> None:
         self.store.pin(rel)

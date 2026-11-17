@@ -32,7 +32,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtNetwork import QNetworkReply
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMenu, QStyle, QWidget
+from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMenu, QMessageBox, QStyle, QWidget
 
 from calculon import rates, settings, spelling
 from calculon.settings import Settings
@@ -236,6 +236,168 @@ def test_folders_pins_trash_restore(window, app) -> None:
     assert store.trashed()[0][1] == "Work/Budget.txt"
     window.restore(store.trashed()[0][0])
     assert window.current == ("sheet", "Work/Budget.txt")
+
+
+def test_trashed_directory_shows_its_sheets(window, app) -> None:
+    store = window.store
+    store.create_folder("", "Work")
+    store.create_folder("Work", "Plans")
+    store.create_sheet("Work/Plans", "Budget", "123")
+    window.trash("Work")
+    root = window.sidebar.tree
+    trash = root.topLevelItem(root.topLevelItemCount() - 1)
+    work = trash.child(0)
+    assert work.text(0) == "Work"
+    plans = work.child(0)
+    assert plans.text(0) == "Plans"
+    budget = plans.child(0)
+    assert budget.text(0) == "Budget"
+    window.sidebar._clicked(budget)
+    assert window.editor.toPlainText() == "123"
+    window.restore("Work")
+    assert window.current == ("sheet", "Work/Plans/Budget.txt")
+    assert window.editor.toPlainText() == "123"
+
+
+def test_trashed_directories_with_same_name_show_original_locations(window) -> None:
+    store = window.store
+    store.create_folder("", "New folder")
+    store.create_folder("New folder", "New folder 2")
+    store.create_folder("", "New folder 2")
+    store.create_sheet("New folder/New folder 2", "Inside", "1")
+    store.create_sheet("New folder 2", "Outside", "2")
+    window.trash("New folder/New folder 2")
+    window.trash("New folder 2")
+    trash = window.sidebar.tree.topLevelItem(window.sidebar.tree.topLevelItemCount() - 1)
+    entries = {trash.child(i).text(0): trash.child(i) for i in range(trash.childCount())}
+    assert set(entries) == {"New folder", "New folder 2"}
+    parent = entries["New folder"]
+    assert parent.childCount() == 1
+    assert parent.child(0).text(0) == "New folder 2"
+    assert parent.child(0).child(0).text(0) == "Inside"
+    assert entries["New folder 2"].child(0).text(0) == "Outside"
+    for name, _original in store.trashed():
+        window.restore(name)
+    assert store.read("New folder/New folder 2/Inside.txt") == "1"
+    assert store.read("New folder 2/Outside.txt") == "2"
+
+
+def test_trash_combines_original_paths_with_a_deleted_parent(window) -> None:
+    store = window.store
+    store.create_folder("", "Work")
+    store.create_folder("Work", "Plans")
+    store.create_sheet("Work/Plans", "Old", "1")
+    store.create_sheet("Work/Plans", "Current", "2")
+    window.trash("Work/Plans/Old.txt")
+    window.trash("Work")
+    trash = window.sidebar.tree.topLevelItem(window.sidebar.tree.topLevelItemCount() - 1)
+    assert trash.childCount() == 1
+    work = trash.child(0)
+    assert work.text(0) == "Work"
+    assert work.childCount() == 1
+    plans = work.child(0)
+    assert plans.text(0) == "Plans"
+    assert {plans.child(i).text(0) for i in range(plans.childCount())} == {"Old", "Current"}
+
+
+@pytest.mark.parametrize("action_name", ["new_folder", "move_to_trash"])
+def test_sidebar_context_menu_finishes_before_action(window, app, action_name) -> None:
+    sidebar = window.sidebar
+    calls = []
+    during_menu = []
+    signal = sidebar.new_folder if action_name == "new_folder" else sidebar.trash
+    signal.disconnect()
+    signal.connect(lambda path: calls.append(path))
+
+    def choose():
+        menu = QApplication.activePopupWidget()
+        assert isinstance(menu, QMenu)
+        action = next(a for a in menu.actions() if a.text() == window.t(action_name))
+        menu.setActiveAction(action)
+        QTest.keyClick(menu, Qt.Key.Key_Return)
+        during_menu.extend(calls)
+
+    QTimer.singleShot(0, choose)
+    item = sidebar.tree.topLevelItem(0)
+    if action_name == "move_to_trash":
+        item = item.child(0)
+    sidebar._menu(sidebar.tree.visualItemRect(item).center())
+    assert during_menu == []
+    assert calls == []
+    pump(app)
+    assert calls == ([""] if action_name == "new_folder" else ["Welcome.txt"])
+
+
+def test_context_menu_trashes_directory_with_open_nested_sheet(window, app) -> None:
+    store = window.store
+    store.create_folder("", "Work")
+    store.create_folder("Work", "Plans")
+    store.create_sheet("Work/Plans", "Budget", "123")
+    window.open_sheet("Work/Plans/Budget.txt")
+    window.sidebar.rebuild()
+    directory = window.sidebar._find("folder", "Work")
+    assert directory is not None
+
+    def choose():
+        menu = QApplication.activePopupWidget()
+        assert isinstance(menu, QMenu)
+        action = next(a for a in menu.actions() if a.text() == window.t("move_to_trash"))
+        menu.setActiveAction(action)
+        QTest.keyClick(menu, Qt.Key.Key_Return)
+
+    QTimer.singleShot(0, choose)
+    pos = window.sidebar.tree.visualItemRect(directory).center()
+    window.sidebar._menu(pos)
+    pump(app)
+    assert not store.path("Work").exists()
+    assert store.read_trashed("Work/Plans/Budget.txt") == "123"
+    assert window.current != ("sheet", "Work/Plans/Budget.txt")
+
+
+def test_trashing_directory_releases_watches_before_move(window, monkeypatch) -> None:
+    store = window.store
+    store.create_folder("", "Work")
+    store.create_folder("Work", "Plans")
+    store.create_sheet("Work/Plans", "Budget", "123")
+    window.open_sheet("Work/Plans/Budget.txt")
+    window.sidebar.rebuild()
+    directory = store.path("Work")
+    assert str(directory) in window.sidebar.watcher.directories()
+    assert window.file_watcher.files()
+    trash = store.trash
+
+    def move(rel):
+        assert all(
+            not Path(p).is_relative_to(directory) for p in window.sidebar.watcher.directories()
+        )
+        assert all(not Path(p).is_relative_to(directory) for p in window.file_watcher.files())
+        return trash(rel)
+
+    monkeypatch.setattr(store, "trash", move)
+    window.trash("Work")
+    assert store.read_trashed("Work/Plans/Budget.txt") == "123"
+
+
+def test_failed_directory_trash_restores_watches(window, monkeypatch) -> None:
+    store = window.store
+    store.create_folder("", "Work")
+    sheet = store.create_sheet("Work", "Budget", "123")
+    window.open_sheet(sheet)
+    window.sidebar.rebuild()
+    directory = str(store.path("Work"))
+    sheet_path = str(store.path(sheet))
+    warnings = []
+
+    def fail(_rel):
+        raise PermissionError("access denied")
+
+    monkeypatch.setattr(store, "trash", fail)
+    monkeypatch.setattr(QMessageBox, "warning", lambda *args: warnings.append(args))
+    window.trash("Work")
+    assert warnings
+    assert directory in window.sidebar.watcher.directories()
+    assert sheet_path in window.file_watcher.files()
+    assert window.current == ("sheet", sheet)
 
 
 def test_search_filters_sheets(window, app) -> None:

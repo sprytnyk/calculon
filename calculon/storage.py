@@ -270,7 +270,11 @@ class SheetStore:
         return out
 
     def read_trashed(self, name: str) -> str:
-        return (self.trash_dir / _safe_component(name)).read_text(encoding="utf-8")
+        root = self.trash_dir.resolve()
+        path = (root / name).resolve()
+        if not path.is_relative_to(root):
+            raise StorageError("outside the trash directory")
+        return path.read_text(encoding="utf-8")
 
     def restore(self, name: str) -> str:
         src = self.trash_dir / _safe_component(name)

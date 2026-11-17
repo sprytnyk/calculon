@@ -899,8 +899,25 @@ class MainWindow(QMainWindow):
         if not self.save_current():
             return
         kind, key = self.current
+        target = self.store.path(rel)
+        paused = []
+        for watcher in (self.sidebar.watcher, self.file_watcher):
+            paths = [
+                p
+                for p in watcher.directories() + watcher.files()
+                if Path(p).resolve().is_relative_to(target)
+            ]
+            if paths:
+                watcher.removePaths(paths)
+                paused.append((watcher, paths))
         try:
-            self.store.trash(rel)
+            try:
+                self.store.trash(rel)
+            finally:
+                for watcher, paths in paused:
+                    existing = [p for p in paths if Path(p).exists()]
+                    if existing:
+                        watcher.addPaths(existing)
         except OSError as exc:
             QMessageBox.warning(self, self.t("move_to_trash"), str(exc))
             return
@@ -916,12 +933,15 @@ class MainWindow(QMainWindow):
             self.sidebar.rebuild()
 
     def restore(self, name: str) -> None:
+        current_kind, current_name = self.current
         try:
             rel = self.store.restore(name)
         except OSError as exc:
             QMessageBox.warning(self, self.t("restore"), str(exc))
             return
-        if rel.endswith(".txt"):
+        if current_kind == TRASHED and current_name.startswith(name + "/"):
+            self.open_sheet(rel + current_name[len(name) :])
+        elif rel.endswith(".txt"):
             self.open_sheet(rel)
         else:
             self.sidebar.rebuild()
@@ -938,7 +958,9 @@ class MainWindow(QMainWindow):
             self.store.delete_forever(name)
         except OSError as exc:
             QMessageBox.warning(self, self.t("delete_forever"), str(exc))
-        if self.current == (TRASHED, name):
+        if self.current[0] == TRASHED and (
+            self.current[1] == name or self.current[1].startswith(name + "/")
+        ):
             self.open_help()
         self.sidebar.rebuild()
 
