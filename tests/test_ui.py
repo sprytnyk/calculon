@@ -179,7 +179,7 @@ def test_folder_error_names_the_reason_not_the_test_file(app, tmp_path) -> None:
     finally:
         locked.chmod(0o700)
     assert dialog.error.text() == (
-        f"Calculon can't create or write to {locked}. Permission denied.\n\nPick another folder."
+        f"Calculon can't create or write to {locked}. Permission denied.\n\nPick another directory."
     )
 
 

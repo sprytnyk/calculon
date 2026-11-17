@@ -8,8 +8,8 @@ T = {
     "menu_view": "&View",
     "menu_help": "&Help",
     "new_sheet": "New Sheet",
-    "new_folder": "New Folder",
-    "open_folder": "Show Sheets Folder",
+    "new_folder": "New Directory",
+    "open_folder": "Show Sheets Directory",
     "settings": "Settings…",
     "quit": "Quit",
     "undo": "Undo",
@@ -88,7 +88,7 @@ T = {
     "vim_normal": "Back to Normal mode",
     "vim_panes": "Go to the sheet list, the sheet or the answers",
     "vim_list_move": "Move in the sheet list and the answers",
-    "vim_list_enter": "Open a sheet or folder, copy an answer",
+    "vim_list_enter": "Open a sheet or directory, copy an answer",
     "refresh_rates": "Refresh Exchange Rates",
     "about": "About Calculon",
     # autocomplete: what kind of word a suggestion is
@@ -114,7 +114,7 @@ T = {
     "confirm_delete": 'Delete "{name}" for good? This can\'t be undone.',
     "confirm_empty": "Delete everything in the trash for good? This can't be undone.",
     "untitled": "Untitled",
-    "folder": "New folder",
+    "folder": "New directory",
     "no_results": "No sheets found",
     # editor
     "read_only_help": (
@@ -148,7 +148,7 @@ T = {
     "section_source": "Source",
     "section_json": "What a custom source must return",
     "hint_sheets_dir": (
-        "Each sheet is a plain .txt file in this folder, so sync tools and backups just work."
+        "Each sheet is a plain .txt file in this directory, so sync tools and backups just work."
     ),
     "hint_dollar": "Which currency a bare $ stands for.",
     "hint_decimals": "Results show up to this many; money uses its own setting.",
@@ -159,15 +159,15 @@ T = {
     "tab_appearance": "Appearance",
     "tab_spelling": "Spell Check",
     "tab_vim": "Vim",
-    "sheets_dir": "Sheets folder:",
+    "sheets_dir": "Sheets directory:",
     "folder_blocked": "Calculon can't create or write to {folder}. {error}.",
     "folder_blocked_windows": (
         "Controlled folder access in Windows Security may be blocking it. "
-        "Allow Calculon there, or pick another folder."
+        "Allow Calculon there, or pick another directory."
     ),
-    "folder_pick_another": "Pick another folder.",
+    "folder_pick_another": "Pick another directory.",
     "folder_question": "Where should Calculon keep your sheets?",
-    "folder_use": "Use this folder",
+    "folder_use": "Use this directory",
     "browse": "Browse…",
     "font_size": "Text size:",
     "ligatures": "Font ligatures",

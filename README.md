@@ -25,7 +25,7 @@ dates, and the answers show up in a column on the right. The syntax follows
 - About 160 currencies, with new rates every day
 - English and Ukrainian, in sheets and in the interface
 - Linux and Windows x64, and macOS on Intel and Apple Silicon
-- Sheets in folders, with search, pins and a trash
+- Sheets in directories, with search, pins and a trash
 - Focus Mode hides the menu bar, the sidebar and the date of the last rates update, so
   only the sheet is left. Turn it on with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>,
   or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> on macOS. On macOS the menu bar stays
@@ -67,20 +67,20 @@ gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum --ignore-missing -c SHA256SU
 ## Sheets
 
 On first start, Calculon asks where to keep your sheets and suggests
-`~/Documents/Calculon`. Each sheet is a plain `.txt` file in that folder. You can pick
-another folder later in Settings.
+`~/Documents/Calculon`. Each sheet is a plain `.txt` file in that directory. You can pick
+another directory later in Settings.
 
-Folders are real folders, so the sheets work with any sync tool, `grep` or backups.
-Calculon keeps pins and custom order in a hidden `.calculon.json` in that folder.
+Directories are real directories, so the sheets work with any sync tool, `grep` or backups.
+Calculon keeps pins and custom order in a hidden `.calculon.json` in that directory.
 Deleted sheets go to `.trash/` until you empty the trash. Calculon ignores links and
 Windows junctions, such as `My Music` in Documents.
 
-Calculon checks the folder by creating it and writing a test file. If that fails, it says
-why and asks for another folder. On Windows the usual cause is Controlled folder access in
-Windows Security. Allow Calculon there, or pick a folder outside Documents.
+Calculon checks the directory by creating it and writing a test file. If that fails, it says
+why and asks for another directory. On Windows the usual cause is Controlled folder access in
+Windows Security. Allow Calculon there, or pick a directory outside Documents.
 
 If saving fails, Calculon keeps your edits open and stops you from closing the window,
-switching sheets or changing the sheets folder until it can save. On Windows it retries
+switching sheets or changing the sheets directory until it can save. On Windows it retries
 brief file-access errors before reporting a failure.
 
 ## Exchange rates
@@ -111,7 +111,7 @@ when you open About, to ask GitHub whether a newer version is out.
 Turn it on with Check Spelling in the View menu, or in Settings. Calculon draws a wavy line
 under misspelled words. Right-click one for suggestions, Add to Dictionary or Ignore.
 It skips numbers, units, currencies and variable names, and checks only the words
-around them. Words you add go to `words.txt` in Calculon's app data folder, one per
+around them. Words you add go to `words.txt` in Calculon's app data directory, one per
 line. On Linux that's `~/.local/share/sprytnyk.dev/Calculon`.
 
 Calculon doesn't ship a spell checker or dictionaries. It uses the ones already on your
@@ -126,7 +126,7 @@ sudo apt install libhunspell-1.7-0 hunspell-en-us hunspell-uk
 
 Other distros have the same packages under similar names. Calculon looks for
 dictionaries in `/usr/share/hunspell`, `/usr/share/myspell`, `~/.local/share/hunspell`
-and any folder in `$DICPATH`.
+and any directory in `$DICPATH`.
 
 **macOS.** Install Hunspell with [Homebrew](https://brew.sh), then put the dictionaries
 in `~/Library/Spelling`:

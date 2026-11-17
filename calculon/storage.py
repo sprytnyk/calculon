@@ -166,7 +166,7 @@ class SheetStore:
         _atomic_write(target, text)
         return self.rel(target)
 
-    def create_folder(self, parent: str = "", name: str = "New folder") -> str:
+    def create_folder(self, parent: str = "", name: str = "New directory") -> str:
         base = self.path(parent) if parent else self.root
         target = _unique(base, _safe(name), "")
         target.mkdir(parents=True)
