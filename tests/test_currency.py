@@ -7,6 +7,15 @@ import pytest
 from calculon.engine.currency import RatesError, RateTable
 
 
+def test_parse_frankfurter_v2_rates() -> None:
+    table = RateTable.parse(
+        '[{"date":"2026-11-16","base":"USD","quote":"EUR","rate":0.9},'
+        '{"date":"2026-11-16","base":"USD","quote":"GBP","rate":0.8}]'
+    )
+    assert table.base == "USD"
+    assert table.rates == {"USD": Decimal(1), "EUR": Decimal("0.9"), "GBP": Decimal("0.8")}
+
+
 @pytest.mark.parametrize(
     "value",
     [

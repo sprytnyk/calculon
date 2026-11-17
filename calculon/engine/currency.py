@@ -157,6 +157,21 @@ class RateTable:
             data = json.loads(payload)
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             raise RatesError(f"not JSON: {exc}") from exc
+        if isinstance(data, list) and data:
+            if not all(isinstance(row, dict) for row in data):
+                raise RatesError("invalid rates list")
+            bases = {str(row.get("base", "")).upper() for row in data}
+            if len(bases) != 1 or not next(iter(bases)):
+                raise RatesError("rates list must have one base currency")
+            data = {
+                "base": next(iter(bases)),
+                "date": max((str(row.get("date", "")) for row in data), default=""),
+                "rates": {
+                    row.get("quote"): row.get("rate")
+                    for row in data
+                    if isinstance(row.get("quote"), str)
+                },
+            }
         if not isinstance(data, dict) or not isinstance(data.get("rates"), dict):
             raise RatesError('expected an object with a "rates" object')
         base = str(data.get("base") or data.get("base_code") or "USD").upper()
