@@ -297,6 +297,8 @@ def apply(app: QApplication, theme: Theme) -> None:
         QMenu::item {{ padding: 6px 28px 6px 8px; border-radius: 5px; }}
         QMenu::item:selected {{ background: {theme.selection}; }}
         QMenu::icon {{ padding-left: 6px; }}
+        QMenu::indicator {{ width: 8px; height: 8px; margin-left: 8px; }}
+        QMenu::indicator:checked {{ background: {theme.accent}; border-radius: 4px; }}
         QMenu::separator {{ height: 1px; background: {theme.border}; margin: 4px 8px; }}
         QMenuBar {{ background: {theme.sidebar}; border: none; padding: 2px 4px; }}
         QMenuBar::item {{ background: transparent; color: {theme.text}; padding: 4px 10px;
