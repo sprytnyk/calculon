@@ -856,6 +856,20 @@ def test_shortcuts_dialog_lists_menu_and_sidebar_keys(window) -> None:
 def test_find_next_and_previous_have_no_extra_shortcuts(window) -> None:
     assert not window._actions["find_next"].shortcuts()
     assert not window._actions["find_previous"].shortcuts()
+    assert window._actions["find_next"].text().endswith("\tEnter")
+    assert window._actions["find_previous"].text().endswith("\tShift+Enter")
+    rows = dict(ShortcutsDialog(window.menuBar(), window.t, window).rows())
+    assert rows["Find Next"] == "Enter"
+    assert rows["Find Previous"] == "Shift+Enter"
+
+
+def test_find_labels_do_not_intercept_enter_in_sheet(window, app) -> None:
+    window.new_sheet("")
+    window.editor.setFocus()
+    QTest.keyClicks(window.editor, "10")
+    QTest.keyClick(window.editor, Qt.Key.Key_Return)
+    QTest.keyClicks(window.editor, "20")
+    assert window.editor.toPlainText() == "10\n20"
 
 
 def test_qt_buttons_follow_language(window) -> None:

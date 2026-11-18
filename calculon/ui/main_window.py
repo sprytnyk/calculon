@@ -394,8 +394,13 @@ class MainWindow(QMainWindow):
         m.addSeparator()
         fb = self.find_bar
         self._action(m, "find_in_sheet", lambda: fb.open(), standard_key.Find)
-        self._action(m, "find_next", fb.step)
-        self._action(m, "find_previous", lambda: fb.step(backward=True))
+        for key, slot, label in (
+            ("find_next", fb.step, "Enter"),
+            ("find_previous", lambda: fb.step(backward=True), "Shift+Enter"),
+        ):
+            act = self._action(m, key, slot)
+            act.setProperty("shortcut_label", label)
+            act.setText(f"{act.text()}\t{label}")
         self._action(m, "find", self._focus_search, "Ctrl+P")
 
         m = bar.addMenu(self.t("menu_view"))

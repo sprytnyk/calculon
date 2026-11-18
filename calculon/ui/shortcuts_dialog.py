@@ -32,6 +32,8 @@ def menu_shortcuts(bar: QMenuBar) -> list[tuple[str, list[tuple[QAction, str]]]]
         rows = []
         for act in menu.actions():
             keys = [key_text(s) for s in act.shortcuts() if not s.isEmpty()]
+            if label := act.property("shortcut_label"):
+                keys.append(label)
             if keys and act.isVisible():
                 rows.append((act, ", ".join(keys)))
         if rows:
@@ -44,7 +46,10 @@ def shortcut_sections(bar: QMenuBar, tr, vim: bool) -> list[tuple[str, list[tupl
     sections = [
         (
             title,
-            [(a.property("icon_name"), a.text().replace("&", ""), keys) for a, keys in rows],
+            [
+                (a.property("icon_name"), a.text().split("\t")[0].replace("&", ""), keys)
+                for a, keys in rows
+            ],
         )
         for title, rows in menu_shortcuts(bar)
     ]
