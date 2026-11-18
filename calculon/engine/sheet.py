@@ -7,10 +7,14 @@ from dataclasses import dataclass, field, replace
 
 from . import units as U
 from .currency import RateTable
+from .diagnostics import Diagnostic, DiagnosticError
 from .format import FormatOptions, format_value
 from .interpreter import (
     AGGREGATES,
     SOFT,
+    SYMBOL_OPERATORS,
+    VALUE_KEYWORDS,
+    VALUE_KINDS,
     Config,
     Context,
     Item,
@@ -19,6 +23,7 @@ from .interpreter import (
     classify,
     evaluate_tokens,
     tokenize_line,
+    unsupported_date_in_range,
     var_key,
 )
 from .lexer import Tok
@@ -68,19 +73,29 @@ SPAN_CLASSES = {
     "tag": "tag",
     "op": "operator",
 }
+INPUT_WARNINGS = {
+    "invalid_number": Diagnostic("invalid number"),
+    "invalid_date": Diagnostic("use YYYY-MM-DD for numeric dates"),
+    "invalid_calendar_date": Diagnostic("no such date"),
+    "invalid_time": Diagnostic("no such time"),
+}
 
 
 @dataclass
 class LineResult:
-    kind: str = "empty"  # empty heading divider comment value text
+    kind: str = "empty"  # empty heading divider comment value text unfinished
     value: Value | None = None
     text: str = ""
-    error: str = ""
+    diagnostic: Diagnostic | None = None
     spans: list[tuple[int, int, str]] = field(default_factory=list)
     aggregate: str = ""  # a line like total, average or total of #food: "sum", "avg"...
     of_tag: bool = False  # the aggregate works on tagged lines, not the lines above
     short: str = ""  # the answer as the answers column shows it, when shorter: $386.8M
     hints: list[tuple[int, int, str]] = field(default_factory=list)  # variables' values
+
+    @property
+    def error(self) -> str:
+        return self.diagnostic.render() if self.diagnostic is not None else ""
 
     @property
     def is_total(self) -> bool:
@@ -121,9 +136,9 @@ def evaluate_sheet(
                 res = _evaluate_line(raw, ctx, opts, timeline)
                 if res.kind == "divider":
                     timeline = None
-        except Exception as exc:  # noqa: BLE001 - one bad line must never break the sheet
+        except Exception:  # noqa: BLE001 - one bad line must never break the sheet
             log.debug("line failed: %r", raw, exc_info=True)
-            res = LineResult(kind="text", error=f"internal error: {type(exc).__name__}")
+            res = LineResult(kind="text", diagnostic=Diagnostic("internal calculation error"))
         results.append(res)
         ctx.line_values.append(res.value)
         if res.value is None:
@@ -183,17 +198,20 @@ def _evaluate_directive(
     res = _evaluate_line(rest, ctx, opts, None)
     del ctx.block[block:]  # @from/@to answers don't count in totals
     res.spans.insert(0, (at, m.end(), "keyword"))
+    if res.kind == "unfinished":
+        return res, timeline
     given = res.value if res.kind == "value" else None
     if is_start(m.group("word")):
         if isinstance(given, DateVal) and given.has_date:
             return res, Timeline(given, given)
-        _no_answer(res, res.error or f"@{m.group('word')} needs a date")
+        _no_answer(res, res.diagnostic or Diagnostic("@{0} needs a date", (m.group("word"),)))
         return res, Timeline(None, None)
     elapsed = timeline.elapsed() if timeline else None
     if timeline is None:
-        _no_answer(res, f"no @{'від' if m.group('word').lower() == 'до' else 'from'} above")
+        start = "від" if m.group("word").lower() == "до" else "from"
+        _no_answer(res, Diagnostic("no @{0} above", (start,)))
     elif timeline.cursor is None or elapsed is None:
-        _no_answer(res, "")  # @from already shows the error
+        _no_answer(res, None)  # @from already shows the error
     elif res.kind in ("empty", "comment"):
         res.kind = "value"
         res.value = timeline.cursor
@@ -208,15 +226,39 @@ def _evaluate_directive(
         full = left_text(_format(shown if shown.mag else short, opts), over, opts.lang)
         res.hints.append((at, m.end(), f"{full}\n{lasts_text(_format(elapsed, opts), opts.lang)}"))
     else:
-        _no_answer(res, res.error or f"@{m.group('word')} needs a date")
+        _no_answer(res, res.diagnostic or Diagnostic("@{0} needs a date", (m.group("word"),)))
     return res, None
 
 
-def _no_answer(res: LineResult, error: str) -> None:
+def _no_answer(res: LineResult, diagnostic: Diagnostic | None) -> None:
     res.kind = "text"
     res.value = None
     res.text = ""
-    res.error = error
+    res.diagnostic = diagnostic
+
+
+def _expression_tokens(body: str, offset: int, ctx: Context, res: LineResult) -> list[Tok] | None:
+    """Mark input warnings and return the tokens the calculator can use."""
+    tokens = tokenize_line(body, ctx)
+    has_unsupported_date = any(token.kind == "INVALID_DATE" for token in tokens)
+    date_error = has_unsupported_date and (
+        not any(token.kind == "DATE" for token in tokens) or unsupported_date_in_range(tokens)
+    )
+    for token in tokens:
+        token.start += offset
+        token.end += offset
+        span = token.kind.lower()
+        if warning := INPUT_WARNINGS.get(span):
+            res.spans.append((token.start, token.end, span))
+            if res.diagnostic is None and (span != "invalid_date" or date_error):
+                res.diagnostic = warning
+    if res.diagnostic is not None:
+        res.kind = "text"
+        return None
+    if any(t.kind == "UNFINISHED_NUMBER" for t in tokens):
+        res.kind = "unfinished"
+        return None
+    return [token for token in tokens if token.kind != "INVALID_DATE"]
 
 
 def _evaluate_line(
@@ -246,6 +288,7 @@ def _evaluate_line(
         ctx.block = []
         ctx.tags = {}
         ctx.variables = {}
+        ctx.invalid_variables.clear()
         ctx.var_names = {}
         ctx.var_lines = {}
         ctx.custom_units = set()
@@ -278,11 +321,12 @@ def _evaluate_line(
         tok = Tok("WORD", "subtotal", len(line), len(line))
         items = [Item("kw", "subtotal", tok, tok)]
     else:
-        toks = tokenize_line(body, ctx)
-        for t in toks:
-            t.start += offset
-            t.end += offset
-        items = classify(toks, ctx)
+        tokens = _expression_tokens(body, offset, ctx, res)
+        if tokens is None:
+            if var_name:
+                ctx.invalidate_var(var_name)
+            return res
+        items = classify(tokens, ctx)
     # each variable's value as the line sees it, before an assignment changes it
     seen = {id(it): ctx.variables.get(it.key) for it in items if it.kind == "var"}
     plain: set[int] = set()  # "if", "to", "in" in prose: not coloured as keywords
@@ -291,17 +335,21 @@ def _evaluate_line(
     continues = offset == 0 and CONTINUE_RE.match(line) is not None  # no label, name, list mark
     _evaluate_items(res, items, var_name, op, ctx, opts, plain, skipped, continues, moves)
     if res.kind != "value":
+        if var_name:
+            ctx.invalidate_var(var_name)
         plain = {id(it) for it in items if it.kind == "kw" and it.key in SOFT}
-    # a list number the maths left out looks like the skipped "1." of "1. Rent $1000"
-    lead = next((it for it in items if it.kind != "noise"), None)
-    if res.kind == "value" and lead is not None and lead.kind == "num" and id(lead) in skipped:
-        plain.add(id(lead))
-        res.spans.append((lead.start, lead.end, "comment"))
     for it in items:
+        item_id = id(it)
         cls = SPAN_CLASSES.get(it.kind)
-        if cls and id(it) not in plain and it.end > it.start:
+        if cls and item_id not in plain and it.end > it.start:
+            if item_id in skipped:
+                cls = "comment"
             res.spans.append((it.start, it.end, cls))
-        if (value := seen.get(id(it))) is not None and (text := _format(value, opts)):
+        if (
+            item_id not in skipped
+            and (value := seen.get(item_id)) is not None
+            and (text := _format(value, opts))
+        ):
             res.hints.append((it.start, it.end, text))
     if var_name and res.kind == "value":
         res.hints.append((*name_span, res.text))
@@ -331,6 +379,12 @@ def _evaluate_items(
     res.aggregate, res.of_tag = _aggregate_of(meaningful)
     if not any(it.kind != "tag" for it in meaningful):
         res.kind = "text"
+        if var_name and any(item.tok.kind == "WORD" for item in items):
+            res.diagnostic = Diagnostic("expected a value")
+        return
+    last = items[-1]
+    if last.kind == "op" and last.key in SYMBOL_OPERATORS:
+        res.kind = "unfinished"
         return
     # a line starting with an operator continues from the answer just above it
     above = ctx.line_values[-1] if ctx.line_values else None
@@ -340,8 +394,10 @@ def _evaluate_items(
     try:
         if var_name and op in ("+=", "-="):
             key = var_key(var_name)
+            if key in ctx.invalid_variables:
+                raise CalcError("{0} has no value", ctx.var_names.get(key, var_name))
             if key not in ctx.variables:
-                raise ParseError(f"{var_name} is not defined")
+                raise ParseError("{0} is not defined", var_name)
             current = ctx.variables[key]
             value = add(
                 current,
@@ -353,18 +409,29 @@ def _evaluate_items(
             value = evaluate_tokens(meaningful, ctx, plain, skipped)
         if continued and all(id(it) in skipped for it in meaningful[1:]):
             # "- milk" under $10 is a note, not $10 again
-            raise ParseError("nothing after the operator")
+            res.kind = "text"
+            return
         if timeline is not None and not res.is_total:
             value = timeline.advance(value, ctx.rates)  # a labelled duration moves it
-    except (ParseError, ArithmeticError, ValueError) as exc:
-        res.kind = "text"
-        res.error = str(exc)
+    except DiagnosticError as exc:
+        function_call = len(meaningful) > 1 and (
+            meaningful[0].kind == "fn" and meaningful[1].key == "("
+        )
+        calculation = (
+            isinstance(exc, CalcError)
+            or var_name
+            or function_call
+            or any(item.kind in VALUE_KINDS or item.key in VALUE_KEYWORDS for item in meaningful)
+        )
+        _no_answer(res, exc.diagnostic if calculation else None)
+        return
+    except ArithmeticError, ValueError:
+        _no_answer(res, Diagnostic("could not calculate this line"))
         return
     try:
         text = format_value(value, opts)
     except ArithmeticError, ValueError:  # 1e999999 as % overflows while formatting
-        res.kind = "text"
-        res.error = "number too large"
+        _no_answer(res, Diagnostic("number too large"))
         return
     # "- 5k" and "rent += $100" change the answer they start from, whatever the maths
     if continued:
@@ -393,7 +460,7 @@ def _evaluate_items(
 
 def _aggregate_of(items: list[Item]) -> tuple[str, bool]:
     """What a line like total or average works out ("sum", "avg"...), or "" if it isn't
-    one, and whether it works on tagged lines, as "total of #food" does. "total of 3, 4"
+    one, and whether it works on tagged lines, as "total of #food" does. "total of 3; 4"
     isn't one: it adds up numbers of its own."""
     if not items or items[0].kind != "kw" or items[0].key not in AGGREGATES:
         return "", False

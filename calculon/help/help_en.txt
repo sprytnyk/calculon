@@ -1,6 +1,7 @@
 # Welcome to Calculon
 // Type anywhere. Answers appear on the right. Click an answer to copy it.
 // This sheet is read-only. Make your own with File → New Sheet (Ctrl+N).
+// Choose a number format in Settings for both input and answers.
 
 # Basics
 3 × 3
@@ -9,19 +10,19 @@
 2^10
 12²
 30 plus 20 minus 5
-1,000 divided by 8
-remainder of 21 divided by 5
+1000 divided by 8
+remainder of 21 divided by 5 // 5 km mod 2 m gives 0 km.
 
 # Words are fine
 $19 for breakfast + $22 for the uber
 4 people × $20
 Hotel room: $120 // a label ends with a colon and a space
 1. Taxi $25 // list numbers like 1. or 1) and • at the start are skipped
-Boeing "747" costs $386.8M // text in quotes and after two slashes is ignored
+Boeing "747" costs $386{point}8M // Calculon skips text in quotes and after two slashes
 $999 (for the new phone)
 
 # Variables
-rent = $1,900
+rent = $1900
 people = 3
 rent / people
 rent += $100
@@ -38,16 +39,16 @@ rent
 50 to 75 is what %
 20 is what % of 200
 20 as a % of 200
-0.35 as %
+0{point}35 as %
 2/10 as fraction
 20/5 as multiplier
 
 # Money
 100 EUR in USD
-₴5,000 in €
+₴5000 in €
 $3k + €2k
 1500 UAH as GBP
-50 EUR in USD at 1.05 USD/EUR // your own rate
+50 EUR in USD at 1{point}05 USD/EUR // your own rate
 $5m // k, m, bn, tn work with money
 
 # Units
@@ -71,6 +72,8 @@ $24 a day for a year
 90 km / 3 days
 
 # Dates and times
+2026-11-18 // Use YYYY-MM-DD for numeric dates, including in ranges.
+2026-11-18 15:00 // date with a time
 today + 3 weeks
 next friday
 3 days ago
@@ -94,37 +97,38 @@ Paris: 3 nights
 @to Nov 17 at 12:00
 
 # Functions and numbers
+1{group}234{point}56 // Group digits in threes. You can also type 1234{point}56.
 sqrt 16
-square root of 81
-round(3.14159, 2)
+square root of 81 // sqrt(1e-400) gives 1e-200.
+round(3{point}14159; 2) // separate arguments with a semicolon
 sin(90°)
 log 1000
 5!
 pi × 2
 255 as hex
 0b1010 + 1
-2.5k + 5M
-1.5e3
+2{point}5k + 5M
+1{point}5e3
 
 # Totals
 // "total" or "sum" adds the lines above it, up to the previous total or heading.
 // "average", "median" and "count" work the same way.
-// The bottom bar shows the sheet total without counting subtotals again.
+// A line can have several tags. The sheet total counts its amount once.
 // You can name a subtotal and continue calculating from it.
 $20 lunch #food
 $35 dinner #food
 $15 taxi #travel
 total // Ctrl+T types it
-$1,900 flat
+$1900 flat
 $300 bills
 home = // a name and "=" with nothing after it names the subtotal
 home / 3
 total of #food
-average of 36, 42, 19 and 81
+average of 36; 42; 19; 81
 
 # Earlier lines
 100
-line126 * 2 // the line number is shown on the left; or double-click an answer
+line130 * 2 // Look for line numbers on the left. Double-click an answer to insert a reference.
 prev + 1 // the answer just above; Ctrl+L types it
 + 10 // an operator at the start continues the answer just above; - does too
 Refund: -5 // anything in front stops that: this is just -5

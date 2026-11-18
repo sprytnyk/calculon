@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
 
+from .diagnostics import DiagnosticError
+
 # ISO 4217 codes recognised even before any rates are loaded.
 _CODES = """
 AED AFN ALL AMD ANG AOA ARS AUD AWG AZN BAM BBD BDT BGN BHD BIF BMD BND BOB BRL BSD BTN
@@ -114,7 +116,7 @@ DISPLAY_SYMBOLS: dict[str, str] = {
 ZERO_DECIMALS = {"JPY", "KRW", "VND", "CLP", "ISK", "HUF", "PYG", "UGX", "XAF", "XOF"}
 
 
-class RatesError(ValueError):
+class RatesError(DiagnosticError, ValueError):
     pass
 
 
@@ -140,7 +142,7 @@ class RateTable:
         try:
             return self.rates[dst] / self.rates[src]
         except KeyError as exc:
-            raise RatesError(f"no exchange rate for {exc.args[0]}") from exc
+            raise RatesError("no exchange rate for {0}", exc.args[0]) from exc
 
     @classmethod
     def parse(cls, payload: bytes | str, source: str = "") -> RateTable:
@@ -156,7 +158,7 @@ class RateTable:
         try:
             data = json.loads(payload)
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise RatesError(f"not JSON: {exc}") from exc
+            raise RatesError("not JSON: {0}", exc) from exc
         if isinstance(data, list) and data:
             if not all(isinstance(row, dict) for row in data):
                 raise RatesError("invalid rates list")

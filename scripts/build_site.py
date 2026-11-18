@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from calculon.engine import Config, FormatOptions, RateTable, evaluate_sheet, format_value
-from calculon.engine.format import MONTHS_UK
+from calculon.engine.format import MONTHS_EN, MONTHS_UK
 from calculon.paths import FALLBACK_RATES
 from calculon.translations import tr
 from calculon.ui.icons import GROUPS
@@ -29,7 +29,6 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 # "now" for the examples, so answers don't depend on the day the script runs
 NOW = datetime(2026, 11, 14, 10, 0)
-STYLE = {"en": "comma_dot", "uk": "space_comma"}
 
 SHEETS = {
     "en": {
@@ -53,13 +52,13 @@ Run: 10 km in miles
 Oven 180 °C in °F
 1.5 TB at 25 MB/s in hours""",
         "dates": """# Portugal trip
-@from 14.11.2026
+@from 2026-11-14
 Lisbon: 3 days
 Porto: 2 days
 // the flight home is on 18 November
-@to 18.11.2026
-14.11.2026 + 3 weeks
-days between 14.11.2026 and 25.12.2026""",
+@to 2026-11-18
+2026-11-14 + 3 weeks
+days between 2026-11-14 and 2026-12-25""",
         "spelling": """# Ремонт кухні
 Плитка: 650 грн × 12
 Шпаклівкаа: 4 × 380 грн
@@ -70,36 +69,36 @@ days between 14.11.2026 and 25.12.2026""",
     "uk": {
         "hero": """# Вихідні у Львові
 Потяг: 2 × 850 грн
-Готель: 2 × 1 900 грн
+Готель: 2 × 1,900 грн
 Кава з тістечком: 4 × 180 грн
 Музей 2 × 250 грн
 разом у EUR""",
         "basics": """# Переїзд
-оренда = 1 450 $
+оренда = 1,450 $
 застава = оренда × 2
 Вантажники: 380 $ за машину + 45 $ на чай
-Диван 1 200 $ − 15%
+Диван 1,200 $ − 15%
 разом""",
         "money": """# Покупки в Лондоні
 Куртка: 89 £ у USD
-Кава 4,50 £ × 6 у EUR
+Кава 4.50 £ × 6 у EUR
 20% знижки від 80 $
 Пробіжка: 10 км у милях
 Духовка 180 °C у °F
-1,5 ТБ при 25 МБ/с у годинах""",
+1.5 ТБ при 25 МБ/с у годинах""",
         "dates": """# Поїздка до Португалії
-@від 14.11.2026
+@від 2026-11-14
 Лісабон: 3 дні
 Порту: 2 дні
 // літак додому 18 листопада
-@до 18.11.2026
-14.11.2026 + 3 тижні
-днів між 14.11.2026 і 25.12.2026""",
+@до 2026-11-18
+2026-11-14 + 3 тижні
+днів між 2026-11-14 і 2026-12-25""",
         "spelling": """# Ремонт кухні
 Плитка: 650 грн × 12
 Шпаклівкаа: 4 × 380 грн
-Робота 15 000 грн
-Кухонні меблі 48 000 грн − 10%
+Робота 15,000 грн
+Кухонні меблі 48,000 грн − 10%
 разом""",
     },
 }
@@ -148,13 +147,12 @@ def rates_date(table: RateTable, lang: str) -> str:
     day = datetime.fromtimestamp(table.updated, UTC)
     if lang == "uk":
         return f"{day.day} {MONTHS_UK[day.month - 1]} {day.year}"
-    return f"{day.day} {day:%B %Y}"
+    return f"{day.day} {MONTHS_EN[day.month - 1]} {day.year}"
 
 
 def sheet(text: str, lang: str, table: RateTable) -> dict[str, Any]:
-    style = STYLE[lang]
-    opts = FormatOptions(number_style=style, lang=lang)
-    config = Config(number_style=style, now=lambda: NOW)
+    opts = FormatOptions(lang=lang)
+    config = Config(now=lambda: NOW)
     result = evaluate_sheet(text, table, config, opts)
     lines: list[dict[str, Any]] = []
     for src, line in zip(text.splitlines(), result.lines, strict=True):

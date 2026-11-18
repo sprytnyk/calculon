@@ -2,33 +2,27 @@
 
 from dataclasses import dataclass, replace
 from datetime import datetime
-from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal, localcontext
 from fractions import Fraction
 
 from . import units as U
 from .currency import ZERO_DECIMALS
 from .currency import display as currency_display
+from .numbers import separators
 from .ukrainian import CITY_NAMES
 from .values import DateVal, Q, Value
 
-# thousands separator, decimal separator
-NUMBER_STYLES = {
-    "comma_dot": (",", "."),  # 1,234.56
-    "dot_comma": (".", ","),  # 1.234,56
-    "space_comma": (" ", ","),  # 1 234,56 (narrow no-break space)
-    "space_dot": (" ", "."),  # 1 234.56
-}
 # The answers column shortens big numbers: $386,800,000.00 shows as $386.8M.
 SHORT_FROM = Decimal(10) ** 6
 SHORT_SCALES = {
     "en": ((Decimal(10) ** 12, "T"), (Decimal(10) ** 9, "B"), (SHORT_FROM, "M")),
     "uk": ((Decimal(10) ** 12, " трлн"), (Decimal(10) ** 9, " млрд"), (SHORT_FROM, " млн")),
 }
-# Number format used for each UI language when the setting is "auto".
-LANGUAGE_NUMBER_STYLES = {"en": "comma_dot", "uk": "space_comma"}
-
-
 # Month names as they follow a day number: "10 листопада".
+MONTHS_EN = (
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+)  # fmt: skip
 MONTHS_UK = (
     "січня", "лютого", "березня", "квітня", "травня", "червня",
     "липня", "серпня", "вересня", "жовтня", "листопада", "грудня",
@@ -45,40 +39,33 @@ class FormatOptions:
 
 
 def format_number(x: Decimal, opts: FormatOptions, decimals: int | None = None) -> str:
-    thousands, point = NUMBER_STYLES.get(opts.number_style, NUMBER_STYLES["comma_dot"])
+    thousands, point = separators(opts.number_style)
     if not x.is_finite():
         return str(x)
-    if x != 0 and abs(x) >= Decimal("1e21"):
+    magnitude = x.copy_abs()
+    if magnitude >= Decimal("1e21"):
         return format_sci(x, opts)
+    places = opts.max_decimals if decimals is None else decimals
+    quantum = Decimal(1).scaleb(-places)
+    if decimals is None and 0 < magnitude < quantum:
+        return format_sci(x, opts)
+    rounding = ROUND_HALF_EVEN if decimals is None else ROUND_HALF_UP
+    with localcontext() as ctx:
+        if x:
+            # Allow the whole part, the requested decimal places, and a rounding carry.
+            ctx.prec = max(ctx.prec, x.adjusted() + places + 2)
+        q = x.quantize(quantum, rounding=rounding)
+    if q.is_zero():
+        q = q.copy_abs()
+    whole, _, fraction = f"{q:,f}".partition(".")
+    whole = whole.replace(",", thousands)
     if decimals is None:
-        if x != 0 and abs(x) < Decimal(10) ** -opts.max_decimals:
-            return format_sci(x, opts)
-        q = x.quantize(Decimal(1).scaleb(-opts.max_decimals), rounding=ROUND_HALF_EVEN)
-        text = f"{q:f}"
-        if "." in text:
-            text = text.rstrip("0").rstrip(".")
-    else:
-        q = x.quantize(Decimal(1).scaleb(-decimals), rounding=ROUND_HALF_UP)
-        text = f"{q:f}"
-    if text in ("-0", "-0.00", "-0.0") or (text.startswith("-") and Decimal(text) == 0):
-        text = text[1:]
-    sign = ""
-    if text.startswith("-"):
-        sign, text = "-", text[1:]
-    whole, _, frac = text.partition(".")
-    groups = []
-    while len(whole) > 3:
-        groups.insert(0, whole[-3:])
-        whole = whole[:-3]
-    groups.insert(0, whole)
-    out = thousands.join(groups)
-    if frac:
-        out += point + frac
-    return sign + out
+        fraction = fraction.rstrip("0")
+    return whole + point + fraction if fraction else whole
 
 
 def format_sci(x: Decimal, opts: FormatOptions) -> str:
-    _, point = NUMBER_STYLES.get(opts.number_style, NUMBER_STYLES["comma_dot"])
+    _, point = separators(opts.number_style)
     text = f"{x:.{min(opts.max_decimals, 10)}e}"
     mant, _, exp = text.partition("e")
     if "." in mant:
@@ -174,19 +161,22 @@ def format_date(d: DateVal, opts: FormatOptions) -> str:
     dt = d.dt
     parts = []
     if d.has_date:
-        month = MONTHS_UK[dt.month - 1] if opts.lang == "uk" else f"{dt:%B}"
+        month = (MONTHS_UK if opts.lang == "uk" else MONTHS_EN)[dt.month - 1]
         text = f"{dt.day} {month}"
         if dt.year != datetime.now().year:
             text += f" {dt.year}"
         parts.append(text)
     if d.has_time:
-        if opts.time_24h:
-            parts.append(f"{dt:%H:%M}")
-        else:
-            hour = dt.hour % 12 or 12
-            parts.append(f"{hour}:{dt:%M}{'am' if dt.hour < 12 else 'pm'}")
+        parts.append(format_time(dt, opts.time_24h))
         key = getattr(dt.tzinfo, "key", None) if dt.tzinfo is not None else None
         if key:
             city = CITY_NAMES.get(key) if opts.lang == "uk" else None
             parts[-1] += f" {city or key.rsplit('/', 1)[-1].replace('_', ' ')}"
     return ", ".join(parts)
+
+
+def format_time(dt: datetime, time_24h: bool) -> str:
+    if time_24h:
+        return f"{dt:%H:%M}"
+    hour = dt.hour % 12 or 12
+    return f"{hour}:{dt:%M}{'am' if dt.hour < 12 else 'pm'}"

@@ -42,6 +42,7 @@ class Theme:
     label: str
     tag: str
     misspelled: str  # the wavy line under a misspelled word
+    invalid_number: str  # the wavy line under invalid numeric input
     error: str  # text of error messages
     icons: dict[str, str] = field(default_factory=dict, compare=False)  # menu and sidebar
 
@@ -92,6 +93,7 @@ DARK = Theme(
     label="#cfd1d8",
     tag="#6fcf97",
     misspelled="#ff6b6b",
+    invalid_number="#f6d365",
     error="#ff6b6b",
     icons=ICONS_DARK,
 )
@@ -119,6 +121,7 @@ LIGHT = Theme(
     label="#374151",
     tag="#15803d",
     misspelled="#dc2626",
+    invalid_number="#926600",
     error="#dc2626",
     icons=ICONS_LIGHT,
 )
@@ -159,6 +162,7 @@ GLACIER_DARK = Theme(
     label="#cbd5e1",
     tag="#34d399",
     misspelled="#fb7185",
+    invalid_number="#f5d76e",
     error="#fb7185",
     icons=GLACIER_ICONS_DARK,
 )
@@ -186,6 +190,7 @@ GLACIER_LIGHT = Theme(
     label="#334155",
     tag="#047857",
     misspelled="#e11d48",
+    invalid_number="#856000",
     error="#e11d48",
     icons=GLACIER_ICONS_LIGHT,
 )
@@ -285,6 +290,7 @@ def apply(app: QApplication, theme: Theme) -> None:
         QToolButton#sidebarButton {{ border: none; padding: 4px 6px; border-radius: 4px;
                                      color: {theme.muted}; }}
         QToolButton#sidebarButton:hover {{ background: {theme.surface}; color: {theme.text}; }}
+        QWidget#startupNotice {{ background: {theme.surface}; }}
         QLabel#banner {{ background: {theme.surface}; color: {theme.muted}; padding: 6px 12px;
                          border-bottom: 1px solid {theme.border}; }}
         QWidget#findBar {{ background: {theme.sidebar}; border-top: 1px solid {theme.border}; }}

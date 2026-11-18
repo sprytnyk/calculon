@@ -1,6 +1,7 @@
 """Ukrainian sheets: 1 234,56 numbers, metric units in Cyrillic, Ukrainian results."""
 
 from dataclasses import replace
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -125,7 +126,7 @@ def test_ukrainian(line: str, expected: str) -> None:
 
 
 def test_ukrainian_timeline() -> None:
-    sheet = "@від 11.11.2026 15:00\nЛондон: 2 ночі\n@до 14.11.2026 15:00\n@до 12.11.2026"
+    sheet = "@від 2026-11-11 15:00\nЛондон: 2 ночі\n@до 2026-11-14 15:00\n@до 2026-11-12"
     res = evaluate_sheet(sheet, RATES, UK_CONFIG, UK)
     assert [(line.text, line.error) for line in res.lines] == [
         ("11 листопада, 15:00", ""),
@@ -155,3 +156,20 @@ def test_english_results_stay_english() -> None:
 def test_ukrainian_line_references() -> None:
     res = evaluate_sheet("100\nрядок1 * 2\nпопередній + 1", RATES, UK_CONFIG, UK)
     assert [line.text for line in res.lines] == ["100", "200", "201"]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("17 січ 2027", "17 січня 2027"),
+        ("18 лют 2026", "18 лютого 2026"),
+        ("18 лютого 2027", "18 лютого 2027"),
+        ("17 лютий 2027", "17 лютого 2027"),
+    ],
+)
+def test_abbreviated_ukrainian_months(text, expected) -> None:
+    config = replace(CONFIG, now=lambda: NOW.replace(year=2025))
+    result = evaluate_sheet(text, RATES, config, FormatOptions(lang="uk"))
+    if text.endswith(str(datetime.now().year)):
+        expected = expected.rsplit(" ", 1)[0]
+    assert result.lines[0].text == expected

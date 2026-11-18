@@ -58,8 +58,12 @@ from ..engine import Config, FormatOptions, RateTable, SheetResult, evaluate_she
 from ..engine import ukrainian as UK
 from ..engine import units as U
 from ..engine.currency import KNOWN_CODES
+from ..engine.diagnostics import Diagnostic
 from ..engine.interpreter import AGGREGATES, FUNCTIONS, KEYWORDS, ROUNDERS
+from ..engine.numbers import number_sample
+from ..engine.sheet import INPUT_WARNINGS
 from ..spelling import SpellChecker, misspelled, words
+from ..translations import tr
 from . import icons, vim
 from .theme import Theme
 
@@ -73,8 +77,8 @@ MAX_MATCHES = 2000  # find highlights at most this many
 KIND_ROLE = Qt.ItemDataRole.UserRole + 1
 # autocomplete: the order kinds are listed in, and the colour each gets
 KIND_ORDER = ("variable", "function", "currency", "unit", "keyword")
-# what the engine understood, so not prose to spell check
-NOT_PROSE = frozenset({"number", "unit", "variable", "keyword", "operator", "tag"})
+# Skip these spans when checking spelling.
+NOT_PROSE = INPUT_WARNINGS.keys() | {"number", "unit", "variable", "keyword", "operator", "tag"}
 NO_WORD = (-1, -1)
 # the right-click menu: the Edit menu's items in groups, by their names in main_window
 EDIT_MENU = (
@@ -83,6 +87,21 @@ EDIT_MENU = (
     ("toggle_comment", "copy_result", "insert_reference"),
 )
 READ_ONLY_MENU = frozenset({"copy", "select_all", "copy_result"})
+
+
+def sheet_text(document: QTextDocument) -> str:
+    # Qt's plain text also replaces non-breaking spaces with ordinary spaces.
+    return document.toRawText().replace("\u2029", "\n")
+
+
+def text_offsets(text: str) -> range | list[int]:
+    """Map Python character offsets to Qt's UTF-16 positions."""
+    if all(ord(ch) <= 0xFFFF for ch in text):
+        return range(len(text) + 1)
+    offsets = [0]
+    for ch in text:
+        offsets.append(offsets[-1] + (2 if ord(ch) > 0xFFFF else 1))
+    return offsets
 
 
 def fit_menu(click: QPoint, size: QSize, screen: QRect) -> QPoint:
@@ -155,6 +174,9 @@ class Highlighter(QSyntaxHighlighter):
             "tag": fmt(theme.tag),
         }
         self.misspelled_color = QColor(theme.misspelled)
+        self._warning_format = fmt(theme.number)
+        self._warning_format.setUnderlineStyle(QTextCharFormat.UnderlineStyle.WaveUnderline)
+        self._warning_format.setUnderlineColor(QColor(theme.invalid_number))
 
     def misspelled(self, n: int, text: str) -> list[tuple[int, int]]:
         """Misspelled words in block `n`, the word being typed included."""
@@ -169,21 +191,31 @@ class Highlighter(QSyntaxHighlighter):
         if n >= len(self.spans):
             return
         spans = self.spans[n]
+        offsets = text_offsets(text)
         for start, end, cls in spans:
             f = self.formats.get(cls)
             if f is not None and start < len(text):
-                self.setFormat(start, min(end, len(text)) - start, f)
+                self.setFormat(offsets[start], offsets[min(end, len(text))] - offsets[start], f)
         # Font ligatures (<=, ->, >=, ===) only form when the whole run of symbols has one
         # format, so give each run outside comments the operator colour from end to end.
         comments = [(a, b) for a, b, cls in spans if cls == "comment"]
         for m in SYMBOL_RUN.finditer(text):
-            if not any(a <= m.start() < b for a, b in comments):
-                self.setFormat(m.start(), m.end() - m.start(), self.formats["operator"])
+            if not any(a <= m.start() and m.end() <= b for a, b in comments):
+                start, end = offsets[m.start()], offsets[m.end()]
+                self.setFormat(start, end - start, self.formats["operator"])
+        for start, end, cls in spans:
+            if cls in INPUT_WARNINGS and start < len(text):
+                self.setFormat(
+                    offsets[start],
+                    offsets[min(end, len(text))] - offsets[start],
+                    self._warning_format,
+                )
         # a wavy line under misspelled words, on top of their colour; not under the word
         # still being typed
         for start, end in self.misspelled(n, text):
             if (n, start) == self.typing:
                 continue
+            start, end = offsets[start], offsets[end]
             f = self.format(start)
             f.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SpellCheckUnderline)
             f.setUnderlineColor(self.misspelled_color)
@@ -235,14 +267,21 @@ class ResultsArea(QWidget):
             width = self.editor.results_width - (x - self._drag_x)
             self.editor.set_results_width(width)
             return
-        self.setCursor(
-            Qt.CursorShape.SplitHCursor if self._near_edge(x) else Qt.CursorShape.PointingHandCursor
-        )
         n = self._block_at(int(event.position().y()))
+        if self._near_edge(x):
+            self.setCursor(Qt.CursorShape.SplitHCursor)
+        elif self.editor.result_text(n):
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+        else:
+            self.unsetCursor()
         if n != self.hover_block:
             self.hover_block = n
-            self.setToolTip(self.editor.result_text(n))
+            self.refresh_tooltip()
             self.update()
+
+    def refresh_tooltip(self) -> None:
+        n = self.hover_block
+        self.setToolTip(self.editor.result_text(n) or self.editor.result_warning(n))
 
     def leaveEvent(self, event) -> None:  # noqa: N802
         self.hover_block = -1
@@ -330,23 +369,23 @@ class ResultsArea(QWidget):
         current = ed.textCursor().blockNumber()
         focused = self.hasFocus()  # after vim mode's Ctrl+W l: mark the cursor's line
         pad = 12
+        height = fm.height()
         while block.isValid():
             geo = ed.blockBoundingGeometry(block).translated(offset)
             if geo.top() > event.rect().bottom():
                 break
             n = block.blockNumber()
+            top = int(geo.top())
             if focused and n == current and block.isVisible():
-                painter.fillRect(
-                    QRect(1, int(geo.top()), self.width(), fm.height()), QColor(theme.selection)
-                )
+                painter.fillRect(QRect(1, top, self.width(), height), QColor(theme.selection))
             if n < len(result.lines) and block.isVisible():
                 line = result.lines[n]
                 if line.text:
-                    top = int(geo.top())
-                    h = fm.height()
-                    rect = QRect(pad, top, self.width() - 2 * pad, h)
+                    rect = QRect(pad, top, self.width() - 2 * pad, height)
                     if n == self.flash_block:
-                        painter.fillRect(QRect(1, top, self.width(), h), QColor(theme.selection))
+                        painter.fillRect(
+                            QRect(1, top, self.width(), height), QColor(theme.selection)
+                        )
                     color = theme.result_hover if n in (self.hover_block, current) else theme.result
                     if n == self.flash_block:
                         color = theme.accent
@@ -362,6 +401,17 @@ class ResultsArea(QWidget):
                         painter.fillRect(
                             QRect(pad, top, self.width() - 2 * pad, 1), QColor(theme.border)
                         )
+                elif line.diagnostic is not None:
+                    size = max(12, height - 5)
+                    marker = QRect(
+                        self.width() - pad - size, top + (height - size) // 2, size, size
+                    )
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    painter.setPen(QColor(theme.invalid_number))
+                    painter.setFont(bold)
+                    painter.drawEllipse(marker)
+                    painter.drawText(marker, Qt.AlignmentFlag.AlignCenter, "!")
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
             block = block.next()
 
 
@@ -804,7 +854,7 @@ class SheetEdit(QPlainTextEdit):
         self._timer.start()
 
     def recalculate(self) -> None:
-        text = self.toPlainText()
+        text = sheet_text(self.document())
         if text == self._last_text:
             return
         self._last_text = text
@@ -823,6 +873,7 @@ class SheetEdit(QPlainTextEdit):
         finally:
             self.blockSignals(False)
         self._variables = self.result.variables
+        self.results.refresh_tooltip()
         self.results.update()
         self.evaluated.emit(self.result)
 
@@ -831,11 +882,23 @@ class SheetEdit(QPlainTextEdit):
             return ""
         return self.result.lines[block_number].text
 
+    def result_warning(self, block_number: int) -> str:
+        if self.result is None or not 0 <= block_number < len(self.result.lines):
+            return ""
+        diagnostic = self.result.lines[block_number].diagnostic
+        return self._diagnostic_text(diagnostic) if diagnostic is not None else ""
+
+    def _diagnostic_text(self, diagnostic: Diagnostic) -> str:
+        template = tr(self.opts.lang, diagnostic.template)
+        if diagnostic == INPUT_WARNINGS["invalid_number"]:
+            return diagnostic.render(template, sample=number_sample(self.opts.number_style))
+        return diagnostic.render(template)
+
     def current_result(self) -> str:
         return self.result_text(self.textCursor().blockNumber())
 
     def text_with_results(self) -> str:
-        lines = self.toPlainText().split("\n")
+        lines = sheet_text(self.document()).split("\n")
         width = max((len(line) for line in lines), default=0)
         out = []
         for n, line in enumerate(lines):
@@ -1034,7 +1097,7 @@ class SheetEdit(QPlainTextEdit):
         return True
 
     def hint_at(self, pos: QPoint) -> str:
-        """The value of the variable under `pos` (viewport coordinates), or ""."""
+        """Return the warning or variable value under a viewport position."""
         if self.result is None:
             return ""
         cur = self.cursorForPosition(pos)
@@ -1043,7 +1106,17 @@ class SheetEdit(QPlainTextEdit):
         if n >= len(self.result.lines):
             return ""
         at = cur.positionInBlock()
-        for start, end, text in self.result.lines[n].hints:
+        line = self.result.lines[n]
+        hints = [
+            (start, end, self._diagnostic_text(INPUT_WARNINGS[kind]))
+            for start, end, kind in line.spans
+            if kind in INPUT_WARNINGS
+        ]
+        offsets = text_offsets(block.text())
+        for start, end, text in hints + line.hints:
+            if end >= len(offsets):
+                continue  # recalculation may still be scheduled after an edit
+            start, end = offsets[start], offsets[end]
             if not start <= at <= end:
                 continue
             first = QTextCursor(block)

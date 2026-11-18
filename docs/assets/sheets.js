@@ -691,7 +691,7 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "@from 14.11.2026",
+      "text": "@from 2026-11-14",
       "spans": [
        [
         0,
@@ -768,7 +768,7 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "@to 18.11.2026",
+      "text": "@to 2026-11-18",
       "spans": [
        [
         0,
@@ -786,7 +786,7 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "14.11.2026 + 3 weeks",
+      "text": "2026-11-14 + 3 weeks",
       "spans": [
        [
         0,
@@ -814,7 +814,7 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "days between 14.11.2026 and 25.12.2026",
+      "text": "days between 2026-11-14 and 2026-12-25",
       "spans": [
        [
         0,
@@ -1166,12 +1166,12 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "1 700,00 ₴",
+      "answer": "1,700.00 ₴",
       "total": false,
-      "status": "Разом: 1 700,00 ₴"
+      "status": "Разом: 1,700.00 ₴"
      },
      {
-      "text": "Готель: 2 × 1 900 грн",
+      "text": "Готель: 2 × 1,900 грн",
       "spans": [
        [
         0,
@@ -1199,9 +1199,9 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "3 800,00 ₴",
+      "answer": "3,800.00 ₴",
       "total": false,
-      "status": "Разом: 5 500,00 ₴"
+      "status": "Разом: 5,500.00 ₴"
      },
      {
       "text": "Кава з тістечком: 4 × 180 грн",
@@ -1232,9 +1232,9 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "720,00 ₴",
+      "answer": "720.00 ₴",
       "total": false,
-      "status": "Разом: 6 220,00 ₴"
+      "status": "Разом: 6,220.00 ₴"
      },
      {
       "text": "Музей 2 × 250 грн",
@@ -1260,9 +1260,9 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "500,00 ₴",
+      "answer": "500.00 ₴",
       "total": false,
-      "status": "Разом: 6 720,00 ₴"
+      "status": "Разом: 6,720.00 ₴"
      },
      {
       "text": "разом у EUR",
@@ -1283,12 +1283,12 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "131,99 €",
+      "answer": "131.99 €",
       "total": true,
-      "status": "Разом: 131,99 €"
+      "status": "Разом: 131.99 €"
      }
     ],
-    "total": "Разом: 131,99 €"
+    "total": "Разом: 131.99 €"
    },
    "basics": {
     "name": "Переїзд",
@@ -1307,7 +1307,7 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "оренда = 1 450 $",
+      "text": "оренда = 1,450 $",
       "spans": [
        [
         0,
@@ -1325,9 +1325,9 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "1 450,00 $",
+      "answer": "1,450.00 $",
       "total": false,
-      "status": "Разом: 1 450,00 $"
+      "status": "Разом: 1,450.00 $"
      },
      {
       "text": "застава = оренда × 2",
@@ -1353,9 +1353,9 @@ window.CALCULON = {
         "number"
        ]
       ],
-      "answer": "2 900,00 $",
+      "answer": "2,900.00 $",
       "total": false,
-      "status": "Разом: 4 350,00 $"
+      "status": "Разом: 4,350.00 $"
      },
      {
       "text": "Вантажники: 380 $ за машину + 45 $ на чай",
@@ -1391,12 +1391,12 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "425,00 $",
+      "answer": "425.00 $",
       "total": false,
-      "status": "Разом: 4 775,00 $"
+      "status": "Разом: 4,775.00 $"
      },
      {
-      "text": "Диван 1 200 $ − 15%",
+      "text": "Диван 1,200 $ − 15%",
       "spans": [
        [
         6,
@@ -1424,9 +1424,9 @@ window.CALCULON = {
         "operator"
        ]
       ],
-      "answer": "1 020,00 $",
+      "answer": "1,020.00 $",
       "total": false,
-      "status": "Разом: 5 795,00 $"
+      "status": "Разом: 5,795.00 $"
      },
      {
       "text": "разом",
@@ -1437,12 +1437,12 @@ window.CALCULON = {
         "keyword"
        ]
       ],
-      "answer": "5 795,00 $",
+      "answer": "5,795.00 $",
       "total": true,
-      "status": "Разом: 5 795,00 $"
+      "status": "Разом: 5,795.00 $"
      }
     ],
-    "total": "Разом: 5 795,00 $"
+    "total": "Разом: 5,795.00 $"
    },
    "money": {
     "name": "Покупки в Лондоні",
@@ -1489,12 +1489,12 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "119,51 $",
+      "answer": "119.51 $",
       "total": false,
-      "status": "Разом: 119,51 $"
+      "status": "Разом: 119.51 $"
      },
      {
-      "text": "Кава 4,50 £ × 6 у EUR",
+      "text": "Кава 4.50 £ × 6 у EUR",
       "spans": [
        [
         5,
@@ -1527,9 +1527,9 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "32,36 €",
+      "answer": "32.36 €",
       "total": false,
-      "status": "Разом: 139,02 €"
+      "status": "Разом: 139.02 €"
      },
      {
       "text": "20% знижки від 80 $",
@@ -1560,9 +1560,9 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "64,00 $",
+      "answer": "64.00 $",
       "total": false,
-      "status": "Разом: 219,77 $"
+      "status": "Разом: 219.77 $"
      },
      {
       "text": "Пробіжка: 10 км у милях",
@@ -1593,9 +1593,9 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "6,214 милі",
+      "answer": "6.214 милі",
       "total": false,
-      "status": "Разом: 219,77 $"
+      "status": "Разом: 219.77 $"
      },
      {
       "text": "Духовка 180 °C у °F",
@@ -1623,10 +1623,10 @@ window.CALCULON = {
       ],
       "answer": "356 °F",
       "total": false,
-      "status": "Разом: 219,77 $"
+      "status": "Разом: 219.77 $"
      },
      {
-      "text": "1,5 ТБ при 25 МБ/с у годинах",
+      "text": "1.5 ТБ при 25 МБ/с у годинах",
       "spans": [
        [
         0,
@@ -1674,12 +1674,12 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "16,667 години",
+      "answer": "16.667 години",
       "total": false,
-      "status": "Разом: 219,77 $"
+      "status": "Разом: 219.77 $"
      }
     ],
-    "total": "Разом: 219,77 $"
+    "total": "Разом: 219.77 $"
    },
    "dates": {
     "name": "Поїздка до Португалії",
@@ -1698,7 +1698,7 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "@від 14.11.2026",
+      "text": "@від 2026-11-14",
       "spans": [
        [
         0,
@@ -1775,7 +1775,7 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "@до 18.11.2026",
+      "text": "@до 2026-11-18",
       "spans": [
        [
         0,
@@ -1793,7 +1793,7 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "14.11.2026 + 3 тижні",
+      "text": "2026-11-14 + 3 тижні",
       "spans": [
        [
         0,
@@ -1821,7 +1821,7 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "днів між 14.11.2026 і 25.12.2026",
+      "text": "днів між 2026-11-14 і 2026-12-25",
       "spans": [
        [
         0,
@@ -1901,9 +1901,9 @@ window.CALCULON = {
         "number"
        ]
       ],
-      "answer": "7 800,00 ₴",
+      "answer": "7,800.00 ₴",
       "total": false,
-      "status": "Разом: 7 800,00 ₴"
+      "status": "Разом: 7,800.00 ₴"
      },
      {
       "text": "Шпаклівкаа: 4 × 380 грн",
@@ -1934,12 +1934,12 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "1 520,00 ₴",
+      "answer": "1,520.00 ₴",
       "total": false,
-      "status": "Разом: 9 320,00 ₴"
+      "status": "Разом: 9,320.00 ₴"
      },
      {
-      "text": "Робота 15 000 грн",
+      "text": "Робота 15,000 грн",
       "spans": [
        [
         7,
@@ -1952,12 +1952,12 @@ window.CALCULON = {
         "unit"
        ]
       ],
-      "answer": "15 000,00 ₴",
+      "answer": "15,000.00 ₴",
       "total": false,
-      "status": "Разом: 24 320,00 ₴"
+      "status": "Разом: 24,320.00 ₴"
      },
      {
-      "text": "Кухонні меблі 48 000 грн − 10%",
+      "text": "Кухонні меблі 48,000 грн − 10%",
       "spans": [
        [
         14,
@@ -1985,9 +1985,9 @@ window.CALCULON = {
         "operator"
        ]
       ],
-      "answer": "43 200,00 ₴",
+      "answer": "43,200.00 ₴",
       "total": false,
-      "status": "Разом: 67 520,00 ₴"
+      "status": "Разом: 67,520.00 ₴"
      },
      {
       "text": "разом",
@@ -1998,12 +1998,12 @@ window.CALCULON = {
         "keyword"
        ]
       ],
-      "answer": "67 520,00 ₴",
+      "answer": "67,520.00 ₴",
       "total": true,
-      "status": "Разом: 67 520,00 ₴"
+      "status": "Разом: 67,520.00 ₴"
      }
     ],
-    "total": "Разом: 67 520,00 ₴",
+    "total": "Разом: 67,520.00 ₴",
     "misspelled": {
      "line": 2,
      "start": 0,

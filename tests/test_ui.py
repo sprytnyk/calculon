@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import time
+from dataclasses import replace
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
@@ -32,7 +33,14 @@ from PySide6.QtGui import (
 )
 from PySide6.QtNetwork import QNetworkReply
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMenu, QMessageBox, QStyle, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialogButtonBox,
+    QMenu,
+    QMessageBox,
+    QStyle,
+    QWidget,
+)
 
 from calculon import rates, settings, spelling
 from calculon.settings import Settings
@@ -42,7 +50,7 @@ from calculon.translations import tr
 from calculon.ui import directory_dialog, icons, main_window, settings_dialog
 from calculon.ui import theme as themes
 from calculon.ui.about_dialog import AboutDialog
-from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu
+from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu, sheet_text
 from calculon.ui.main_window import MainWindow
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog, key_text
@@ -249,6 +257,20 @@ def test_typing_saves_and_calculates(window, app) -> None:
     assert window.store.read(window.current[1]) == "a = 5\na * 2"
 
 
+def test_high_precision_total_updates(window, app) -> None:
+    window.settings.max_decimals = 20
+    window.apply_settings()
+    window.new_sheet("")
+    window.editor.setPlainText("99000000")
+    pump(app)
+    assert window.total_label.text() == "Total: 99,000,000"
+
+    window.editor.setPlainText("99000000\n99000000")
+    pump(app)
+    assert window.editor.result_text(1) == "99,000,000"
+    assert window.total_label.text() == "Total: 198,000,000"
+
+
 @pytest.mark.parametrize(("size", "step"), [(8, -1), (40, 1)])
 def test_zoom_does_not_reapply_at_limit(window, monkeypatch, size, step) -> None:
     window.settings.font_size = size
@@ -283,16 +305,64 @@ def test_new_sheet_prompts_for_name(window, monkeypatch) -> None:
     assert window.store.all_sheets().count("Budget.txt") == 1
 
 
-def test_switch_number_style_with_money_in_sheet(window, app) -> None:
-    window.editor.setPlainText("$75.000,00\n10.1111\n1.43 CAD in USD")
-    window.settings.number_style = "dot_comma"
+def test_switch_number_style_recalculates_without_touching_the_sheet(window, monkeypatch) -> None:
+    window.new_sheet("")
+    ed = window.editor
+    text = "$75.000,00\n$75,000.00\n10.1111\n1000\u00a0500"
+    ed.setPlainText(text)
+    ed.recalculate()
+    assert [line.text for line in ed.result.lines] == ["", "$75,000.00", "10.111", ""]
+    assert window.save_current()
+    document = ed.document()
+
+    def accept(dialog):
+        dialog.number_style.setCurrentIndex(dialog.number_style.findData("dot_comma"))
+        return SettingsDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(SettingsDialog, "exec", accept)
+    window.open_settings()
+    assert [line.text for line in ed.result.lines] == ["$75.000,00", "", "", ""]
+    assert ed.document() is document
+    assert sheet_text(document) == window.store.read(window.current[1]) == text
+    assert Settings.load().number_style == "dot_comma"
+
+
+@pytest.mark.parametrize(
+    ("style", "group", "point"),
+    [
+        ("comma_dot", ",", "."),
+        ("dot_comma", ".", ","),
+        ("space_comma", " ", ","),
+        ("space_dot", " ", "."),
+    ],
+)
+def test_pasting_and_typing_numbers_preserves_sheet_text(window, app, style, group, point):
+    window.settings.number_style = style
     window.apply_settings()
+    window.new_sheet("")
+    ed = window.editor
+    typed = f"1{group}2"
+    QTest.keyClicks(ed, typed)
     pump(app)
-    assert window.editor.result_text(0) == "$75.000,00"
-    assert window.editor.result_text(1) == "10,111"
+    assert ed.result.lines[0].kind == "unfinished"
+    assert ed.result_text(0) == ""
+    assert not ed.document().firstBlock().layout().formats()
+    QTest.keyClicks(ed, "34")
+    pump(app)
+    assert ed.result.lines[0].value.mag == 1234
+    QTest.keyClick(ed, Qt.Key.Key_Return)
+    pasted_group = "\u00a0" if group == " " else group
+    pasted = f"3{pasted_group}456{point}5\n2{group}9999"
+    QGuiApplication.clipboard().setText(pasted)
+    ed.paste()
+    pump(app)
+    assert sheet_text(ed.document()) == f"{typed}34\n{pasted}"
+    assert ed.result.lines[1].value.mag == 3456.5
+    assert ed.result.lines[2].spans == [(0, len(pasted.splitlines()[1]), "invalid_number")]
+    assert ed.result.total.mag == 4690.5
 
 
-def test_folders_pins_trash_restore(window, app) -> None:
+def test_directories_pins_trash_restore(window, app) -> None:
     store = window.store
     directory = store.create_directory("", "Work")
     rel = store.create_sheet(directory, "Budget", "$5")
@@ -529,6 +599,43 @@ def test_help_is_read_only_and_translated(window, app) -> None:
     window.set_language("en")
 
 
+def test_settings_language_change_reloads_open_help(window, monkeypatch) -> None:
+    window.open_help()
+
+    def accept(dialog):
+        dialog.language.setCurrentIndex(dialog.language.findData("uk"))
+        return SettingsDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(SettingsDialog, "exec", accept)
+    window.open_settings()
+    assert window.editor.toPlainText().startswith("# Ласкаво просимо")
+    assert window.editor.isReadOnly()
+
+
+def test_settings_number_format_reloads_open_help(window, monkeypatch) -> None:
+    now = window.editor.config.now()
+    engine_config = Settings.engine_config
+    monkeypatch.setattr(
+        Settings, "engine_config", lambda s: replace(engine_config(s), now=lambda: now)
+    )
+    window.apply_settings()
+    window.open_help()
+    ed = window.editor
+    assert "round(3.14159; 2)" in ed.toPlainText()
+    values = [line.value for line in ed.result.lines]
+
+    def accept(dialog):
+        dialog.number_style.setCurrentIndex(dialog.number_style.findData("space_comma"))
+        return SettingsDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(SettingsDialog, "exec", accept)
+    window.open_settings()
+    assert "round(3,14159; 2)" in ed.toPlainText()
+    assert "1\u202f234,56" in sheet_text(ed.document())
+    assert ed.isReadOnly()
+    assert [line.value for line in ed.result.lines] == values
+
+
 def test_theme_switch(window, app) -> None:
     window.set_theme("light")
     assert QApplication.palette().base().color().name() == "#f8fafc"
@@ -566,21 +673,22 @@ def test_each_theme_uses_its_accent(
     assert palette.highlight().color().name() == selection
     sheet = app.styleSheet()
     assert f"QLineEdit#search:focus {{ border-color: {accent}; }}" in sheet
+    assert f"QPushButton:focus {{ border-color: {accent}; }}" in sheet
     assert f"QPushButton#primary {{ background: {accent}; border-color: {accent};" in sheet
     assert f"color: {on_accent}; font-weight: 600;" in sheet
 
 
-def test_ukrainian_numbers_follow_language(window, app) -> None:
+def test_default_formats_are_independent_of_ui_language(window, app) -> None:
     window.new_sheet("")
-    window.editor.setPlainText("1 234,5 + 10\n5 кг у г")
+    window.editor.setPlainText("1,234.5 + 10\n5 кг у г\n15:45")
     window.set_language("uk")
     pump(app)
-    assert window.editor.result_text(0) == "1 244,5"
-    assert window.editor.result_text(1) == "5 000 г"
-    window.set_language("en")
-    window.editor.setPlainText("1,234.5 + 10")
-    pump(app)
     assert window.editor.result_text(0) == "1,244.5"
+    assert window.editor.result_text(1) == "5,000 г"
+    assert window.editor.result_text(2) == "15:45"
+    window.set_language("en")
+    assert window.editor.result_text(0) == "1,244.5"
+    assert window.editor.result_text(2) == "15:45"
 
 
 def test_line_numbers_toggle(window, app) -> None:
@@ -769,7 +877,7 @@ def test_settings_dialog_round_trip(window) -> None:
 
 
 @pytest.mark.parametrize("same_name", [False, True])
-def test_settings_switch_to_folder_with_directory_link(
+def test_settings_switch_to_directory_with_directory_link(
     window, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, same_name: bool
 ) -> None:
     old_store = window.store
@@ -962,7 +1070,7 @@ def test_unknown_settings_fall_back_to_defaults(app) -> None:
         "theme": "zzz",
         "colours": "zzz",
         "number_style": "bogus",
-        "date_order": "YDM",
+        "time_format": "bogus",
         "dollar": "XYZ",
         "font_size": "abc",
         "max_decimals": "999",
@@ -971,15 +1079,78 @@ def test_unknown_settings_fall_back_to_defaults(app) -> None:
     qs.sync()
     s = Settings.load()
     qs.clear()
-    assert (s.language, s.theme, s.number_style, s.date_order, s.dollar) == (
+    assert (s.language, s.theme, s.number_style, s.time_format, s.dollar) == (
         "en",
         "dark",
-        "auto",
-        "DMY",
+        "comma_dot",
+        "24h",
         "USD",
     )
     assert (s.font_size, s.max_decimals) == (14, 20)
     assert s.colours == "glacier"
+
+
+@pytest.mark.parametrize(
+    ("saved", "expected"),
+    [
+        ((None, None), ("comma_dot", "24h")),
+        (("auto", "auto"), ("comma_dot", "24h")),
+        (("dot_comma", "12h"), ("dot_comma", "12h")),
+        (("space_comma", "auto"), ("space_comma", "24h")),
+        (("auto", "12h"), ("comma_dot", "12h")),
+    ],
+)
+def test_format_preferences_on_startup(window, reopen, saved, expected) -> None:
+    qs = QSettings()
+    for key, value in zip(("number_style", "time_format"), saved, strict=True):
+        if value is None:
+            qs.remove(key)
+        else:
+            qs.setValue(key, value)
+
+    restored = reopen()
+    assert (restored.settings.number_style, restored.settings.time_format) == expected
+    assert restored.startup_notice.isHidden()
+    dialog = SettingsDialog(restored.settings, restored.t, restored)
+    assert dialog.number_style.count() == 4
+    assert dialog.time_format.count() == 2
+    assert (dialog.number_style.currentData(), dialog.time_format.currentData()) == expected
+
+
+def test_legacy_date_order_uses_24_hour_default(window, reopen, monkeypatch) -> None:
+    QSettings().setValue("date_order", "MDY")
+    restored = reopen()
+    restored.open_sheet(restored.store.create_sheet("", "Time", "15:45"))
+    assert restored.settings.time_format == "24h"
+    assert restored.editor.result_text(0) == "15:45"
+
+    def accept(dialog):
+        dialog.time_format.setCurrentIndex(dialog.time_format.findData("12h"))
+        return SettingsDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(SettingsDialog, "exec", accept)
+    restored.open_settings()
+    assert restored.editor.result_text(0) == "3:45pm"
+    assert Settings.load().time_format == "12h"
+    assert reopen().editor.result_text(0) == "3:45pm"
+
+
+def test_startup_number_and_date_notice_is_shown_once(window, reopen, app) -> None:
+    QSettings().remove("number_date_notice_seen")
+    restored = reopen()
+    pump(app)
+    assert restored.startup_notice.isVisible()
+    notice = restored.notice_text.text()
+    assert "2026-11-18" in notice
+    assert "Rewrite numeric dates in other formats" in notice
+    assert notice == restored.t("number_date_notice")
+    restored.open_sheet(restored.store.create_sheet("", "Numbers", "1,234.56"))
+    assert restored.editor.result_text(0) == "1,234.56"
+    QTest.mouseClick(restored.dismiss_notice, Qt.MouseButton.LeftButton)
+    assert restored.startup_notice.isHidden()
+    assert Settings.load().number_date_notice_seen
+
+    assert reopen().startup_notice.isHidden()
 
 
 @pytest.mark.parametrize(
@@ -1307,6 +1478,76 @@ def test_spelling_underlines_prose_only(window, app, tmp_path: Path) -> None:
     assert underlined(ed, 2) == ["teh"]  # heading
     ed.set_spell_checker(None)
     assert all(underlined(ed, n) == [] for n in range(4))
+
+
+@pytest.mark.parametrize("palette", ["glacier", "ember"])
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_invalid_number_has_a_yellow_wave_and_format_hint(window, app, tmp_path, palette, mode):
+    window.set_colours(palette)
+    window.set_theme(mode)
+    text = "🧾 teh $1..23"
+    spell_window(window, app, text, tmp_path)
+    ed = window.editor
+    ranges = {
+        r.format.underlineStyle(): (r.start, r.length, r.format.underlineColor().name())
+        for r in ed.document().firstBlock().layout().formats()
+        if r.format.underlineStyle() != QTextCharFormat.UnderlineStyle.NoUnderline
+    }
+    assert ranges == {
+        QTextCharFormat.UnderlineStyle.SpellCheckUnderline: (3, 3, window.theme.misspelled),
+        QTextCharFormat.UnderlineStyle.WaveUnderline: (8, 5, window.theme.invalid_number),
+    }
+    assert ed.result_text(0) == ""
+    assert "1,234.56" in ed.hint_at(line_pos(ed, 0, 10))
+    assert ed.hint_at(line_pos(ed, 0, 4)) == ""
+
+
+def test_unsupported_date_has_a_yellow_wave_and_iso_hint(window, app):
+    ed = window.editor
+    ed.setPlainText("18/11/2026")
+    ed.recalculate()
+    pump(app)
+    formats = ed.document().firstBlock().layout().formats()
+    assert any(
+        r.format.underlineStyle() == QTextCharFormat.UnderlineStyle.WaveUnderline
+        and r.format.underlineColor().name() == window.theme.invalid_number
+        for r in formats
+    )
+    assert "2026-11-18" in ed.hint_at(line_pos(ed, 0, 3))
+
+
+def test_invalid_iso_date_shows_the_reason(window, app):
+    ed = window.editor
+    ed.setPlainText("salary = 2026-19-11")
+    ed.recalculate()
+    pump(app)
+    formats = ed.document().firstBlock().layout().formats()
+    assert any(
+        r.format.underlineStyle() == QTextCharFormat.UnderlineStyle.WaveUnderline
+        and r.format.underlineColor().name() == window.theme.invalid_number
+        for r in formats
+    )
+    assert "date" in ed.hint_at(line_pos(ed, 0, 12)).lower()
+
+
+def test_result_warnings_show_on_hover_and_stay_out_of_copied_answers(window, app) -> None:
+    window.set_language("uk")
+    ed = window.editor
+    ed.setPlainText("10 / 0\n// 10 / 0\ngo to the shop\n1e+\n1 +\nline99\n24:60")
+    ed.recalculate()
+    pump(app)
+
+    def hover(row):
+        y = line_pos(ed, row, 0).y()
+        QTest.mouseMove(ed.results, QPoint(ed.results.width() - 12, y))
+        return ed.results.toolTip()
+
+    assert hover(0) == "Ділення на нуль."
+    assert hover(5) == "Такого рядка не існує."
+    assert hover(6) == ed.hint_at(line_pos(ed, 6, 2)) == "Такого часу не існує."
+    assert all(hover(row) == "" for row in range(1, 5))
+    assert ed.result_text(0) == ""
+    assert ed.text_with_results() == ed.toPlainText()
 
 
 def test_spelling_waits_until_the_word_is_typed(window, app, tmp_path: Path) -> None:

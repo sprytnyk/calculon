@@ -118,7 +118,7 @@ T = {
     "no_results": "No sheets found",
     # editor
     "read_only_help": (
-        "The help sheet is read-only. To try things out, make a sheet with File → New Sheet."
+        "The help sheet is read-only. To try an example, choose New Sheet in the File menu."
     ),
     "read_only_trash": "This sheet is in the trash. Restore it to edit.",
     "copied": "Copied {text}",
@@ -151,8 +151,8 @@ T = {
         "Calculon saves each sheet as a .txt file here. You can sync or back up this directory."
     ),
     "hint_dollar": "Which currency a bare $ stands for.",
-    "hint_decimals": "Results show up to this many; money uses its own setting.",
-    "hint_rates_url": "Leave empty to use open.er-api.com, with Frankfurter as the fallback.",
+    "hint_decimals": "Set the maximum decimal places for answers. Set money separately below.",
+    "hint_rates_url": "Leave blank to try open.er-api.com first, then Frankfurter.",
     "tab_general": "General",
     "tab_numbers": "Numbers",
     "tab_rates": "Exchange Rates",
@@ -192,10 +192,37 @@ T = {
         "Time & language > Language & region."
     ),
     "number_style": "Number format:",
-    "number_style_auto": "Same as the language",
-    "date_order": "Dates like 01/02/2026:",
-    "dmy": "Day first (1 February)",
-    "mdy": "Month first (January 2)",
+    "hint_number_style": "Use this format for numbers you type and for answers.",
+    "invalid number": "Use {sample}. Group digits in threes or leave them ungrouped.",
+    "use YYYY-MM-DD for numeric dates": (
+        "Write numeric dates as YYYY-MM-DD, for example 2026-11-18."
+    ),
+    "no such time": "Enter a time like 15:30 or 3:30pm.",
+    "Use ‘to’ between the dates to calculate a date range.": (
+        "Put 'to' between the dates to find the time between them."
+    ),
+    "{0} has no value": 'Variable "{0}" has no value.',
+    "{0} is not defined": 'Define "{0}" before using it.',
+    "expected {0}": "Enter {0} here.",
+    "per what": "Enter a unit after 'per'.",
+    "a what": "Enter a unit for the rate.",
+    "after what": "Enter a start date.",
+    "from what": "Enter a start date.",
+    "through what": "Enter an end date.",
+    "cast to what": "Enter the new unit.",
+    "convert to what": "Enter a unit or currency to convert to.",
+    "plain number expected": "Enter a number without units.",
+    "places must be between -20 and 20": "Enter a number of decimal places from -20 to 20.",
+    "number_date_notice": (
+        "Calculon uses the number format in Settings. Use semicolons between list items and "
+        "function arguments. Write dates as 2026-11-18 or 18 November 2026. "
+        "Rewrite numeric dates in other formats. Add spaces around / for division, as in "
+        "18 / 11 / 2026. Edit existing sheets by hand if they use the old formats."
+    ),
+    "dismiss_notice": "Dismiss",
+    "time_format": "Time display:",
+    "time_12h": "12-hour (3:45pm)",
+    "time_24h": "24-hour (15:45)",
     "dollar": "$ means:",
     "max_decimals": "Decimal places (up to):",
     "money_decimals": "Decimal places for money:",

@@ -8,18 +8,21 @@ treated as plain text and skipped, which lets lines mix prose and maths:
 import math
 import re
 import zoneinfo
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from functools import cache
+from itertools import groupby, pairwise
 from statistics import median, stdev
 
 from . import ukrainian as UK
 from . import units as U
 from .currency import KNOWN_CODES, RateTable
 from .currency import NAMES as CURRENCY_NAMES
+from .diagnostics import DiagnosticError
 from .lexer import GENERAL_SCALES, SCALES, Tok, tokenize
+from .months import MONTHS
 from .values import (
     ONE,
     ZERO,
@@ -112,46 +115,6 @@ TRIG = {"sin", "cos", "tan"}
 CONSTANTS = {"pi": Decimal("3.14159265358979323846264338327950288"), "π": None, "e": None}
 CONSTANTS["π"] = CONSTANTS["pi"]
 CONSTANTS["e"] = Decimal("2.71828182845904523536028747135266250")
-MONTHS = {
-    m: i + 1
-    for i, names in enumerate(
-        [
-            ("january", "jan"),
-            ("february", "feb"),
-            ("march", "mar"),
-            ("april", "apr"),
-            ("may",),
-            ("june", "jun"),
-            ("july", "jul"),
-            ("august", "aug"),
-            ("september", "sep", "sept"),
-            ("october", "oct"),
-            ("november", "nov"),
-            ("december", "dec"),
-        ]
-    )
-    for m in names
-}
-MONTHS |= {
-    m: i + 1
-    for i, names in enumerate(
-        [
-            ("січень", "січня"),
-            ("лютий", "лютого"),
-            ("березень", "березня"),
-            ("квітень", "квітня"),
-            ("травень", "травня"),
-            ("червень", "червня"),
-            ("липень", "липня"),
-            ("серпень", "серпня"),
-            ("вересень", "вересня"),
-            ("жовтень", "жовтня"),
-            ("листопад", "листопада"),
-            ("грудень", "грудня"),
-        ]
-    )
-    for m in names
-}
 WEEKDAYS = {
     d: i
     for i, names in enumerate(
@@ -193,7 +156,8 @@ AGGREGATES = {
     "count": "count",
     "stdev": "stdev",
 }
-LIST_SEPARATORS = {",", "and", ";"}
+LIST_SEPARATORS = {"and", ";"}
+DATE_RANGE_SEPARATORS = {"to", "until", "till", "through", "-", "−", "–"}
 
 TZ_ALIASES = {
     "utc": "UTC", "gmt": "Etc/GMT", "kyiv": "Europe/Kyiv", "kiev": "Europe/Kyiv",
@@ -233,7 +197,6 @@ def tz_table() -> dict[str, str]:
 @dataclass
 class Config:
     number_style: str = "comma_dot"
-    date_order: str = "DMY"  # how 01/02/2026 is read
     dollar: str = "USD"
     now: Callable[[], datetime] = datetime.now
 
@@ -264,6 +227,7 @@ class Context:
     rates: RateTable
     config: Config = field(default_factory=Config)
     variables: dict[str, Value] = field(default_factory=dict)
+    invalid_variables: set[str] = field(default_factory=set)
     var_names: dict[str, str] = field(default_factory=dict)  # key -> name as typed
     var_lines: dict[str, int] = field(default_factory=dict)  # key -> the line that set it
     line_values: list[Value | None] = field(default_factory=list)
@@ -278,8 +242,15 @@ class Context:
     def set_var(self, name: str, value: Value) -> None:
         key = var_key(name)
         self.variables[key] = value
+        self.invalid_variables.discard(key)
         self.var_names[key] = name.strip()
         self.var_lines[key] = len(self.line_values)  # the line being worked out
+
+    def invalidate_var(self, name: str) -> None:
+        key = var_key(name)
+        self.variables.pop(key, None)
+        self.var_lines.pop(key, None)
+        self.invalid_variables.add(key)
 
 
 def var_key(name: str) -> str:
@@ -287,13 +258,13 @@ def var_key(name: str) -> str:
     return " ".join(name.lower().split())
 
 
-class ParseError(Exception):
+class ParseError(DiagnosticError):
     pass
 
 
 def classify(toks: list[Tok], ctx: Context) -> list[Item]:
     items: list[Item] = []
-    var_keys = [tuple(k.split()) for k in ctx.variables]
+    var_keys = [tuple(k.split()) for k in ctx.variables.keys() | ctx.invalid_variables]
     max_var = max((len(k) for k in var_keys), default=1)
     tz = tz_table()
     i = 0
@@ -346,6 +317,7 @@ def classify(toks: list[Tok], ctx: Context) -> list[Item]:
         i += 1
     items = UK.apply(items)
     _mark_custom_units(items, ctx)
+    _mark_unknown_operands(items)
     _mark_comment_parens(items)
     return items
 
@@ -448,7 +420,8 @@ def _mark_comment_parens(items: list[Item]) -> None:
         elif it.kind == "op" and it.key == ")" and stack:
             start = stack.pop()
             inner = items[start + 1 : idx]
-            if any(x.kind == "noise" for x in inner):
+            kinds = {x.kind for x in inner}
+            if "noise" in kinds and "unknown" not in kinds:
                 for x in items[start : idx + 1]:
                     x.kind = "noise"
 
@@ -457,6 +430,60 @@ ADD_OPS = {"+": 1, "plus": 1, "-": -1, "−": -1, "–": -1, "minus": -1}
 MUL_OPS = {"*", "×", "·", "times", "x"}
 DIV_OPS = {"/", "÷"}
 CONVERT_WORDS = {"in", "to", "into", "as"}
+SYMBOL_OPERATORS = (ADD_OPS.keys() | MUL_OPS | DIV_OPS | {"^", "**"}) - {
+    "plus",
+    "minus",
+    "times",
+    "x",
+}
+MATH_OPERATORS = SYMBOL_OPERATORS | {"plus", "minus", "times", "mod", "divided", "multiplied"}
+VALUE_KINDS = frozenset({"num", "cur", "var", "const", "lineref", "date", "time"})
+VALUE_KEYWORDS = AGGREGATES.keys() | {
+    "prev",
+    "previous",
+    "ans",
+    "answer",
+    "today",
+    "tomorrow",
+    "yesterday",
+    "now",
+}
+
+
+def _mark_unknown_operands(items: list[Item]) -> None:
+    """Keep unknown names that occupy an operand's place next to a math operator."""
+    if not any(it.kind in VALUE_KINDS or it.key in VALUE_KEYWORDS for it in items):
+        return
+    groups = groupby(
+        enumerate(items), key=lambda pair: pair[1].kind == "noise" and pair[1].tok.kind == "WORD"
+    )
+    for is_words, group in groups:
+        if not is_words:
+            continue
+        words = list(group)
+        start, first = words[0]
+        end, last = words[-1]
+        left = items[start - 1] if start else None
+        right = items[end + 1] if end + 1 < len(items) else None
+        name = " ".join(it.tok.text for _, it in words)
+        right_operand = (
+            start > 1
+            and left is not None
+            and left.kind == "op"
+            and left.key in SYMBOL_OPERATORS
+            and (right is None or right.key in SYMBOL_OPERATORS | {")", ",", ";"})
+        )
+        left_operand = (
+            right is not None
+            and right.kind == "op"
+            and right.key in SYMBOL_OPERATORS
+            and (left is None or left.key == "(")
+            and (right.key not in {"-", "–", "−"} or "_" in name)
+        )
+        if right_operand or left_operand:
+            first.kind = "unknown"
+            first.key = name
+            first.end_tok = last.end_tok
 
 
 class Parser:
@@ -493,6 +520,8 @@ class Parser:
         return self._sum_of(value, frozenset({i}))
 
     def read_var(self, key: str) -> Value:
+        if key in self.ctx.invalid_variables:
+            raise CalcError("{0} has no value", self.ctx.var_names.get(key, key))
         line = self.ctx.var_lines[key]
         self.used.add(line)
         return self._sum_of(self.ctx.variables[key], frozenset({line}))
@@ -522,7 +551,7 @@ class Parser:
 
     def expect(self, *keys: str) -> None:
         if not self.take(*keys):
-            raise ParseError(f"expected {keys}")
+            raise ParseError("expected {0}", ", ".join(keys))
 
     def done(self) -> bool:
         return self.pos >= len(self.items)
@@ -777,7 +806,7 @@ class Parser:
             return self.keyword(key, stops)
         if kind == "op" and key == "@":
             raise ParseError("unexpected @")
-        raise ParseError(f"unexpected {it.tok.text}")
+        raise ParseError("unexpected {0}", it.tok.text)
 
     def keyword(self, key: str, stops: frozenset[str]) -> Value:
         cfg = self.ctx.config
@@ -840,7 +869,7 @@ class Parser:
         if key in SOFT:
             self.skip_plain()  # plain text at the start of an expression
             return self.prefix(stops)
-        raise ParseError(f"unexpected {key}")
+        raise ParseError("unexpected {0}", key)
 
     def number(self) -> Q:
         it = self.peek()
@@ -862,31 +891,13 @@ class Parser:
                 if unit is None:
                     raise ParseError("unknown suffix")
                 q = Q(value, ((unit, 1),))
-        # 12 June [2026]
-        nxt = self.peek()
-        if nxt is not None and nxt.kind == "month" and not tok.scale and value <= 31:
-            self.pos += 1
-            month = MONTHS[nxt.key]
-            year = self._year()
-            return self._make_date(year, month, int(value))  # type: ignore[return-value]
         return q
 
-    def _year(self) -> int | None:
-        save = self.pos
-        self.take(",")
-        it = self.peek()
-        if it is not None and it.kind == "num" and not it.tok.scale:
-            v = it.tok.value
-            if isinstance(v, Decimal) and 1000 <= v <= 2999 and v == int(v):
-                self.pos += 1
-                return int(v)
-        self.rewind(save)
-        return None
-
     def _make_date(self, year: int | None, month: int, day: int) -> DateVal:
-        now = self.ctx.config.now()
+        if year is None:
+            year = self.ctx.config.now().year
         try:
-            return DateVal(datetime(year or now.year, month, day))
+            return DateVal(datetime(year, month, day))
         except ValueError as exc:
             raise CalcError("no such date") from exc
 
@@ -898,10 +909,7 @@ class Parser:
         nxt = self.peek()
         if nxt is not None and nxt.kind == "num" and not nxt.tok.scale:
             v = nxt.tok.value
-            if isinstance(v, Decimal) and 1 <= v <= 31 and v == int(v):
-                self.pos += 1
-                return self._make_date(self._year(), month, int(v))
-            if isinstance(v, Decimal) and 1000 <= v <= 2999:
+            if isinstance(v, Decimal) and 1000 <= v <= 2999 and v == int(v):
                 self.pos += 1
                 return self._make_date(int(v), month, 1)
         return self._make_date(None, month, 1)
@@ -921,12 +929,7 @@ class Parser:
         return DateVal(today + timedelta(days=diff))
 
     def numeric_date(self, tok: Tok) -> DateVal:
-        a, b, c, order = tok.value  # type: ignore[misc]
-        if order == "ymd":
-            return self._make_date(a, b, c)
-        if self.ctx.config.date_order == "MDY":
-            return self._make_date(c, a, b)
-        return self._make_date(c, b, a)
+        return self._make_date(*tok.value)  # type: ignore[misc]
 
     def money(self) -> Q:
         it = self.peek()
@@ -1012,7 +1015,7 @@ class Parser:
         return value
 
     def _date_time(self, value: DateVal) -> DateVal:
-        """A time right after a date joins it: 11.11.2026 15:00, Nov 11 at 3pm, 12 Nov, 17:00."""
+        """Join a date and time, as in 2026-11-11 15:00 or Nov 11 at 3pm."""
         if not value.has_date or value.has_time:
             return value
         offset = 1 if self.at("at", "@", ",") else 0
@@ -1136,7 +1139,7 @@ class Parser:
         lines = self.ctx.line_values
         # compare before int(): int(1e999999) takes a minute
         if n != n.to_integral_value() or not 1 <= n <= len(lines) or lines[int(n) - 1] is None:
-            raise ParseError("no such line")
+            raise CalcError("no such line")
         return self.read_line(int(n) - 1)
 
     def function(self) -> Value:
@@ -1146,10 +1149,9 @@ class Parser:
         name = it.key
         args: list[Value]
         if self.take("("):
-            # ";" also separates arguments, for 1,5 style decimals: round(2,345; 2)
-            stops = frozenset({",", ";"})
+            stops = frozenset({";"})
             args = [self.expr(0, stops)]
-            while self.take(",") or self.take(";"):
+            while self.take(";"):
                 args.append(self.expr(0, stops))
             self.expect(")")
         else:
@@ -1592,17 +1594,63 @@ PATTERNS: list[Callable[[Parser], Value | None]] = [
 ]
 
 
+def _expression_ranges(items: list[Item], keys: list[str]) -> Iterator[tuple[int, int]]:
+    length = len(items)
+    yield 0, length
+    incomplete_group = (
+        keys.count("(") != keys.count(")")
+        or ("(" in keys and keys[-1] in SYMBOL_OPERATORS)
+        or any(left in SYMBOL_OPERATORS and right == ")" for left, right in pairwise(keys))
+    )
+    has_separator = any(it.kind == "op" and it.key in {",", ";"} for it in items)
+    if incomplete_group or has_separator:
+        return
+    operators = [
+        i for i, it in enumerate(items) if it.kind in ("kw", "op") and it.key in MATH_OPERATORS
+    ]
+    # A note can have extra values at either end. Keep the math operators and their operands.
+    last_start = max(0, operators[0] - 1) if operators else length - 1
+    first_end = min(length, operators[-1] + 2) if operators else 1
+    for start in range(1, last_start + 1):
+        yield start, length
+    for end in range(length - 1, first_end - 1, -1):
+        yield 0, end
+
+
+def _has_date_range_separator(keys: list[str], left: int, right: int) -> bool:
+    connectors = keys[left + 1 : right]
+    return not DATE_RANGE_SEPARATORS.isdisjoint(connectors) or (
+        "and" in connectors and "between" in keys[:left]
+    )
+
+
+def unsupported_date_in_range(tokens: list[Tok]) -> bool:
+    """Whether an unsupported date is linked to another date as a range endpoint."""
+    dates = [i for i, token in enumerate(tokens) if token.kind in ("DATE", "INVALID_DATE")]
+    keys = []
+    for token in tokens:
+        word = token.text.lower()
+        keys.append("to" if word == "до" else UK.WORDS.get(word, word))
+    return any(
+        (tokens[left].kind == "INVALID_DATE" or tokens[right].kind == "INVALID_DATE")
+        and _has_date_range_separator(keys, left, right)
+        for left, right in pairwise(dates)
+    )
+
+
 def evaluate_tokens(
     items: list[Item],
     ctx: Context,
     plain: set[int] | None = None,
     skipped: set[int] | None = None,
 ) -> Value:
-    """Evaluate the line; if it fails, use the longest tail (then head) that works.
+    """Evaluate the whole line, then try shorter expressions in a note.
 
     `plain` gets the id() of each soft keyword ("if", "to", "in") the maths didn't use.
     `skipped` gets the id() of each item left out of the tail or head that worked.
     """
+    if unknown := next((it for it in items if it.kind == "unknown"), None):
+        raise CalcError("{0} is not defined", unknown.key)
     soft = [it for it in items if it.kind == "kw" and it.key in SOFT]
     items = [
         it
@@ -1611,19 +1659,24 @@ def evaluate_tokens(
     ]
     if not items:
         raise ParseError("empty")
-    errors: list[Exception] = []
-    candidates = [items[s:] for s in range(len(items))]
-    candidates += [items[:e] for e in range(len(items) - 1, 0, -1)]
-    for n, cand in enumerate(candidates):
+    keys = [it.key for it in items]
+    dates = [i for i, it in enumerate(items) if it.kind == "date"]
+    first_error = None
+    for n, (start, end) in enumerate(_expression_ranges(items, keys)):
+        if len(dates) > 1 and (start > dates[0] or end <= dates[-1]):
+            continue  # don't silently choose one date from a sentence with several
+        cand = items if n == 0 else items[start:end]
         try:
             parser = Parser(cand, ctx)
             value = parser.statement()
         except CalcError:
             if n == 0:
                 raise  # the whole line is maths that can't be done: show no answer
-            errors.append(ParseError("no answer"))
-        except (ParseError, ArithmeticError, ValueError, KeyError) as exc:
-            errors.append(exc)
+        except ParseError as exc:
+            if n == 0:
+                first_error = exc
+        except ArithmeticError, ValueError, KeyError:
+            pass
         else:
             if plain is not None:
                 used = {id(it) for i, it in enumerate(cand) if i not in parser.plain}
@@ -1634,10 +1687,11 @@ def evaluate_tokens(
             ctx.used = parser.used
             ctx.adds_up = set(parser.adds_up(value))
             return value
-    first = errors[0] if errors else ParseError("nothing to calculate")
-    if isinstance(first, CalcError):
-        raise first
-    raise ParseError(str(first))
+    if len(dates) == 2:
+        start, end = dates
+        if not _has_date_range_separator(keys, start, end):
+            raise ParseError("Use ‘to’ between the dates to calculate a date range.")
+    raise first_error or ParseError("could not calculate this line")
 
 
 def simplify_value(v: Value, rates: RateTable) -> Value:

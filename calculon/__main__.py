@@ -1,6 +1,7 @@
 """Start Calculon."""
 
 import sys
+from datetime import datetime
 from pathlib import Path
 
 if __package__ in (None, ""):
@@ -14,8 +15,9 @@ from PySide6.QtWidgets import QApplication
 
 from calculon import __version__
 from calculon.engine import Config, FormatOptions, RateTable, evaluate_sheet
-from calculon.engine.format import LANGUAGE_NUMBER_STYLES
-from calculon.paths import APP_ICON, FALLBACK_RATES, FONTS, HELP_DIR
+from calculon.engine.numbers import NUMBER_STYLES
+from calculon.help_sheet import read_help
+from calculon.paths import APP_ICON, FALLBACK_RATES, FONTS
 from calculon.spelling import SpellChecker, probe
 from calculon.ui.directory_dialog import choose_sheets_directory
 from calculon.ui.icons import NAMES, svg
@@ -32,14 +34,20 @@ def self_test() -> int:
     """Check a build has everything it needs: unit data, time zones, help, rates."""
     rates = RateTable.parse(FALLBACK_RATES.read_bytes())
     failed = []
+    now = datetime.now().astimezone()
+    config = Config(now=lambda: now)
     for lang in ("en", "uk"):
-        text = (HELP_DIR / f"help_{lang}.txt").read_text(encoding="utf-8")
-        style = LANGUAGE_NUMBER_STYLES[lang]
-        opts = FormatOptions(number_style=style, lang=lang)
-        res = evaluate_sheet(text, rates, Config(number_style=style), opts)
-        for src, line in zip(text.split("\n"), res.lines, strict=True):
-            if src.strip() and not src.lstrip().startswith(("#", "//", "---")) and not line.text:
-                failed.append(f"{lang}: {src}")
+        expected_values = None
+        for style in NUMBER_STYLES:
+            text = read_help(lang, style)
+            opts = FormatOptions(number_style=style, lang=lang)
+            res = evaluate_sheet(text, rates, config, opts)
+            if expected_values is None:
+                expected_values = [line.value for line in res.lines]
+            for src, line, value in zip(text.split("\n"), res.lines, expected_values, strict=True):
+                is_example = src.strip() and not src.lstrip().startswith(("#", "//", "---"))
+                if is_example and (line.value is None or line.value != value):
+                    failed.append(f"{lang} ({style}): {src}")
     if not list(FONTS.glob("*.ttf")):
         failed.append("fonts missing")
     directory = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)

@@ -8,9 +8,10 @@ from dateutil.relativedelta import relativedelta
 
 from . import units as U
 from .currency import RatesError, RateTable
+from .diagnostics import DiagnosticError
 
 
-class CalcError(ValueError):
+class CalcError(DiagnosticError, ValueError):
     """Raised for anything that cannot be calculated."""
 
 
@@ -98,7 +99,7 @@ def convert(q: Q, target: U.Units, rates: RateTable) -> Q:
             try:
                 rate = rates.rate(sa[1:], da[1:])
             except RatesError as exc:
-                raise CalcError(str(exc)) from exc
+                raise CalcError(exc.diagnostic.template, *exc.diagnostic.args) from exc
             mag *= rate**sp
     return Q(mag, target)
 
@@ -120,7 +121,7 @@ def simplify(q: Q, rates: RateTable) -> Q:
                     try:
                         f = rates.rate(b[1:], a[1:])
                     except RatesError as exc:
-                        raise CalcError(str(exc)) from exc
+                        raise CalcError(exc.diagnostic.template, *exc.diagnostic.args) from exc
                 elif a in U.TEMPERATURES or b in U.TEMPERATURES:
                     continue
                 else:

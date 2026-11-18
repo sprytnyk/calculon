@@ -7,6 +7,8 @@ from decimal import Decimal
 import pytest
 
 from calculon.engine import Config, FormatOptions, RateTable, evaluate_sheet, format_value
+from calculon.engine.interpreter import Parser
+from calculon.engine.values import DateVal
 
 RATES = RateTable(
     base="USD",
@@ -20,6 +22,96 @@ RATES = RateTable(
 )
 NOW = datetime(2026, 11, 10, 18, 30)
 CONFIG = Config(now=lambda: NOW)
+
+
+@pytest.mark.parametrize("text", ["100 + sqrt(-1)", "2 * (3 +)", "2 + (3 +", "1 + 2) + 4"])
+def test_invalid_math_never_becomes_a_partial_answer(text: str) -> None:
+    line = evaluate_sheet(text, RATES, CONFIG).lines[0]
+    assert line.value is None
+
+
+@pytest.mark.parametrize("operator", ["*", "/", "^"])
+def test_malformed_formula_does_not_return_its_last_number(operator: str) -> None:
+    line = evaluate_sheet(f"2 + {operator} 3", RATES, CONFIG).lines[0]
+    assert line.value is None
+    assert line.error
+
+
+def test_long_malformed_formula_is_not_reparsed_at_every_operator(monkeypatch) -> None:
+    original = Parser.statement
+    attempts = 0
+
+    def count_attempt(parser):
+        nonlocal attempts
+        attempts += 1
+        return original(parser)
+
+    monkeypatch.setattr(Parser, "statement", count_attempt)
+    text = " + ".join(["1"] * 80) + " + * 3"
+    evaluate_sheet(text, RATES, CONFIG)
+    assert attempts <= 3
+
+
+def test_failed_assignment_does_not_reuse_old_value() -> None:
+    lines = evaluate_sheet(
+        "rent = 1900\nrent = 1/0\nrent / 2\nrent += 10\nrent = 2000\nrent / 2",
+        RATES,
+        CONFIG,
+    ).lines
+    assert lines[2].value is None
+    assert lines[2].hints == []
+    assert lines[3].value is None
+    assert lines[-1].value.mag == 1000
+    assert lines[-1].hints == [(0, 4, "2,000")]
+
+
+@pytest.mark.parametrize(
+    ("input_text", "error"),
+    [
+        ("1e9999999999999999999", "invalid number"),
+        ("Aprıl 5", "no such date"),
+        ("Aprıl 2026", "no such date"),
+    ],
+)
+def test_invalid_lexed_assignment_clears_old_value(input_text: str, error: str) -> None:
+    lines = evaluate_sheet(
+        f"budget = 100\nbudget = {input_text}\nbudget * 2\n2 + 2", RATES, CONFIG
+    ).lines
+    assert lines[1].value is None
+    assert lines[1].error == error
+    assert lines[2].value is None
+    assert lines[2].error == "budget has no value"
+    assert lines[3].text == "4"
+
+
+@pytest.mark.parametrize("reference", ["line999", "line 999", "line2"])
+def test_missing_line_reference_cannot_overwrite_variable(reference: str) -> None:
+    lines = evaluate_sheet(
+        f"balance = 100\nbalance = {reference} + 1\nbalance * 2", RATES, CONFIG
+    ).lines
+    assert lines[1].error == "no such line"
+    assert lines[1].value is None
+    assert lines[2].error == "balance has no value"
+    assert lines[2].value is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["10 + unknown_variable", "10 + unknown fee + 5", "unknown_variable + 10", "(8 + unknown)"],
+)
+def test_unknown_operand_gives_an_error_instead_of_a_partial_answer(text) -> None:
+    line = evaluate_sheet(text, RATES, CONFIG).lines[0]
+    assert line.value is None
+    assert "is not defined" in line.error
+
+
+@pytest.mark.parametrize("clock", ["24:30", "12:60", "15:00pm", "0am", "08:15:60"])
+def test_invalid_time_is_not_reduced_to_a_number_or_date(clock) -> None:
+    text = f"Meeting: 2026-11-18 {clock}"
+    line = evaluate_sheet(text, RATES, CONFIG).lines[0]
+    assert line.value is None
+    assert line.error == "no such time"
+    assert (20, len(text), "invalid_time") in line.spans
 
 
 def calc(text: str, **opts) -> list[str]:
@@ -41,13 +133,14 @@ def test_abbreviated_month_after_day(text: str, expected: str) -> None:
 @pytest.mark.parametrize(
     ("text", "style", "expected"),
     [
-        ("$1000,1", "comma_dot", "$1,000.10"),
-        ("1000,1", "comma_dot", "1,000.1"),
-        ("100 500", "comma_dot", "100,500"),
-        ("1) 100 500 500", "comma_dot", "100,500,500"),
-        ("1. 100 500 500", "comma_dot", "100,500,500"),
-        ("• 100 500 500", "comma_dot", "100,500,500"),
+        ("$1000.1", "comma_dot", "$1,000.10"),
+        ("100\u00a0500", "space_dot", "100\u202f500"),
+        ("100\u2007500", "space_dot", "100\u202f500"),
+        ("1) 100\u202f500 500", "space_comma", "100\u202f500\u202f500"),
+        ("1. 100 500 500", "space_dot", "100\u202f500\u202f500"),
+        ("• 100\u2009500,5", "space_comma", "100\u202f500,5"),
         ("$75.000,00", "dot_comma", "$75.000,00"),
+        ("100.111,1", "dot_comma", "100.111,1"),
     ],
 )
 def test_pasted_number_formats(text: str, style: str, expected: str) -> None:
@@ -57,12 +150,83 @@ def test_pasted_number_formats(text: str, style: str, expected: str) -> None:
     assert (start, len(text), "number") in result.spans
 
 
-def test_date_with_two_digit_year() -> None:
-    assert one("11.12.26") == "11 December"
+@pytest.mark.parametrize(
+    ("style", "text"),
+    [
+        ("comma_dot", "100 100 1000"),
+        ("space_comma", "100 100 1000"),
+        ("comma_dot", "100.111,1"),
+        ("space_dot", "100.111,1"),
+        ("space_comma", "100.111,1"),
+        ("dot_comma", "1.234.5678"),
+        ("comma_dot", "10 10 10 10 10"),
+        ("comma_dot", "10 100 10 100 1000"),
+        ("comma_dot", "100 100 1"),
+        ("comma_dot", "100 100 100 1"),
+        ("comma_dot", "1_000_000"),
+        ("comma_dot", "1’234.5"),
+        ("space_comma", "١٬٢٣٤٫٥"),
+    ],
+)
+def test_invalid_number_does_not_return_a_partial_answer(style: str, text: str) -> None:
+    result = evaluate_sheet(text, RATES, CONFIG, FormatOptions(number_style=style)).lines[0]
+    assert result.value is None
+    assert result.spans == [(0, len(text), "invalid_number")]
 
 
-def test_comma_still_separates_function_arguments() -> None:
-    assert one("round(1,9)") == "1"
+@pytest.mark.parametrize(
+    ("style", "group", "point"),
+    [
+        ("comma_dot", ",", "."),
+        ("dot_comma", ".", ","),
+        ("space_dot", " ", "."),
+        ("space_comma", " ", ","),
+    ],
+)
+def test_invalid_number_does_not_return_a_partial_answer_during_editing(style, group, point):
+    opts = FormatOptions(number_style=style)
+    texts = [f"1{group}2", f"1{group}23", f"1{group}234{point}"]
+    result = evaluate_sheet("\n".join(texts), RATES, CONFIG, opts)
+    assert all(line.value is None and not line.error and not line.spans for line in result.lines)
+    texts = [f"2 + 1{group}234{point}5", f"round({point}55; 1)", f"total of {point}5; 2"]
+    result = evaluate_sheet("\n".join(texts), RATES, CONFIG, opts)
+    assert [line.value.mag for line in result.lines] == [
+        Decimal("1236.5"),
+        Decimal("0.6"),
+        Decimal("2.5"),
+    ]
+    assert result.total.mag == Decimal("1239.6")
+
+
+@pytest.mark.parametrize(
+    ("style", "bad"),
+    [
+        ("comma_dot", "12,345.67.8"),
+        ("dot_comma", "12.345,67,8"),
+        ("space_comma", "12 345,67,8"),
+        ("space_dot", "12 345.67.8"),
+    ],
+)
+def test_bad_numbers_cannot_change_sheet_state(style, bad) -> None:
+    start = "budget += $"
+    text = f"budget = $200\n{start}{bad} + $999\n1. Fuel $50\n4 Car $200\nbudget + $1"
+    res = evaluate_sheet(text, RATES, CONFIG, FormatOptions(number_style=style))
+    assert [line.value.mag if line.value else None for line in res.lines] == [
+        200,
+        None,
+        50,
+        200,
+        None,
+    ]
+    assert (len(start), len(start) + len(bad), "invalid_number") in res.lines[1].spans
+    assert (0, 3, "comment") in res.lines[2].spans
+    assert (0, 1, "comment") in res.lines[3].spans
+    assert res.total.mag == 450
+
+
+@pytest.mark.parametrize("style", ["comma_dot", "dot_comma", "space_comma", "space_dot"])
+def test_commas_do_not_separate_function_arguments_or_list_items(style) -> None:
+    assert calc("round(1, 9)\ntotal of 1, 9", number_style=style) == ["", ""]
 
 
 def test_switch_to_dot_comma_with_mixed_sheet() -> None:
@@ -216,7 +380,7 @@ $1000,1
         # numbers
         ("2.5k", "2,500"),
         ("5M", "5,000,000"),
-        ("1_000_000 + 2_000", "1,002,000"),
+        ("1000000 + 2000", "1,002,000"),
         ("0b_1100_0001 to decimal", "193"),
         ("0xff + 1", "0x100"),
         ("255 as hex", "0xFF"),
@@ -228,7 +392,7 @@ $1000,1
         ("sqrt 16", "4"),
         ("sqrt(2)", "1.414"),
         ("square root of 81", "9"),
-        ("round(3.14159, 2)", "3.14"),
+        ("round(3.14159; 2)", "3.14"),
         ("floor(2.7)", "2"),
         ("ceil(2.1)", "3"),
         ("sin(90°)", "1"),
@@ -237,11 +401,11 @@ $1000,1
         ("abs(-4)", "4"),
         ("pi * 2", "6.283"),
         # statistics
-        ("total of 3, 4, 7 and 9", "23"),
-        ("average of 36, 42, 19 and 81", "44.5"),
-        ("count of 1, 2, 3, 4, 5", "5"),
-        ("median of 10, 20 and 30", "20"),
-        ("standard deviation of 20, 30 and 40", "10"),
+        ("total of 3; 4; 7; 9", "23"),
+        ("average of 36; 42; 19; 81", "44.5"),
+        ("count of 1; 2; 3; 4; 5", "5"),
+        ("median of 10; 20; 30", "20"),
+        ("standard deviation of 20; 30; 40", "10"),
         # comments, labels, quotes
         ("Cost of 128 GB iPhone 16: $999", "$999.00"),
         ("I spent $128 + $45 on clothes // on 10-02-2019", "$173.00"),
@@ -255,8 +419,8 @@ $1000,1
         # dates (today is 10 Nov 2026, 18:30)
         ("10 June + 3 weeks", "1 July"),
         ("April 1, 2019 − 3 months 5 days", "27 December 2018"),
-        ("12/02/1988 + 32 years", "12 February 2020"),
-        ("01.05.2005 + 3 years 2 months 3 weeks", "22 July 2008"),
+        ("1988-02-12 + 32 years", "12 February 2020"),
+        ("2005-05-01 + 3 years 2 months 3 weeks", "22 July 2008"),
         ("2024-03-15 + 1 day", "16 March 2024"),
         ("3 weeks after March 14, 2019", "4 April 2019"),
         ("28 days before March 12", "12 February"),
@@ -288,22 +452,23 @@ $1000,1
         ("March 5 10:00 to 12:30", "2 hours 30 min"),
         ("10 June + 2 nights", "12 June"),
         # nights with a time end at 12:00 check-out; before 06:00 is still the night before
-        ("11.11.2026 14:00 + 2 nights", "13 November, 12:00"),
-        ("11.11.2026 23:30 + 1 night", "12 November, 12:00"),
-        ("12.11.2026 01:00 + 1 night", "12 November, 12:00"),
-        ("11.11.2026 14:00 + 1 night 2 hours", "12 November, 14:00"),
-        ("11.11.2026 14:00 + 2 days", "13 November, 14:00"),
+        ("2026-11-11 14:00 + 2 nights", "13 November, 12:00"),
+        ("2026-11-11 23:30 + 1 night", "12 November, 12:00"),
+        ("2026-11-12 01:00 + 1 night", "12 November, 12:00"),
+        ("2026-11-11 14:00 + 1 night 2 hours", "12 November, 14:00"),
+        ("2026-11-11 14:00 + 2 days", "13 November, 14:00"),
         # a date followed by a time
-        ("11.11.2026 15:00", "11 November, 15:00"),
-        ("11.11.2026 at 15:00 + 1 day", "12 November, 15:00"),
-        ("Nov 11, 2026 3pm + 26 hours", "12 November, 17:00"),
         ("2026-11-11 15:00", "11 November, 15:00"),
+        ("2026-11-11 at 15:00 + 1 day", "12 November, 15:00"),
+        ("Nov 11, 2026 3pm + 26 hours", "12 November, 17:00"),
+        ("11 Nov 2026 15:00", "11 November, 15:00"),
         ("12 November, 17:00", "12 November, 17:00"),  # an answer pasted back
         ("Nov 11, 2026, 3pm", "11 November, 15:00"),
+        ("Nov 2026 15:00", "1 November, 15:00"),
         ("12 June 2027 @ 9:00", "12 June 2027, 09:00"),
         ("tomorrow 9am", "11 November, 09:00"),
-        ("13.11.2026 15:00 - 12.11.2026 15:00", "1 day"),
-        ("11.11.2026 15:00 to 12.11.2026 17:30", "1 day 2 hours 30 min"),
+        ("2026-11-13 15:00 - 2026-11-12 15:00", "1 day"),
+        ("2026-11-11 15:00 to 2026-11-12 17:30", "1 day 2 hours 30 min"),
         ("next friday", "13 November"),
         ("March 1st + 1 week", "8 March"),
     ],
@@ -459,6 +624,7 @@ def test_big_answers_are_short_in_the_answers_column_only() -> None:
         ("5 ft 3 in in cm", "160.02 cm"),
         ("3 in to cm", "7.62 cm"),
         ("10 GB at 100 Mbps in minutes", "13.333 min"),
+        ("0B in bytes", "0 B"),
         ("1 year in days", "365.242 days"),
         ("1 decade in years", "10 years"),
         ("2 centuries in decades", "20 decades"),
@@ -474,7 +640,7 @@ def test_soulver_references_in_exported_text() -> None:
 
 
 def test_empty_add_assignment_stays_empty() -> None:
-    assert calc("x = 5\nx +=\nx") == ["5", "", "5"]
+    assert calc("x = 5\nx +=\nx") == ["5", "", ""]
 
 
 def test_average_of_lines() -> None:
@@ -519,7 +685,7 @@ def sheet_total(text: str) -> str:
         ("$20 lunch #food\n$15 taxi\naverage of #food", "$35.00"),
         ("$20 lunch #food\n$15 taxi\ntotal of #food\n* 2", "$55.00"),
         # a list of its own numbers is a new answer
-        ("$20\ntotal of $3, $4", "$27.00"),
+        ("$20\ntotal of $3; $4", "$27.00"),
         # a line takes the place of the answers it uses
         ("rent = 12k UAH\nfood = 8k UAH\nhousing = rent + food", "₴20,000.00"),
         ("rent = 12k UAH\ntax = rent * 20%\nnet = rent - tax", "₴9,600.00"),
@@ -528,7 +694,7 @@ def sheet_total(text: str) -> str:
         ("rent = 12k UAH\ntax = rent * 20%", "₴14,400.00"),
         ("$10\nline 1 * 2", "$30.00"),
         ("rent = $1,000\nfood = $500\nrent × 2 + food", "$3,500.00"),
-        ("rent = $1,000\nfood = $500\ntotal of rent, food", "$1,500.00"),
+        ("rent = $1,000\nfood = $500\ntotal of rent; food", "$1,500.00"),
         ("rent = $1,000\nrent in EUR", "€900.00"),
         ("$10\n$20\nx = average\nx * 2", "$30.00"),
         # two lines can use one answer, and both count
@@ -555,7 +721,7 @@ def test_money_wins_the_sheet_total() -> None:
 def test_number_styles() -> None:
     assert one("1.234,5 + 1", number_style="dot_comma") == "1.235,5"
     assert one("1 234,5 + 1", number_style="space_comma") == "1 235,5"
-    assert one("1234.5", number_style="space_comma") == "1 234,5"
+    assert one("1234.5", number_style="space_comma") == ""
     assert one("total of 1,5 and 2", number_style="dot_comma") == "3,5"
 
 
@@ -565,7 +731,7 @@ def test_decimal_settings() -> None:
 
 
 def test_timeline() -> None:
-    sheet = """@from 11.11.2026 at 15:00
+    sheet = """@from 2026-11-11 at 15:00
 London: 1 night
 Driving: 2 hours
 Hotel: $100 * 2
@@ -588,33 +754,33 @@ Time zone shift: -1 hour
 
 
 def test_timeline_hotel_nights() -> None:
-    sheet = "@from 11 Nov 2026 at 14:00\nHotel: 2 nights\n@to 13.11.2026 12:00"
+    sheet = "@from 11 Nov 2026 at 14:00\nHotel: 2 nights\n@to 2026-11-13 12:00"
     assert one(sheet) == "0 hours left"
     assert one(sheet.replace("nights", "days")) == "2 hours over"
     # @from without a time: 02:00 after a walk isn't a late arrival
-    walk = "@from 11.11.2026\nWalk: 2 hours\nHotel: 1 night"
+    walk = "@from 2026-11-11\nWalk: 2 hours\nHotel: 1 night"
     assert one(walk) == "12 November, 12:00"
     # @to without a time compares whole days
-    nye = "@from 30.12.2026 at 15:00\nNYE: 2 nights\n@to 1.1.2027"
+    nye = "@from 2026-12-30 at 15:00\nNYE: 2 nights\n@to 2027-01-01"
     assert one(nye) == "0 days left"
     assert one(nye.replace("2 nights", "3 nights")) == "1 day over"
     assert one(nye.replace("2 nights", "1 night")) == "1 day left"
     # a label ending in a digit is still a label, so it moves the timeline
-    two = "@from 28.02.2028 at 15:00\nHotel: 1 night\nHotel 2: 1 night\n@to 1.3.2028 12:00"
+    two = "@from 2028-02-28 at 15:00\nHotel: 1 night\nHotel 2: 1 night\n@to 2028-03-01 12:00"
     assert calc(two)[2:] == ["1 March 2028, 12:00", "0 hours left"]
 
 
 def test_timeline_boundary() -> None:
-    start = "@from 11.11.2026 15:00\nLondon: 1 day\n"
+    start = "@from 2026-11-11 15:00\nLondon: 1 day\n"
     # days and hours keep it short; hovering over @to shows it exactly
-    assert one(start + "@to 14.11.2026 18:40") == "2 days 3 hours left"
-    assert one(start + "@to 13.11.2026 15:40") == "1 day left"
-    assert one(start + "@to 13.11.2026 14:20") == "23 hours 20 min left"
-    assert one(start + "@to 12.11.2026 15:20") == "20 min left"
-    assert one(start + "@to 12.11.2026 12:00") == "3 hours over"
-    assert one(start + "@to 13.11.2026") == "1 day left"  # no time: whole days
+    assert one(start + "@to 2026-11-14 18:40") == "2 days 3 hours left"
+    assert one(start + "@to 2026-11-13 15:40") == "1 day left"
+    assert one(start + "@to 2026-11-13 14:20") == "23 hours 20 min left"
+    assert one(start + "@to 2026-11-12 15:20") == "20 min left"
+    assert one(start + "@to 2026-11-12 12:00") == "3 hours over"
+    assert one(start + "@to 2026-11-13") == "1 day left"  # no time: whole days
     # how long the timeline lasts shows when hovering over @to
-    res = evaluate_sheet(start + "  @to 13.11.2026 15:00", RATES, CONFIG, FormatOptions())
+    res = evaluate_sheet(start + "  @to 2026-11-13 15:00", RATES, CONFIG, FormatOptions())
     assert res.lines[-1].hints == [(2, 5, "1 day left\nlasts 1 day")]
     res = evaluate_sheet(start + "@to", RATES, CONFIG, FormatOptions())
     assert res.lines[-1].hints == [(0, 3, "lasts 1 day")]
@@ -622,14 +788,14 @@ def test_timeline_boundary() -> None:
     assert one("1 day left") == "1 day"
     assert one("12 November, 15:00") == "12 November, 15:00"
     res = evaluate_sheet(
-        start + "@to 12.11.2026 12:00\nprev in hours", RATES, CONFIG, FormatOptions()
+        start + "@to 2026-11-12 12:00\nprev in hours", RATES, CONFIG, FormatOptions()
     )
     assert res.lines[-1].text == "-3 hours"
 
 
 def test_timeline_edges() -> None:
     # a date alone starts at midnight; months and leap days come from date maths
-    assert calc("@from 28.02.2028\nLeap: 1 day 2 hours\nNext: 1 month") == [
+    assert calc("@from 2028-02-28\nLeap: 1 day 2 hours\nNext: 1 month") == [
         "28 February 2028",
         "29 February 2028, 02:00",
         "29 March 2028, 02:00",
@@ -642,14 +808,14 @@ def test_timeline_edges() -> None:
         ("", ""),
     ]
     # a block ends at @to, at ---, and at the next @from
-    assert calc("@from 11.11.2026\nA: 1 day\n@to\nB: 1 day") == [
+    assert calc("@from 2026-11-11\nA: 1 day\n@to\nB: 1 day") == [
         "11 November",
         "12 November",
         "12 November",
         "1 day",
     ]
-    assert one("@from 11.11.2026\n---\nB: 1 day") == "1 day"
-    assert one("@from 11.11.2026\nA: 1 day\n@from 1.12.2026\nB: 1 day\n@to") == ("2 December")
+    assert one("@from 2026-11-11\n---\nB: 1 day") == "1 day"
+    assert one("@from 2026-11-11\nA: 1 day\n@from 2026-12-01\nB: 1 day\n@to") == ("2 December")
     res = evaluate_sheet("@to", RATES, CONFIG, FormatOptions())
     assert res.lines[0].error == "no @from above"
     # outside a block nothing moves, and @ still means "at"
@@ -659,7 +825,7 @@ def test_timeline_edges() -> None:
 
 def test_timeline_answers_stay_out_of_totals() -> None:
     res = evaluate_sheet(
-        "@from 11.11.2026\nHotel: $100\nTaxi: $20\nStay: 2 nights\n@to 20.11.2026",
+        "@from 2026-11-11\nHotel: $100\nTaxi: $20\nStay: 2 nights\n@to 2026-11-20",
         RATES,
         CONFIG,
         FormatOptions(),
@@ -668,10 +834,92 @@ def test_timeline_answers_stay_out_of_totals() -> None:
     assert res.total is not None and res.total.mag == 120
 
 
-def test_date_order_setting() -> None:
-    cfg = Config(now=lambda: NOW, date_order="MDY")
-    res = evaluate_sheet("02/12/2020", RATES, cfg)
-    assert res.lines[0].text == "12 February 2020"
+@pytest.mark.parametrize("style", ["comma_dot", "dot_comma", "space_comma", "space_dot"])
+def test_dates_use_the_same_syntax_in_every_number_format(style) -> None:
+    lines = [
+        "2026-01-18",
+        "18 January 2026",
+        "January 18, 2026",
+        "18 Jan 2026",
+        "January 18 2026",
+        "18 January",
+        "January 18",
+        "18 Jan. 2026",
+        "Jan. 18, 2026",
+        "18.01.2026",
+        "11.12.26",
+        "18/01/2026",
+    ]
+    result = evaluate_sheet("\n".join(lines), RATES, CONFIG, FormatOptions(number_style=style))
+    assert [line.value.dt for line in result.lines[:-3]] == [datetime(2026, 1, 18)] * 9
+    assert [line.value for line in result.lines[-3:]] == [None, None, None]
+
+
+@pytest.mark.parametrize("style", ["comma_dot", "dot_comma", "space_comma", "space_dot"])
+def test_day_first_dates_and_times(style: str) -> None:
+    text = "18-11-2026\n18-11-2026 15:00\n2026-11-18 15:00\n31-11-2026\n18 - 11 - 2026"
+    date, date_time, iso, invalid, subtraction = evaluate_sheet(
+        text, RATES, CONFIG, FormatOptions(number_style=style)
+    ).lines
+    assert date.value is None
+    assert date.spans == [(0, 10, "invalid_date")]
+    assert date_time.value is None
+    assert iso.value == DateVal(datetime(2026, 11, 18, 15), has_time=True)
+    assert invalid.value is None
+    assert invalid.spans == [(0, 10, "invalid_date")]
+    assert subtraction.value.mag == -2019
+
+
+def test_invalid_assigned_date_is_not_a_number() -> None:
+    line = evaluate_sheet("salary = 18-19-2026", RATES, CONFIG).lines[0]
+    assert line.value is None
+    assert (9, 19, "invalid_date") in line.spans
+
+
+@pytest.mark.parametrize("bad", ["18.11.2026", "18/11/2026", "18-11-2026"])
+def test_unsupported_numeric_date_warns_but_keeps_valid_iso_date(bad: str) -> None:
+    text = f"Going to London on {bad} and back on 2026-11-18"
+    line = evaluate_sheet(text, RATES, CONFIG).lines[0]
+    assert line.value == DateVal(datetime(2026, 11, 18))
+    assert (19, 29, "invalid_date") in line.spans
+
+
+@pytest.mark.parametrize(
+    ("text", "bad"),
+    [
+        ("Trip: 18/11/2026 to 2026-11-20", "18/11/2026"),
+        ("2026-11-18 through 20.11.2026", "20.11.2026"),
+        ("2026-11-18 10:30 - 20/11/2026", "20/11/2026"),
+        ("days between 18/11/2026 and 2026-11-20", "18/11/2026"),
+        ("з 18.11.2026 до 2026-11-20", "18.11.2026"),
+        ("днів між 18.11.2026 і 2026-11-20", "18.11.2026"),
+    ],
+)
+def test_date_range_rejects_an_unsupported_endpoint(text: str, bad: str) -> None:
+    line = evaluate_sheet(text, RATES, CONFIG).lines[0]
+    assert line.value is None
+    assert line.error == "use YYYY-MM-DD for numeric dates"
+    start = text.index(bad)
+    assert (start, start + len(bad), "invalid_date") in line.spans
+
+
+def test_prose_with_two_dates_does_not_pick_one_without_a_range() -> None:
+    line = evaluate_sheet("Going to London on 2026-11-18 and back 2026-11-19", RATES, CONFIG).lines[
+        0
+    ]
+    assert line.value is None
+    assert line.error == "Use ‘to’ between the dates to calculate a date range."
+
+
+def test_date_like_division_with_spaces_remains_arithmetic() -> None:
+    line = evaluate_sheet("18 / 11 / 2026", RATES, CONFIG).lines[0]
+    assert line.value.mag == Decimal(18) / Decimal(11) / Decimal(2026)
+
+
+def test_short_day_and_month_are_also_marked_as_unsupported_dates() -> None:
+    line = evaluate_sheet("1/2/2026", RATES, CONFIG).lines[0]
+    assert line.value is None
+    assert line.spans == [(0, 8, "invalid_date")]
 
 
 def test_missing_rate_gives_no_answer() -> None:
@@ -707,7 +955,7 @@ def test_line_total_uses_main_unit_kind() -> None:
 
 
 def test_explicit_list_keeps_plain_numbers() -> None:
-    assert one("total of $5, 3") == "$8.00"
+    assert one("total of $5; 3") == "$8.00"
 
 
 @pytest.mark.parametrize(
@@ -727,7 +975,8 @@ def test_superscript_powers(line: str, expected: str) -> None:
 def test_bad_input_gives_an_error_not_a_crash() -> None:
     """Found by fuzzing: each of these used to raise inside the engine or hang."""
     res = evaluate_sheet("1\nline 1e999999\n0^-1\n²", RATES, CONFIG, FormatOptions())
-    assert [line.text for line in res.lines] == ["1", "1e999999", "", ""]
+    assert [line.text for line in res.lines] == ["1", "", "", ""]
+    assert res.lines[1].error == "no such line"
     assert res.lines[2].error == "division by zero"
     big = evaluate_sheet("1e25 км", RATES, CONFIG, FormatOptions(lang="uk"))
     assert big.lines[0].text == "1e25 км"

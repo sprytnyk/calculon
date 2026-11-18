@@ -50,8 +50,9 @@ from PySide6.QtWidgets import (
 )
 
 from ..engine import format_value
-from ..engine.format import MONTHS_UK
-from ..paths import FONTS, HELP_DIR
+from ..engine.format import MONTHS_EN, MONTHS_UK, format_time
+from ..help_sheet import read_help
+from ..paths import FONTS
 from ..rates import RatesService
 from ..settings import Settings, own_words_file, read_bool
 from ..spelling import SpellChecker, probe
@@ -61,7 +62,7 @@ from . import icons
 from . import theme as themes
 from .about_dialog import AboutDialog
 from .directory_dialog import directory_error
-from .editor import EDIT_MENU, KIND_ORDER, SheetEdit
+from .editor import EDIT_MENU, KIND_ORDER, SheetEdit, sheet_text
 from .find_bar import FindBar
 from .panes import PaneKeys
 from .settings_dialog import SettingsDialog
@@ -133,10 +134,20 @@ class MainWindow(QMainWindow):
         self.banner = QLabel()
         self.banner.setObjectName("banner")
         self.banner.hide()
+        self.startup_notice = QWidget()
+        self.startup_notice.setObjectName("startupNotice")
+        notice = QHBoxLayout(self.startup_notice)
+        self.notice_text = QLabel()
+        self.notice_text.setWordWrap(True)
+        notice.addWidget(self.notice_text, 1)
+        self.dismiss_notice = QPushButton()
+        self.dismiss_notice.clicked.connect(self._dismiss_startup_notice)
+        notice.addWidget(self.dismiss_notice)
         right = QWidget()
         box = QVBoxLayout(right)
         box.setContentsMargins(0, 0, 0, 0)
         box.setSpacing(0)
+        box.addWidget(self.startup_notice)
         box.addWidget(self.banner)
         box.addWidget(self.editor, 1)
         self.find_bar = FindBar(self.editor, self.t)
@@ -513,6 +524,7 @@ class MainWindow(QMainWindow):
         self.editor.spell_texts = {k: self.t(f"spell_{k}") for k in ("add", "ignore", "none")}
         self._apply_spelling()
         self.total_label.setToolTip(self.t("total_tip"))
+        self._update_startup_notice()
         self._update_rates_label()
         self.setWindowTitle(self._title())
         self.build_menus()
@@ -533,22 +545,37 @@ class MainWindow(QMainWindow):
         if self.settings.language == "en":
             return
         translator = QTranslator(self)
-        folder = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
-        if translator.load(f"qtbase_{self.settings.language}", folder):
+        directory = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+        if translator.load(f"qtbase_{self.settings.language}", directory):
             app.installTranslator(translator)
             self._qt_translator = translator
         else:
-            log.warning("no Qt translation for %s in %s", self.settings.language, folder)
+            log.warning("no Qt translation for %s in %s", self.settings.language, directory)
 
     def _engine_changed(self) -> None:
         s = self.settings
         self.editor.set_engine(self.rates.table, s.engine_config(), s.format_options())
+
+    def _update_startup_notice(self) -> None:
+        self.notice_text.setText(self.t("number_date_notice"))
+        self.dismiss_notice.setText(self.t("dismiss_notice"))
+        self.startup_notice.setVisible(not self.settings.number_date_notice_seen)
+
+    def _dismiss_startup_notice(self) -> None:
+        self.settings.number_date_notice_seen = True
+        self.settings.save()
+        self.startup_notice.hide()
 
     def open_settings(self) -> None:
         dlg = SettingsDialog(self.settings, self.t, self)
         if dlg.exec() != SettingsDialog.DialogCode.Accepted:
             return
         new = dlg.result_settings()
+        help_changed = (
+            new.language != self.settings.language
+            or new.number_style != self.settings.number_style
+            or new.time_format != self.settings.time_format
+        )
         directory_changed = (
             Path(new.sheets_dir).expanduser() != Path(self.settings.sheets_dir).expanduser()
         )
@@ -573,6 +600,8 @@ class MainWindow(QMainWindow):
         self.apply_settings()
         if directory_changed:
             self._open_initial()
+        elif help_changed and self.current[0] == HELP:
+            self.open_help()
 
     def set_theme(self, key: str) -> None:
         self.settings.theme = key
@@ -717,7 +746,7 @@ class MainWindow(QMainWindow):
             doc = self.editor.new_document(text, self)
             if kind == SHEET:
                 self._docs[key] = doc
-        elif doc.toPlainText() != text:
+        elif sheet_text(doc) != text:
             doc.setPlainText(text)  # changed on disk while another sheet was open
         loose, self._loose_doc = self._loose_doc, (None if kind == SHEET else doc)
         self.editor.blockSignals(True)
@@ -760,11 +789,8 @@ class MainWindow(QMainWindow):
     def open_help(self) -> None:
         if not self.save_current():
             return
-        path = HELP_DIR / f"help_{self.settings.language}.txt"
-        if not path.exists():
-            path = HELP_DIR / "help_en.txt"
         try:
-            text = path.read_text(encoding="utf-8")
+            text = read_help(self.settings.language, self.settings.number_style)
         except OSError:
             text = ""
         self._load(HELP, "", text, read_only=True, banner=self.t("read_only_help"))
@@ -789,7 +815,7 @@ class MainWindow(QMainWindow):
         if kind != SHEET or not self._dirty:
             return True
         try:
-            self.store.write(rel, self.editor.toPlainText())
+            self.store.write(rel, sheet_text(self.editor.document()))
         except OSError as exc:
             log.exception("could not save sheet %s", rel)
             self.show_message(str(exc), 5000)
@@ -814,7 +840,7 @@ class MainWindow(QMainWindow):
             text = self.store.read(rel)
         except OSError, UnicodeDecodeError:
             return
-        if text != self.editor.toPlainText():
+        if text != sheet_text(self.editor.document()):
             cursor = self.editor.textCursor().position()
             self.editor.setPlainText(text)
             c = self.editor.textCursor()
@@ -1058,9 +1084,10 @@ class MainWindow(QMainWindow):
 
     def _rates_time(self, stamp: float) -> str:
         dt = datetime.fromtimestamp(stamp)
+        time = format_time(dt, self.settings.time_24h)
         if self.settings.language == "uk":
-            return f"{dt.day} {MONTHS_UK[dt.month - 1]} {dt.year}, {dt:%H:%M}"
-        return f"{dt.day} {dt:%b %Y, %H:%M}"
+            return f"{dt.day} {MONTHS_UK[dt.month - 1]} {dt.year}, {time}"
+        return f"{dt.day} {MONTHS_EN[dt.month - 1][:3]} {dt.year}, {time}"
 
     def _toggle_comment(self) -> None:
         if not self.editor.isReadOnly():

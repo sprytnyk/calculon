@@ -37,6 +37,7 @@ def window(app, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     qs = QSettings()
     qs.clear()
     qs.setValue("sheets_dir", str(tmp_path / "sheets"))
+    qs.setValue("number_date_notice_seen", True)
     qs.sync()
     w = MainWindow()
     monkeypatch.setattr(w, "_ask_text", lambda title, default: (default, True))

@@ -2,14 +2,17 @@
 
 import re
 from dataclasses import dataclass
-from decimal import Decimal
+from datetime import date
+from decimal import Decimal, InvalidOperation
 
 from .currency import PREFIX_SYMBOLS
+from .months import MONTHS
+from .numbers import decimal_mantissa, separators
 
 
 @dataclass
 class Tok:
-    kind: str  # NUM WORD OP CUR DATE TIME TAG
+    kind: str  # NUM INVALID_NUMBER UNFINISHED_NUMBER WORD OP CUR DATE TIME TAG
     text: str
     start: int
     end: int
@@ -38,10 +41,17 @@ SCALES = {
 GENERAL_SCALES = {"k", "K", "к", "К", "M", "G", "T"}
 
 _PREFIX_SYMS = sorted(PREFIX_SYMBOLS, key=len, reverse=True)
-_DATE_RE = re.compile(
-    r"(?P<iso>(?P<y1>\d{4})-(?P<m1>\d{1,2})-(?P<d1>\d{1,2}))"
-    r"|(?P<a>\d{1,2})(?P<sep>[/.])(?P<b>\d{1,2})(?P=sep)(?P<y2>\d{4}|\d{2})"
+_ISO_DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?!\d|[.,]\d)")
+_OTHER_DATE = re.compile(r"\d{1,2}([./-])\d{1,2}\1\d{4}(?!\d|[.,]\d)")
+_MONTH = "|".join(sorted(MONTHS, key=len, reverse=True))
+_DAY = r"\d{1,2}(?:st|nd|rd|th)?"
+_NAMED_DATE = re.compile(
+    rf"(?:(?P<day>{_DAY})\s+(?P<month>{_MONTH})\.?|(?P<first>{_MONTH})\.?\s+(?P<after>{_DAY}))"
+    r"(?:(?:\s+|,\s*)(?P<year>\d{4})(?![\w:]|[.,]\d))?(?![\w:]|[.,]\d)",
+    re.IGNORECASE,
 )
+_MONTH_YEAR = re.compile(rf"({_MONTH})\.?\s+([12]\d{{3}})(?![\w:]|[.,]\d)", re.IGNORECASE)
+_DAY_DIGITS = re.compile(r"\d+")
 _TIME_RE = re.compile(
     r"(?P<h>\d{1,2}):(?P<m>\d{2})(?::(?P<s>\d{2}))?(?:\s?(?P<ap>[aApP])\.?[mM]\.?)?(?![\w:])"
     r"|(?P<h2>\d{1,2})\s?(?P<ap2>[aApP])\.?[mM]\.?(?!\w)"
@@ -55,12 +65,7 @@ def tokenize(line: str, number_style: str = "comma_dot") -> list[Tok]:
     toks: list[Tok] = []
     i = 0
     n = len(line)
-    thousands, point = {
-        "comma_dot": (",", "."),
-        "dot_comma": (".", ","),
-        "space_comma": (" ", ","),
-        "space_dot": (" ", "."),
-    }.get(number_style, (",", "."))
+    group, point = separators(number_style)
     while i < n:
         c = line[i]
         if c.isspace():
@@ -80,36 +85,24 @@ def tokenize(line: str, number_style: str = "comma_dot") -> list[Tok]:
             toks.append(Tok("TAG", m.group(), i, m.end()))
             i = m.end()
             continue
-        if c.isdecimal() or (c == "." and i + 1 < n and line[i + 1].isdecimal()):
-            m = _DATE_RE.match(line, i)
-            if m and not (m.end() < n and line[m.end()].isdecimal()):
-                if m.group("iso"):
-                    val = (int(m.group("y1")), int(m.group("m1")), int(m.group("d1")), "ymd")
-                else:
-                    year = int(m.group("y2"))
-                    if len(m.group("y2")) == 2:
-                        year += 2000 if year <= 68 else 1900
-                    val = (int(m.group("a")), int(m.group("b")), year, "ab")
-                toks.append(Tok("DATE", m.group(), i, m.end(), val))
-                i = m.end()
-                continue
-            m = _TIME_RE.match(line, i)
-            if m:
-                if m.group("h") is not None:
-                    h, mi = int(m.group("h")), int(m.group("m"))
-                    s = int(m.group("s") or 0)
-                    ap = m.group("ap")
-                else:
-                    h, mi, s, ap = int(m.group("h2")), 0, 0, m.group("ap2")
-                if ap:
-                    h = h % 12 + (12 if ap.lower() == "p" else 0)
-                if h < 24 and mi < 60 and s < 60:
-                    toks.append(Tok("TIME", m.group(), i, m.end(), (h, mi, s)))
-                    i = m.end()
-                    continue
-            in_call = bool(re.search(r"\b[^\W\d_]\w*\s*\([^()]*$", line[:i]))
-            tok, i = _number(line, i, thousands, point, allow_comma=not in_call)
+        if (c.isdecimal() or c.isalpha()) and (date := _date(line, i)):
+            toks.append(date)
+            i = date.end
+            continue
+        if c.isdecimal() and (clock := _TIME_RE.match(line, i)):
+            toks.append(_time(clock))
+            i = clock.end()
+            continue
+        if (
+            c.isdecimal()
+            or (c in _NUMBER_PUNCTUATION and _LEADING_POINT.match(line, i))
+            or (c == point and (not toks or toks[-1].kind == "OP") and not line[i + 1 :].strip())
+        ):
+            tok = _number(line, i, group, point)
             toks.append(tok)
+            i = tok.end
+            if tok.kind != "NUM":
+                continue
             # attached scale suffix: 2.5k, 5к, $5m, 7bn
             m = re.compile(r"(bn|tn|[kKкКMGTmbBt])(?![\w])").match(line, i)
             if m:
@@ -155,66 +148,115 @@ def tokenize(line: str, number_style: str = "comma_dot") -> list[Tok]:
     return toks
 
 
-_NUM_PREFIX = re.compile(r"0([xX][0-9a-fA-F_]+|[bB][01_]+|[oO][0-7_]+)")
+_NUM_PREFIX = re.compile(r"0([xX]|[bB](?=[\d_.,])|[oO](?=\d|_|[^\w]|$))[\w.,]*")
+# Include unsupported separators in pasted numbers so validation sees the whole number.
+_NUMBER_PUNCTUATION = ".,٫٬，．"
+_DECIMAL_RUN = rf"[\d_{_NUMBER_PUNCTUATION}]+"
+_NUM_PART = re.compile(rf"{_DECIMAL_RUN}(?:['’ʼ](?=\d){_DECIMAL_RUN})*")
+_LEADING_POINT = re.compile(rf"[{_NUMBER_PUNCTUATION}]+\d")
+_SPACE_BEFORE_DIGIT = re.compile(r"[^\S\r\n]+(?=\d)")
+_EXPONENT = re.compile(r"[eE][+-]?\d*(?![\w])")
 
 
-def _number(
-    line: str, i: int, thousands: str, point: str, allow_comma: bool = True
-) -> tuple[Tok, int]:
-    m = _NUM_PREFIX.match(line, i)
-    if m and not (m.end() < len(line) and line[m.end()].isalnum()):
-        body = m.group(1)
-        base = {"x": 16, "b": 2, "o": 8}[body[0].lower()]
-        value = Decimal(int(body[1:].replace("_", ""), base))
-        fmt = {16: "hex", 2: "bin", 8: "oct"}[base]
-        return Tok("NUM", m.group(), i, m.end(), value, fmt=fmt), m.end()
-    start = i
-    n = len(line)
-    digits = []
-    # integer part with grouping
-    while i < n and (line[i].isdecimal() or line[i] == "_"):
-        if line[i] != "_":
-            digits.append(line[i])
-        i += 1
-    while i < n:
-        sep = line[i]
-        is_group = sep == thousands or sep in "    "
-        if is_group and _three_digits(line, i + 1):
-            digits.extend(line[i + 1 : i + 4])
-            i += 4
-            continue
-        break
+def _date(line: str, i: int) -> Tok | None:
+    if m := _ISO_DATE.match(line, i):
+        parts = tuple(map(int, m.groups()))
+        try:
+            date(*parts)
+        except ValueError:
+            return Tok("INVALID_CALENDAR_DATE", m.group(), i, m.end())
+        return Tok("DATE", m.group(), i, m.end(), parts)
+    if m := _OTHER_DATE.match(line, i):
+        return Tok("INVALID_DATE", m.group(), i, m.end())
+    if m := _NAMED_DATE.match(line, i):
+        day_text = m["day"] or m["after"]
+        digits = _DAY_DIGITS.match(day_text)
+        assert digits
+        day = int(digits.group())
+        year = int(m["year"]) if m["year"] else None
+        month_name = m["month"] or m["first"]
+    elif m := _MONTH_YEAR.match(line, i):
+        month_name, year_text = m.groups()
+        year, day = int(year_text), 1
+    else:
+        return None
+    month = MONTHS.get(month_name.lower())
+    if month is None:
+        return Tok("INVALID_CALENDAR_DATE", m.group(), i, m.end())
+    return Tok("DATE", m.group(), i, m.end(), (year, month, day))
+
+
+def _time(match: re.Match[str]) -> Tok:
+    hours = int(match["h"] or match["h2"])
+    minutes = int(match["m"] or 0)
+    seconds = int(match["s"] or 0)
+    period = match["ap"] or match["ap2"]
+    start, end = match.span()
+    valid_hour = 1 <= hours <= 12 if period else hours < 24
+    if not valid_hour or minutes >= 60 or seconds >= 60:
+        return Tok("INVALID_TIME", match[0], start, end)
+    if period:
+        hours = hours % 12 + (12 if period.lower() == "p" else 0)
+    return Tok("TIME", match[0], start, end, (hours, minutes, seconds))
+
+
+def _number(line: str, i: int, group: str, point: str) -> Tok:
+    if m := _NUM_PREFIX.match(line, i):
+        base, fmt = {"x": (16, "hex"), "b": (2, "bin"), "o": (8, "oct")}[m[1].lower()]
+        end = _numeric_end(line, i, m.end())
+        text = line[i:end]
+        digits = text[2:].replace("_", "")
+        if not digits and not line[end:].strip():
+            return Tok("UNFINISHED_NUMBER", text, i, end)
+        try:
+            value = int(digits, base)
+        except ValueError:
+            return Tok("INVALID_NUMBER", text, i, end)
+        return Tok("NUM", text, i, end, Decimal(value), fmt=fmt)
+    part = _NUM_PART.match(line, i)
+    assert part
+    end = _numeric_end(line, i, part.end())
+    normalized, incomplete = decimal_mantissa(line[i:end], group, point)
+    if exp := _EXPONENT.match(line, end):
+        exp_text = exp.group()
+        end = exp.end()
+        if not exp_text[-1].isdecimal():
+            incomplete = normalized is not None
+            normalized = None
+        elif normalized is None:
+            incomplete = False
+        else:
+            normalized += exp_text
+        # Punctuation after the exponent cannot start a second decimal in the same run.
+        tail = _NUM_PART.match(line, end)
+        tail_end = _numeric_end(line, i, tail.end() if tail else end)
+        if tail_end > end:
+            end = tail_end
+            normalized, incomplete = None, False
+    text = line[i:end]
+    if normalized is not None:
+        try:
+            value = Decimal(normalized)
+        except InvalidOperation:
+            return Tok("INVALID_NUMBER", text, i, end)
+        return Tok("NUM", text, i, end, value)
+    kind = "UNFINISHED_NUMBER" if incomplete and not line[end:].strip() else "INVALID_NUMBER"
+    return Tok(kind, text, i, end)
+
+
+def _numeric_end(line: str, start: int, end: int) -> int:
+    while space := _SPACE_BEFORE_DIGIT.match(line, end):
+        part = _NUM_PART.match(line, space.end())
+        assert part
+        end = part.end()
+    # A comma can be punctuation in a sentence, as in "500, what is ...".
     if (
-        i < n
-        and line[i] in (point, ".", ",")
-        and i + 1 < n
-        and line[i + 1].isdecimal()
-        and (
-            line[i] == point
-            or (line[i] == "." and thousands in (" ", "."))
-            or (allow_comma and line[i] == "," and thousands == ",")
-        )
+        end > start + 1
+        and line[end - 1] == ","
+        and line[end - 2].isdecimal()
+        and end < len(line)
+        and (line[end].isspace() or line[end].isalpha())
+        and line[end:].strip()
     ):
-        digits.append(".")
-        i += 1
-        while i < n and (line[i].isdecimal() or line[i] == "_"):
-            if line[i] != "_":
-                digits.append(line[i])
-            i += 1
-    # scientific notation: 1.5e3, 2E-4
-    m = re.compile(r"[eE][+-]?\d+(?![\w])").match(line, i)
-    if m:
-        digits.append(m.group())
-        i = m.end()
-    text = "".join(digits) or "0"
-    if text.startswith("."):
-        text = "0" + text
-    return Tok("NUM", line[start:i], start, i, Decimal(text)), i
-
-
-def _three_digits(line: str, j: int) -> bool:
-    return (
-        j + 3 <= len(line)
-        and line[j : j + 3].isdecimal()
-        and not (j + 3 < len(line) and line[j + 3].isdecimal())
-    )
+        return end - 1
+    return end

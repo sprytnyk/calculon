@@ -28,19 +28,12 @@ from PySide6.QtWidgets import (
 
 from ..engine import RatesError, RateTable
 from ..engine.currency import KNOWN_CODES
-from ..settings import Settings
+from ..engine.numbers import NUMBER_STYLES, number_sample
+from ..settings import TIME_FORMATS, Settings
 from ..spelling import Status, platform_key, probe
 from ..translations import LANGUAGES
 from . import icons
 from .theme import GLACIER_DARK, PALETTES, Theme
-
-NUMBER_STYLES = [
-    ("auto", ""),
-    ("comma_dot", "1,234.56"),
-    ("dot_comma", "1.234,56"),
-    ("space_comma", "1 234,56"),
-    ("space_dot", "1 234.56"),
-]
 
 
 def _label(text: str) -> str:
@@ -317,15 +310,15 @@ class SettingsDialog(QDialog):
         tr = self.t
         fmt = Card()
         self.number_style = QComboBox()
-        for key, sample in NUMBER_STYLES:
-            self.number_style.addItem(sample or tr("number_style_auto"), key)
+        for key in NUMBER_STYLES:
+            self.number_style.addItem(number_sample(key), key)
         self.number_style.setCurrentIndex(max(0, self.number_style.findData(s.number_style)))
-        fmt.add(tr("number_style"), self.number_style)
-        self.date_order = QComboBox()
-        self.date_order.addItem(tr("dmy"), "DMY")
-        self.date_order.addItem(tr("mdy"), "MDY")
-        self.date_order.setCurrentIndex(max(0, self.date_order.findData(s.date_order)))
-        fmt.add(tr("date_order"), self.date_order)
+        fmt.add(tr("number_style"), self.number_style, tr("hint_number_style"))
+        self.time_format = QComboBox()
+        for key in TIME_FORMATS:
+            self.time_format.addItem(tr(f"time_{key}"), key)
+        self.time_format.setCurrentIndex(max(0, self.time_format.findData(s.time_format)))
+        fmt.add(tr("time_format"), self.time_format)
         self.dollar = QComboBox()
         for code in ("USD", "CAD", "AUD", "NZD", "SGD", "HKD", "MXN", "TWD"):
             self.dollar.addItem(code, code)
@@ -431,7 +424,7 @@ class SettingsDialog(QDialog):
                 else self.original.spell_check
             ),
             number_style=self.number_style.currentData(),
-            date_order=self.date_order.currentData(),
+            time_format=self.time_format.currentData(),
             dollar=dollar if dollar in KNOWN_CODES else self.original.dollar,
             max_decimals=self.max_decimals.value(),
             money_decimals=self.money_decimals.value(),
