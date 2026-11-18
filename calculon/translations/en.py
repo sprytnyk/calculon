@@ -79,6 +79,7 @@ T = {
     "vim_select": "Select characters, whole lines",
     "vim_selection": "Edit the selection, swap its ends",
     "vim_search": "Search, next, previous",
+    "vim_sheet_history": "Go back or forward in sheet history",
     "vim_spell_next": "Next, previous misspelled word",
     "vim_spell_suggest": "Spelling suggestions",
     "vim_spell_add": "Add to dictionary, ignore",

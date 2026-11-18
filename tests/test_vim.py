@@ -256,6 +256,32 @@ def test_every_sheet_opens_in_normal_mode(vim) -> None:
     assert ed.vim.mode is Mode.NORMAL
 
 
+def test_ctrl_o_and_ctrl_i_move_through_opened_sheets(vim) -> None:
+    ed = vim.editor
+    first = vim.current[1]
+    second = vim.store.create_sheet(name="Second", text="next sheet")
+    third = vim.store.create_sheet(name="Third", text="another sheet")
+    QTest.keyClicks(ed, "lll")
+    vim.open_sheet(second)
+    QTest.keyClicks(ed, "ll")
+    vim.open_sheet(third)
+
+    QTest.keyClick(ed, Qt.Key.Key_O, VIM_CTRL)
+    assert vim.current == ("sheet", second)
+    assert ed.textCursor().position() == 2
+    QTest.keyClick(ed, Qt.Key.Key_O, VIM_CTRL)
+    assert vim.current == ("sheet", first)
+    assert ed.textCursor().position() == 3
+    QTest.keyClick(ed, Qt.Key.Key_I, VIM_CTRL)
+    assert vim.current == ("sheet", second)
+    QTest.keyClick(ed, Qt.Key.Key_I, VIM_CTRL)
+    assert vim.current == ("sheet", third)
+    QTest.keyClick(ed, Qt.Key.Key_O, VIM_CTRL)
+    vim.open_sheet(first)
+    QTest.keyClick(ed, Qt.Key.Key_I, VIM_CTRL)
+    assert vim.current == ("sheet", first)
+
+
 def test_help_sheet_allows_movement_but_no_edits(vim) -> None:
     vim.open_help()
     ed = vim.editor

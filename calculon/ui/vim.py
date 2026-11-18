@@ -36,6 +36,7 @@ def key_rows() -> list[tuple[str, str, str]]:
         ("select_all", "vim_select", "v, V"),
         ("edit_selection", "vim_selection", "d c y x p r ~, o"),
         ("search", "vim_search", "/ ?, n N"),
+        ("sheet", "vim_sheet_history", f"{ctrl('O')}, {ctrl('I')}"),
         ("search", "vim_hint", "K"),
         ("spell_add", "vim_spell_next", "]s [s"),
         ("spell_add", "vim_spell_suggest", "z="),

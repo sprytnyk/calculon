@@ -121,6 +121,8 @@ class MainWindow(QMainWindow):
         # one document per opened sheet, so undo survives switching sheets
         self._docs: dict[str, QTextDocument] = {}
         self._positions: dict[str, tuple[int, int]] = {}  # cursor and scroll per sheet
+        self._sheet_history: list[str] = []
+        self._sheet_history_index = -1
         self._loose_doc: QTextDocument | None = None  # help or trash: not kept
         self._focus = False
         self._sidebar_before_focus = True  # whether to show the sidebar when focus mode ends
@@ -231,6 +233,7 @@ class MainWindow(QMainWindow):
             lambda text: self._show_vim(self.vim_pending_label, text)
         )
         self.editor.vim_search.connect(lambda forward: self.find_bar.open(backward=not forward))
+        self.editor.vim_sheet_history.connect(self._jump_sheet_history)
         # vim mode's Ctrl+W h/l between the sheet list, the sheet and its answers
         self.pane_keys = PaneKeys(self.sidebar, self.editor, self)
         self.pane_keys.pending_changed.connect(
@@ -613,6 +616,8 @@ class MainWindow(QMainWindow):
                 new.sheets_dir = self.settings.sheets_dir
             else:
                 self._forget_documents(lambda _rel: True)
+                self._sheet_history.clear()
+                self._sheet_history_index = -1
                 self.current = ("", "")
                 self.store = store
                 self.sidebar.set_store(store)
@@ -805,6 +810,10 @@ class MainWindow(QMainWindow):
 
     def _open_saved_sheet(self, rel: str, text: str, focus: bool = False) -> None:
         self._load(SHEET, rel, text, read_only=False)
+        index = self._sheet_history_index
+        if index < 0 or self._sheet_history[index] != rel:
+            self._sheet_history[index + 1 :] = [rel]
+            self._sheet_history_index = index + 1
         self._saved_text = text
         self._saved_mtime = self.store.mtime(rel)
         self.file_watcher.addPath(str(self.store.path(rel)))
@@ -812,6 +821,29 @@ class MainWindow(QMainWindow):
         self.settings.save()
         if focus:
             self.editor.setFocus()
+
+    def _jump_sheet_history(self, forward: bool) -> None:
+        current_index = self._sheet_history_index
+        if forward:
+            entries = range(current_index + 1, len(self._sheet_history))
+        else:
+            start = current_index - 1 if self.current[0] == SHEET else current_index
+            entries = range(start, -1, -1)
+        for index in entries:
+            rel = self._sheet_history[index]
+            if self.current == (SHEET, rel):
+                continue
+            try:
+                text = self.store.read(rel)
+            except FileNotFoundError:
+                continue
+            except (OSError, UnicodeDecodeError) as exc:
+                QMessageBox.warning(self, self.t("app_name"), str(exc))
+                return
+            if self.save_current():
+                self._sheet_history_index = index
+                self._open_saved_sheet(rel, text, focus=True)
+            return
 
     def open_help(self) -> None:
         if not self.save_current():
@@ -986,6 +1018,10 @@ class MainWindow(QMainWindow):
         for cache in (self._docs, self._positions):
             for old_key in [k for k in cache if k == rel or k.startswith(rel + "/")]:
                 cache[new_rel + old_key[len(rel) :]] = cache.pop(old_key)
+        self._sheet_history = [
+            new_rel + key[len(rel) :] if key == rel or key.startswith(rel + "/") else key
+            for key in self._sheet_history
+        ]
         kind, key = self.current
         if kind == SHEET and (key == rel or key.startswith(rel + "/")):
             self.current = (SHEET, new_rel + key[len(rel) :])

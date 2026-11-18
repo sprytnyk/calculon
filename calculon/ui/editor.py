@@ -54,6 +54,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from side_vim import Mode, VimMode
+from side_vim.keys import key_token, map_layout
 
 from ..engine import Config, FormatOptions, RateTable, SheetResult, evaluate_sheet
 from ..engine import ukrainian as UK
@@ -616,6 +617,7 @@ class SheetEdit(QPlainTextEdit):
     vim_mode_changed = Signal(str)  # what the status bar shows: "" or "-- INSERT --"
     vim_pending_changed = Signal(str)  # keys typed so far, like "2d"
     vim_search = Signal(bool)  # / (True, forward) or ? (False)
+    vim_sheet_history = Signal(bool)  # Ctrl+I (forward) or Ctrl+O (back)
     vim_window = Signal(str)  # the key after Ctrl+W, like "h"
 
     def __init__(self, theme: Theme, parent: QWidget | None = None):
@@ -766,17 +768,26 @@ class SheetEdit(QPlainTextEdit):
         self.vim_mode_changed.emit(vim.label(self.vim.mode) if on else "")
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+        event_type = event.type()
         if (
             watched is self
-            and event.type() == QEvent.Type.KeyPress
+            and event_type in (QEvent.Type.ShortcutOverride, QEvent.Type.KeyPress)
             and self.vim_on()
             and self.vim.mode is Mode.NORMAL
             and not self._vim_pending
             and isinstance(event, QKeyEvent)
-            and event.text() == "K"
         ):
-            self._show_cursor_hint()
-            return True
+            key = key_token(event)
+            if key:
+                key = map_layout(key, self.vim.layout_map)
+            if key in ("<C-o>", "<C-i>"):
+                event.accept()
+                if event_type == QEvent.Type.KeyPress:
+                    self.vim_sheet_history.emit(key == "<C-i>")
+                return True
+            if event_type == QEvent.Type.KeyPress and event.text() == "K":
+                self._show_cursor_hint()
+                return True
         return super().eventFilter(watched, event)
 
     def _remember_vim_pending(self, text: str) -> None:
