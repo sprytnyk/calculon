@@ -290,7 +290,7 @@ def apply(app: QApplication, theme: Theme) -> None:
         QToolButton#sidebarButton {{ border: none; padding: 4px 6px; border-radius: 4px;
                                      color: {theme.muted}; }}
         QToolButton#sidebarButton:hover {{ background: {theme.surface}; color: {theme.text}; }}
-        QWidget#startupNotice {{ background: {theme.surface}; }}
+        QWidget#startupNotice, QWidget#conflictNotice {{ background: {theme.surface}; }}
         QLabel#banner {{ background: {theme.surface}; color: {theme.muted}; padding: 6px 12px;
                          border-bottom: 1px solid {theme.border}; }}
         QWidget#findBar {{ background: {theme.sidebar}; border-top: 1px solid {theme.border}; }}

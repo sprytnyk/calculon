@@ -127,7 +127,10 @@ T = {
     "spell_none": "No suggestions",
     "total": "Total: {text}",
     "total_tip": "Click to copy the sheet total. A subtotal counts in place of its lines.",
-    "external_change": '"{name}" changed on disk, so Calculon reloaded it.',
+    "external_change": 'Calculon reloaded "{name}" after it changed on disk.',
+    "save_conflict": "Couldn't save to the original file. Save a copy to keep your edits.",
+    "save_copy": "Save a copy",
+    "recovered_sheet": "Recovered {name}",
     # rates status
     "rates_updating": "Updating rates…",
     "rates_ok": "Rates: {when} · {source}",

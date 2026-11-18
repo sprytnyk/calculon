@@ -285,6 +285,18 @@ def test_total_label_shows_missing_exchange_rate(window, app) -> None:
     assert window.total_label.text() == "Total: $50.00"
 
 
+def test_external_edit_is_not_overwritten_by_unsaved_changes(window) -> None:
+    window.new_sheet("")
+    path = window.current[1]
+    window.editor.setPlainText("local edit")
+    window.store.write(path, "external edit")
+    window._file_changed(str(window.store.path(path)))
+    assert not window.save_current()
+    assert window.store.read(path) == "external edit"
+    assert window.editor.toPlainText() == "local edit"
+    assert window._dirty
+
+
 @pytest.mark.parametrize(("size", "step"), [(8, -1), (40, 1)])
 def test_zoom_does_not_reapply_at_limit(window, monkeypatch, size, step) -> None:
     window.settings.font_size = size
@@ -1229,6 +1241,38 @@ def test_reopening_current_sheet_keeps_edits_and_undo(window) -> None:
     assert window.store.read(first) == "1 + 1 + 5"
     window.editor.undo()
     assert window.editor.toPlainText() == "1 + 1"
+
+
+def test_save_conflict_can_recover_edits_to_a_separate_sheet(window, monkeypatch) -> None:
+    store = window.store
+    original = store.create_sheet("Expenses", "Budget", "1 + 1")
+    window.open_sheet(original)
+    window.editor.setPlainText("local edits")
+    store.write(original, "external edits")
+
+    assert not window.save_current()
+    assert window.conflict_notice.isVisible()
+    assert store.read(original) == "external edits"
+
+    def fail_create(*args):
+        raise PermissionError("directory is locked")
+
+    with monkeypatch.context() as blocked:
+        blocked.setattr(store, "create_sheet", fail_create)
+        blocked.setattr(QMessageBox, "warning", lambda *_: None)
+        window.save_copy_button.click()
+    assert window.conflict_notice.isVisible()
+    assert window.editor.toPlainText() == "local edits"
+    assert window.current == ("sheet", original)
+
+    window.save_copy_button.click()
+    _, copy = window.current
+    assert copy != original and copy.startswith("Expenses/")
+    assert store.read(copy) == "local edits"
+    assert store.read(original) == "external edits"
+    assert window.conflict_notice.isHidden()
+    window.open_sheet(original)
+    assert window.editor.toPlainText() == "external edits"
 
 
 def test_undo_survives_switching_sheets(window, app) -> None:

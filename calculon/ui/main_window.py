@@ -115,6 +115,7 @@ class MainWindow(QMainWindow):
         self.store = self._open_store(self.settings.sheets_dir)
         self.current: tuple[str, str] = ("", "")  # (kind, key)
         self._saved_mtime = 0.0
+        self._saved_text = ""
         self._dirty = False
         self._qt_translator: QTranslator | None = None
         # one document per opened sheet, so undo survives switching sheets
@@ -143,12 +144,23 @@ class MainWindow(QMainWindow):
         self.dismiss_notice = QPushButton()
         self.dismiss_notice.clicked.connect(self._dismiss_startup_notice)
         notice.addWidget(self.dismiss_notice)
+        self.conflict_notice = QWidget()
+        self.conflict_notice.setObjectName("conflictNotice")
+        self.conflict_notice.hide()
+        conflict = QHBoxLayout(self.conflict_notice)
+        self.conflict_text = QLabel()
+        self.conflict_text.setWordWrap(True)
+        conflict.addWidget(self.conflict_text, 1)
+        self.save_copy_button = QPushButton()
+        self.save_copy_button.clicked.connect(self._save_conflict_copy)
+        conflict.addWidget(self.save_copy_button)
         right = QWidget()
         box = QVBoxLayout(right)
         box.setContentsMargins(0, 0, 0, 0)
         box.setSpacing(0)
         box.addWidget(self.startup_notice)
         box.addWidget(self.banner)
+        box.addWidget(self.conflict_notice)
         box.addWidget(self.editor, 1)
         self.find_bar = FindBar(self.editor, self.t)
         box.addWidget(self.find_bar)
@@ -514,6 +526,8 @@ class MainWindow(QMainWindow):
         self.editor.set_results_width(s.results_width)
         self.editor.set_line_numbers(s.line_numbers)
         self.editor.set_vim(s.vim_mode)
+        self.conflict_text.setText(self.t("save_conflict"))
+        self.save_copy_button.setText(self.t("save_copy"))
         self._engine_changed()
         self._load_qt_translation()
         self.sidebar.tr_ = self.t
@@ -765,6 +779,7 @@ class MainWindow(QMainWindow):
         self.editor.vim_reset()
         self.editor._cursor_moved()
         self._dirty = False
+        self.conflict_notice.hide()
         self.banner.setText(banner)
         self.banner.setVisible(bool(banner))
         self.sidebar.select(kind, key)
@@ -778,7 +793,11 @@ class MainWindow(QMainWindow):
         except (OSError, UnicodeDecodeError) as exc:
             QMessageBox.warning(self, self.t("app_name"), str(exc))
             return
+        self._open_saved_sheet(rel, text, focus)
+
+    def _open_saved_sheet(self, rel: str, text: str, focus: bool = False) -> None:
         self._load(SHEET, rel, text, read_only=False)
+        self._saved_text = text
         self._saved_mtime = self.store.mtime(rel)
         self.file_watcher.addPath(str(self.store.path(rel)))
         self.settings.last_sheet = rel
@@ -814,18 +833,44 @@ class MainWindow(QMainWindow):
         kind, rel = self.current
         if kind != SHEET or not self._dirty:
             return True
+        text = sheet_text(self.editor.document())
         try:
-            self.store.write(rel, sheet_text(self.editor.document()))
+            try:
+                on_disk = self.store.read(rel)
+            except FileNotFoundError, UnicodeDecodeError:
+                on_disk = None
+            if on_disk not in (self._saved_text, text):
+                self.conflict_notice.show()
+                return False
+            if on_disk != text:
+                self.store.write(rel, text)
         except OSError as exc:
             log.exception("could not save sheet %s", rel)
             self.show_message(str(exc), 5000)
         else:
+            self._saved_text = text
             self._saved_mtime = self.store.mtime(rel)
             self._dirty = False
+            self.conflict_notice.hide()
         path = str(self.store.path(rel))
         if path not in self.file_watcher.files():
             self.file_watcher.addPath(path)
         return not self._dirty
+
+    def _save_conflict_copy(self) -> None:
+        kind, rel = self.current
+        if kind != SHEET or not self._dirty:
+            return
+        directory = rel.rpartition("/")[0]
+        name = self.t("recovered_sheet", name=self.store.display_name(rel))
+        text = sheet_text(self.editor.document())
+        try:
+            copy = self.store.create_sheet(directory, name, text)
+        except OSError as exc:
+            QMessageBox.warning(self, self.t("save_copy"), str(exc))
+            return
+        self._save_timer.stop()
+        self._open_saved_sheet(copy, text, focus=True)
 
     def _file_changed(self, path: str) -> None:
         kind, rel = self.current
@@ -848,6 +893,7 @@ class MainWindow(QMainWindow):
             self.editor.setTextCursor(c)
             self._dirty = False
             self.show_message(self.t("external_change", name=self.store.display_name(rel)), 4000)
+        self._saved_text = text
         self._saved_mtime = mtime
         if path not in self.file_watcher.files():
             self.file_watcher.addPath(path)
