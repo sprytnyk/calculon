@@ -4,7 +4,7 @@ import html
 from dataclasses import replace
 
 from PySide6.QtCore import QSize, Qt, QUrl
-from PySide6.QtGui import QFont, QFontDatabase
+from PySide6.QtGui import QColor, QFont, QFontDatabase
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -42,6 +42,8 @@ def _label(text: str) -> str:
 
 
 def stylesheet(t: Theme) -> str:
+    muted = QColor(t.muted)
+    field_border = f"rgba({muted.red()}, {muted.green()}, {muted.blue()}, 105)"
     return f"""
     QDialog#settings {{ background: {t.sidebar}; }}
     QListWidget#nav {{ background: transparent; border: none; outline: 0; }}
@@ -55,8 +57,15 @@ def stylesheet(t: Theme) -> str:
     QLabel#pageTitle {{ color: {t.heading}; }}
     QLabel#cardTitle {{ color: {t.muted}; font-weight: 600; }}
     QFrame#card {{ background: {t.sidebar}; border: 1px solid {t.border};
-                   border-radius: 10px; }}
+                   border-radius: 12px; }}
     QFrame#card QLabel {{ background: transparent; }}
+    QFrame#card QLineEdit, QFrame#card QComboBox, QFrame#card QAbstractSpinBox {{
+        border-color: {field_border}; border-radius: 8px; }}
+    QFrame#card QLineEdit:hover, QFrame#card QComboBox:hover,
+    QFrame#card QAbstractSpinBox:hover {{ border-color: {t.muted}; }}
+    QFrame#card QLineEdit:focus, QFrame#card QComboBox:focus, QFrame#card QComboBox:on,
+    QFrame#card QAbstractSpinBox:focus {{ border-color: {t.accent}; }}
+    QFrame#card QComboBox QLineEdit, QFrame#card QAbstractSpinBox QLineEdit {{ border: none; }}
     QLabel#hint {{ color: {t.muted}; }}
     QLabel#code {{ background: {t.surface}; color: {t.text}; border: 1px solid {t.border};
                    border-radius: 6px; padding: 8px 10px; }}

@@ -1015,6 +1015,26 @@ def test_settings_dialog_round_trip(window) -> None:
     assert new.money_decimals == window.settings.money_decimals
 
 
+def test_settings_selector_border_changes_when_focused(window, app) -> None:
+    dlg = SettingsDialog(window.settings, window.t, window)
+    dlg.show()
+    try:
+        dlg.sheets_dir.setFocus()
+        pump(app)
+        assert not dlg.language.hasFocus()
+        normal = dlg.language.grab().toImage()
+        edge = normal.pixelColor(normal.width() // 2, 0)
+        assert edge.name() not in (window.theme.bg, window.theme.border)
+
+        dlg.language.setFocus()
+        pump(app)
+        assert dlg.language.hasFocus()
+        focused = dlg.language.grab().toImage()
+        assert focused.pixelColor(focused.width() // 2, 0) == QColor(window.theme.accent)
+    finally:
+        dlg.close()
+
+
 @pytest.mark.parametrize("same_name", [False, True])
 def test_settings_switch_to_directory_with_directory_link(
     window, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, same_name: bool
