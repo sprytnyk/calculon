@@ -62,7 +62,7 @@ from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu, sheet_text
 from calculon.ui.main_window import MainWindow
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog, key_text
-from calculon.ui.sidebar import HELP, Sidebar
+from calculon.ui.sidebar import DIRECTORY, HELP, ROLE, Sidebar
 from calculon.ui.theme import GLACIER_DARK
 from tests.test_directory_dialog import assert_error_colour
 
@@ -572,6 +572,43 @@ def test_trashing_directory_releases_watches_before_move(window, monkeypatch) ->
     monkeypatch.setattr(store, "trash", move)
     window.trash("Work")
     assert store.read_trashed("Work/Plans/Budget.txt") == "123"
+
+
+def test_creating_a_directory_selects_it_in_the_sidebar(window) -> None:
+    sidebar = window.sidebar
+    directory = window.store.create_directory(name="Work")
+    sidebar.rebuild()
+    sidebar.tree.setCurrentItem(sidebar._find(DIRECTORY, directory))
+    current = window.current
+
+    sidebar.btn_directory.click()
+
+    created = f"{directory}/{window.t('directory')}"
+    assert window.store.path(created).is_dir()
+    assert sidebar.tree.currentItem().data(0, ROLE) == (DIRECTORY, created)
+    assert window.current == current
+
+
+@pytest.mark.parametrize("open_inside", [False, True])
+def test_deleting_a_directory_selects_the_next_sibling(window, open_inside) -> None:
+    store, sidebar = window.store, window.sidebar
+    parent = store.create_directory(name="Work")
+    removed = store.create_directory(parent, "First")
+    next_directory = store.create_directory(parent, "Second")
+    sheet = store.create_sheet(removed, "Budget", "123")
+    if open_inside:
+        window.open_sheet(sheet)
+    current = window.current
+    sidebar.rebuild()
+    sidebar.tree.setCurrentItem(sidebar._find(DIRECTORY, removed))
+
+    sidebar.delete_current()
+
+    assert not store.path(removed).exists()
+    assert sidebar.tree.currentItem().data(0, ROLE) == (DIRECTORY, next_directory)
+    sidebar.rebuild()
+    assert sidebar.tree.currentItem().data(0, ROLE) == (DIRECTORY, next_directory)
+    assert window.current == (("sheet", "Welcome.txt") if open_inside else current)
 
 
 def test_failed_directory_trash_restores_watches(window, monkeypatch) -> None:

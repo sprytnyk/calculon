@@ -120,7 +120,7 @@ class Sidebar(QWidget):
         self.search = QLineEdit()
         self.search.setObjectName("search")
         self.search.setClearButtonEnabled(True)
-        self.search.textChanged.connect(self.rebuild)
+        self.search.textChanged.connect(lambda: self.rebuild())
         layout.addWidget(self.search)
         self.tree = SheetTree()
         self.tree.itemClicked.connect(self._clicked)
@@ -236,8 +236,9 @@ class Sidebar(QWidget):
             it.setToolTip(0, key)
         return it
 
-    def rebuild(self) -> None:
+    def rebuild(self, *, selection: tuple[str, str] | None = None) -> None:
         tree = self.tree
+        selected_row = selection or self._selected()
         scroll = tree.verticalScrollBar().value()
         tree.setAnimated(False)  # re-adding open directories must not replay the open animation
         tree.blockSignals(True)
@@ -246,7 +247,6 @@ class Sidebar(QWidget):
         pin_icon = icons.icon("pin")
         directory_icon = icons.icon("directory")
         query = self.search.text().strip()
-        selected: QTreeWidgetItem | None = None
         if query:
             hits = self.store.search(query)
             for rel in hits:
@@ -255,8 +255,6 @@ class Sidebar(QWidget):
                 if directory:
                     it.setText(0, f"{self.store.display_name(rel)}  ·  {directory}")
                 tree.addTopLevelItem(it)
-                if self.current == (SHEET, rel):
-                    selected = it
             if not hits:
                 empty = QTreeWidgetItem([self.t("no_results")])
                 empty.setFlags(Qt.ItemFlag.NoItemFlags)
@@ -269,14 +267,11 @@ class Sidebar(QWidget):
                 for node in pinned:
                     it = self._item(node.name, PINNED, node.rel, pin_icon)
                     sec.addChild(it)
-                    if self.current == (SHEET, node.rel):
-                        selected = it
                 sec.setExpanded(True)
             sec = self._item(self.t("sheets").upper(), SECTION, "")
             tree.addTopLevelItem(sec)
 
             def add(parent: QTreeWidgetItem, nodes) -> None:
-                nonlocal selected
                 for node in nodes:
                     if node.is_dir:
                         it = self._item(node.name, DIRECTORY, node.rel, directory_icon)
@@ -286,8 +281,6 @@ class Sidebar(QWidget):
                     else:
                         it = self._item(node.name, SHEET, node.rel, sheet_icon)
                         parent.addChild(it)
-                        if self.current == (SHEET, node.rel):
-                            selected = it
 
             add(sec, self.store.tree().children)
             sec.setExpanded(True)
@@ -298,8 +291,6 @@ class Sidebar(QWidget):
                 icons.icon("help"),
             )
             tree.addTopLevelItem(help_item)
-            if self.current == (HELP, ""):
-                selected = help_item
             trashed = self.store.trashed()
             trash = self._item(
                 f"{self.t('trash')} ({len(trashed)})" if trashed else self.t("trash"),
@@ -322,7 +313,6 @@ class Sidebar(QWidget):
                 parent.addChild(item)
 
             def add_trashed(parent: QTreeWidgetItem, path, key: str, original: str) -> None:
-                nonlocal selected
                 try:
                     children = sorted(
                         path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())
@@ -350,8 +340,6 @@ class Sidebar(QWidget):
                     if is_dir:
                         parents.setdefault(child_original, it)
                         add_trashed(it, child, child_key, child_original)
-                    elif self.current == (TRASHED, child_key):
-                        selected = it
 
             for name, original in trashed:
                 path = self.store.trash_dir / name
@@ -379,12 +367,14 @@ class Sidebar(QWidget):
                 it.setToolTip(0, original)
                 if is_dir:
                     add_trashed(it, path, name, original)
-                elif self.current == (TRASHED, name):
-                    selected = it
             trash.setExpanded(TRASH_DIR in self.expanded)
+        selected = self._find(*selected_row) if selected_row else None
+        if selected is None and self.current:
+            selected = self._find(*self.current)
         if selected is not None:
             self._show_current(selected)
-        tree.verticalScrollBar().setValue(scroll)
+        if selection is None:
+            tree.verticalScrollBar().setValue(scroll)
         tree.blockSignals(False)
         QTimer.singleShot(0, tree, lambda: tree.setAnimated(True))
         self._signature = self._snapshot()
@@ -416,7 +406,7 @@ class Sidebar(QWidget):
         self.current = (SHEET if kind == PINNED else kind, key)
         item = self._find(*self.current)
         if item is None or self.search.text().strip():
-            self.rebuild()
+            self.rebuild(selection=self.current)
             return
         tree = self.tree
         tree.blockSignals(True)
@@ -435,6 +425,20 @@ class Sidebar(QWidget):
                 found = found or it.value()
             it += 1
         return found
+
+    def directory_neighbor(self, key: str) -> tuple[str, str] | None:
+        """Choose the next sibling, previous sibling, or enclosing directory."""
+        item = self._find(DIRECTORY, key)
+        if item is None:
+            return None
+        parent = item.parent()
+        index = parent.indexOfChild(item)
+        if index + 1 < parent.childCount():
+            return parent.child(index + 1).data(0, ROLE)
+        if index > 0:
+            return parent.child(index - 1).data(0, ROLE)
+        parent_row = parent.data(0, ROLE)
+        return parent_row if parent_row[0] == DIRECTORY else None
 
     def current_directory(self) -> str:
         it = self.tree.currentItem()

@@ -67,7 +67,7 @@ from .find_bar import FindBar
 from .panes import PaneKeys
 from .settings_dialog import SettingsDialog
 from .shortcuts_dialog import ShortcutsDialog, key_text
-from .sidebar import HELP, SHEET, TRASHED, Sidebar
+from .sidebar import DIRECTORY, HELP, SHEET, TRASHED, Sidebar
 
 log = logging.getLogger(__name__)
 FONT_FAMILY = "Fira Code"
@@ -976,7 +976,8 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, self.t("app_name"), str(exc))
             return
         self.sidebar.expanded.add(rel)
-        self.sidebar.rebuild()
+        self.sidebar.search.clear()
+        self.sidebar.rebuild(selection=(DIRECTORY, rel))
 
     def _ask_text(self, title: str, text: str) -> tuple[str, bool]:
         """A one-line prompt with room around it, OK styled as the main button."""
@@ -1034,6 +1035,7 @@ class MainWindow(QMainWindow):
             return
         kind, key = self.current
         target = self.store.path(rel)
+        neighbor = self.sidebar.directory_neighbor(rel)
         paused = []
         for watcher in (self.sidebar.watcher, self.file_watcher):
             paths = [
@@ -1063,8 +1065,7 @@ class MainWindow(QMainWindow):
                 self.open_sheet(sheets[0])
             else:
                 self.open_help()
-        else:
-            self.sidebar.rebuild()
+        self.sidebar.rebuild(selection=neighbor)
 
     def restore(self, name: str) -> None:
         current_kind, current_name = self.current
