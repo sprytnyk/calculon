@@ -526,6 +526,8 @@ class MainWindow(QMainWindow):
         self.editor.set_results_width(s.results_width)
         self.editor.set_line_numbers(s.line_numbers)
         self.editor.set_vim(s.vim_mode)
+        self.sidebar.tree.vim_selection = s.vim_mode
+        self.sidebar.tree.viewport().update()
         self.conflict_text.setText(self.t("save_conflict"))
         self.save_copy_button.setText(self.t("save_copy"))
         self._engine_changed()

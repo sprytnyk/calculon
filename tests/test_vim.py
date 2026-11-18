@@ -318,6 +318,32 @@ def ctrl_w(widget, key: str) -> None:
     QTest.keyClicks(widget, key)
 
 
+@pytest.mark.parametrize("directory", [False, True])
+def test_sidebar_highlight_follows_keyboard_focus(vim, app, directory) -> None:
+    store, tree, ed = vim.store, vim.sidebar.tree, vim.editor
+    store.create_directory("", "Work")
+    store.create_sheet("", "Plans", "1")
+    vim.sidebar.rebuild()
+    item = tree.findItems("Work" if directory else "Plans", Qt.MatchFlag.MatchRecursive)[0]
+    tree.setCurrentItem(item)
+    tree.scrollToItem(item)
+    vim.activateWindow()
+    tree.setFocus()
+    pump(app)
+    y = tree.visualItemRect(item).center().y()
+    highlight = tree.palette().highlight().color()
+    assert tree.viewport().grab().toImage().pixelColor(6, y) == highlight
+    ctrl_w(tree, "l")
+    pump(app)
+    assert app.focusWidget() is ed
+    assert tree.currentItem() is item
+    assert tree.viewport().grab().toImage().pixelColor(6, y) != highlight
+    ctrl_w(ed, "h")
+    pump(app)
+    assert tree.currentItem() is item
+    assert tree.viewport().grab().toImage().pixelColor(6, y) == highlight
+
+
 def test_ctrl_w_moves_between_the_list_the_sheet_and_the_answers(vim, app) -> None:
     ed, tree, results = vim.editor, vim.sidebar.tree, vim.editor.results
     pending = vim.vim_pending_label
@@ -416,6 +442,50 @@ def test_j_k_and_enter_in_the_sheet_list(vim, app) -> None:
     QTest.keyClick(tree, Qt.Key.Key_Return)  # Enter opens a sheet and goes to it
     assert vim.current == ("sheet", other)
     assert app.focusWidget() is ed
+
+
+def test_d_in_sheet_list_uses_the_existing_delete_actions(vim, app) -> None:
+    store, sidebar = vim.store, vim.sidebar
+    store.create_directory("", "Work")
+    store.create_sheet("", "Plans", "1")
+    store.trash(store.create_sheet("", "Old", "1"))
+    sidebar.rebuild()
+    tree = sidebar.tree
+    calls = []
+    sidebar.trash.disconnect(vim.trash)
+    sidebar.empty_trash.disconnect(vim.empty_trash)
+    sidebar.trash.connect(lambda path: calls.append(path))
+    sidebar.empty_trash.connect(lambda: calls.append("empty"))
+    tree.setFocus()
+    pump(app)
+    items = [tree.findItems(name, Qt.MatchFlag.MatchRecursive)[0] for name in ("Plans", "Work")]
+    items.append(tree.topLevelItem(tree.topLevelItemCount() - 1))
+    for item in items:
+        tree.setCurrentItem(item)
+        QTest.keyClicks(tree, "d")
+    assert calls == ["Plans.txt", "Work", "empty"]
+
+
+@pytest.mark.parametrize("directory", [False, True])
+def test_r_restores_selected_trash_item(vim, app, directory) -> None:
+    store = vim.store
+    if directory:
+        store.create_directory("", "Work")
+        path = store.create_sheet("Work", "Plans", "saved content")
+        store.trash("Work")
+        name = "Work"
+    else:
+        path = store.create_sheet("", "Plans", "saved content")
+        store.trash(path)
+        name = "Plans"
+    vim.sidebar.rebuild()
+    tree = vim.sidebar.tree
+    tree.setCurrentItem(tree.findItems(name, Qt.MatchFlag.MatchRecursive)[0])
+    tree.setFocus()
+    pump(app)
+    QTest.keyClicks(tree, "r")
+    assert store.read(path) == "saved content"
+    assert not store.trashed()
 
 
 def test_j_k_and_enter_in_the_answers(vim, app) -> None:

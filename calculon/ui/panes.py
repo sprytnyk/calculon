@@ -86,6 +86,12 @@ class PaneKeys(QObject):
         self.pending_changed.emit("^W" if on else "")
 
     def _list_key(self, token: str) -> bool:
+        if token == "d":
+            self.sidebar.delete_current()
+            return True
+        if token == "r":
+            self.sidebar.restore_current()
+            return True
         if token in (DOWN, UP):
             key = Qt.Key.Key_Down if token == DOWN else Qt.Key.Key_Up
             # the list's own arrow keys, so j and k skip the section titles as arrows do

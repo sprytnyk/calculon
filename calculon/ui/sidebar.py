@@ -46,6 +46,7 @@ class SheetTree(QTreeWidget):
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
+        self.vim_selection = False
         self.setObjectName("sheetTree")
         self.setHeaderHidden(True)
         self.setMouseTracking(True)
@@ -59,7 +60,9 @@ class SheetTree(QTreeWidget):
 
     def drawRow(self, painter: QPainter, option, index) -> None:  # noqa: N802
         """One rounded highlight across the whole row, indentation included."""
-        selected = self.selectionModel().isSelected(index)
+        selected = self.selectionModel().isSelected(index) and (
+            not self.vim_selection or self.hasFocus()
+        )
         hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
         if selected or hovered:
             role = QPalette.ColorRole.Highlight if selected else QPalette.ColorRole.AlternateBase
@@ -484,6 +487,21 @@ class Sidebar(QWidget):
             self.trash.emit(data[1])
         elif data and data[0] in (TRASHED, TRASHED_DIR) and "/" not in data[1]:
             self.delete_forever.emit(data[1])
+
+    def delete_current(self) -> None:
+        """Run the selected item's delete action, including emptying Trash."""
+        data = self._selected()
+        if data and data[0] == TRASH:
+            if self.store.trashed():
+                self.empty_trash.emit()
+        else:
+            self._trash_selected()
+
+    def restore_current(self) -> None:
+        """Restore a selected item that was moved to Trash."""
+        data = self._selected()
+        if data and data[0] in (TRASHED, TRASHED_DIR) and "/" not in data[1]:
+            self.restore.emit(data[1])
 
     def _menu(self, pos: QPoint) -> None:
         item = self.tree.itemAt(pos)

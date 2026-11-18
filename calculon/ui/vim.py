@@ -46,4 +46,6 @@ def key_rows() -> list[tuple[str, str, str]]:
         ("sidebar", "vim_panes", f"{ctrl('W')} h, {ctrl('W')} l"),
         ("move", "vim_list_move", "j k"),
         ("accept", "vim_list_enter", "Enter"),
+        ("trash", "vim_list_delete", "d"),
+        ("restore", "vim_list_restore", "r"),
     ]

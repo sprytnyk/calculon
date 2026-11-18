@@ -87,8 +87,10 @@ T = {
     "vim_scroll_page": "Scroll a screen",
     "vim_normal": "Back to Normal mode",
     "vim_panes": "Go to the sheet list, the sheet or the answers",
-    "vim_list_move": "Move in the sheet list and the answers",
-    "vim_list_enter": "Open a sheet or directory, copy an answer",
+    "vim_list_move": "Move through sheets or answers",
+    "vim_list_enter": "Open a sheet or directory, or copy an answer",
+    "vim_list_delete": "Move to Trash, delete forever, or empty Trash",
+    "vim_list_restore": "Restore a sheet or directory from Trash",
     "refresh_rates": "Refresh Exchange Rates",
     "about": "About Calculon",
     # autocomplete: what kind of word a suggestion is
@@ -145,7 +147,7 @@ T = {
     "save": "Save",
     "vim_mode": "Vim mode",
     "hint_vim_mode": (
-        "Normal, Insert and Visual modes, as in Vim. The keys are in Help → Keyboard Shortcuts."
+        "Use Normal, Insert and Visual modes. Open Keyboard Shortcuts in the Help menu."
     ),
     "section_format": "Format",
     "section_decimals": "Decimal places",
