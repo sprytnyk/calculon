@@ -120,7 +120,7 @@ T = {
     "read_only_help": (
         "The help sheet is read-only. To try an example, choose New Sheet in the File menu."
     ),
-    "read_only_trash": "This sheet is in the trash. Restore it to edit.",
+    "read_only_trash": "Restore this sheet from Trash to edit it.",
     "copied": "Copied {text}",
     "spell_add": "Add to Dictionary",
     "spell_ignore": "Ignore",
@@ -131,6 +131,7 @@ T = {
     "save_conflict": "Couldn't save to the original file. Save a copy to keep your edits.",
     "save_copy": "Save a copy",
     "recovered_sheet": "Recovered {name}",
+    "trash_preview_failed": 'Couldn\'t open "{name}" from Trash.\n\n{error}',
     # rates status
     "rates_updating": "Updating rates…",
     "rates_ok": "Rates: {when} · {source}",

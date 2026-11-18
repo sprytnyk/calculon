@@ -819,8 +819,14 @@ class MainWindow(QMainWindow):
             return
         try:
             text = self.store.read_trashed(name)
-        except OSError, UnicodeDecodeError:
-            text = ""
+        except (OSError, UnicodeDecodeError) as exc:
+            QMessageBox.warning(
+                self,
+                self.t("trash"),
+                self.t("trash_preview_failed", name=self.store.display_name(name), error=exc),
+            )
+            self.sidebar.select(*self.current)
+            return
         self._load(TRASHED, name, text, read_only=True, banner=self.t("read_only_trash"))
 
     def _text_changed(self) -> None:

@@ -1275,6 +1275,24 @@ def test_save_conflict_can_recover_edits_to_a_separate_sheet(window, monkeypatch
     assert window.editor.toPlainText() == "external edits"
 
 
+def test_failed_trash_preview_reports_error_and_leaves_sheet_open(window, monkeypatch) -> None:
+    trashed = window.store.trash(window.store.create_sheet("", "Discard", "1 + 1"))
+    current = window.current
+    document = window.editor.document()
+    messages = []
+
+    def fail_read(name):
+        raise PermissionError("sheet is locked")
+
+    monkeypatch.setattr(window.store, "read_trashed", fail_read)
+    monkeypatch.setattr(QMessageBox, "warning", lambda *args: messages.append(args[-1]))
+    window.open_trashed(trashed)
+
+    assert window.current == current
+    assert window.editor.document() is document
+    assert len(messages) == 1 and "Discard" in messages[0] and "sheet is locked" in messages[0]
+
+
 def test_undo_survives_switching_sheets(window, app) -> None:
     store = window.store
     first = store.create_sheet("", "First", "1 + 1")

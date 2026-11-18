@@ -278,7 +278,7 @@ class SheetStore:
 
     def restore(self, name: str) -> str:
         src = self.trash_dir / _safe_component(name)
-        original = self.meta["trash"].pop(name, name)
+        original = self.meta["trash"].get(name, name)
         directory = _parent(original)
         dest_dir = self.path(directory) if directory else self.root
         dest_dir.mkdir(parents=True, exist_ok=True)
@@ -286,6 +286,7 @@ class SheetStore:
         stem, suffix = (base[: -len(EXT)], EXT) if base.endswith(EXT) else (base, "")
         dst = _unique(dest_dir, stem, suffix)
         src.rename(dst)
+        self.meta["trash"].pop(name, None)
         self._save_meta()
         return self.rel(dst)
 

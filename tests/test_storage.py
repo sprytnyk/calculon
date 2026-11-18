@@ -15,6 +15,22 @@ def names(nodes):
     return [n.name for n in nodes]
 
 
+def test_failed_restore_keeps_original_location(tmp_path, monkeypatch) -> None:
+    store = SheetStore(tmp_path)
+    store.create_directory("", "Work")
+    name = store.trash(store.create_sheet("Work", "Budget", "100"))
+
+    def fail(*_args):
+        raise PermissionError()
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "rename", fail)
+        with pytest.raises(PermissionError):
+            store.restore(name)
+    assert store.trashed() == [(name, "Work/Budget.txt")]
+    assert store.restore(name) == "Work/Budget.txt"
+
+
 def test_create_read_write(tmp_path: Path) -> None:
     store = SheetStore(tmp_path)
     rel = store.create_sheet(text="1 + 1")
