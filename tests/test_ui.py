@@ -27,6 +27,7 @@ from PySide6.QtGui import (
     QContextMenuEvent,
     QFont,
     QGuiApplication,
+    QHelpEvent,
     QImage,
     QInputMethodEvent,
     QKeyEvent,
@@ -72,15 +73,22 @@ def pump(app) -> None:
         app.processEvents()
 
 
-def test_tooltip_has_transparent_corners(window, app) -> None:
-    QToolTip.showText(window.mapToGlobal(QPoint(20, 20)), "A tooltip", window)
+def test_warning_tooltip_has_an_opaque_themed_frame(window, app) -> None:
+    ed = window.editor
+    ed.setPlainText("18/11/2026")
+    ed.recalculate()
+    pump(app)
+    pos = line_pos(ed, 0, 3)
+    hover = QHelpEvent(QEvent.Type.ToolTip, pos, ed.viewport().mapToGlobal(pos))
+    QApplication.sendEvent(ed.viewport(), hover)
     try:
+        assert "2026-11-18" in QToolTip.text()
         tooltip = next(
             w
             for w in app.topLevelWidgets()
             if w.isVisible() and w.windowType() == Qt.WindowType.ToolTip
         )
-        assert tooltip.grab().toImage().pixelColor(0, 0).alpha() == 0
+        assert tooltip.grab().toImage().pixelColor(0, 0) == QColor(window.theme.border)
     finally:
         QToolTip.hideText()
 

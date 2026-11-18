@@ -14,7 +14,6 @@ from PySide6.QtWidgets import (
     QStyle,
     QStyledItemDelegate,
     QStyleFactory,
-    QWidget,
 )
 
 from . import icons
@@ -318,7 +317,9 @@ def apply(app: QApplication, theme: Theme) -> None:
                           margin: 1px 1px; border: none; border-radius: 6px; }}
         QMenuBar::item:selected {{ background: {theme.surface}; }}
         QMenuBar::item:pressed {{ background: {theme.selection}; }}
-        QToolTip, QStatusBar QLabel#statusMessage {{
+        QToolTip {{ background: {theme.surface}; color: {theme.text};
+                    border: 1px solid {theme.border}; padding: 3px 8px; }}
+        QStatusBar QLabel#statusMessage {{
             background: {theme.surface}; color: {theme.text};
             border: 1px solid {theme.border}; border-radius: 6px; padding: 3px 8px; }}
         QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px 1px; }}
@@ -394,12 +395,6 @@ class _InputMargins(QObject):
     """
 
     def eventFilter(self, obj, event) -> bool:  # noqa: N802
-        if (
-            event.type() == QEvent.Type.Polish
-            and isinstance(obj, QWidget)
-            and obj.windowType() == Qt.WindowType.ToolTip
-        ):
-            obj.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         if event.type() == QEvent.Type.Show and isinstance(obj, QAbstractSpinBox):
             edit = obj.findChild(QLineEdit)
             if edit is not None and edit.textMargins().left() == 0:
