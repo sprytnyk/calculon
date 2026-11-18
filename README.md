@@ -1,54 +1,77 @@
 # Calculon
 
-A natural-language notepad calculator. Write plain lines with numbers, money, units and
-dates, and the answers show up in a column on the right. The syntax follows
-[Soulver's](https://documentation.soulver.app/), so most sheets work in both.
+A notepad that calculates as you type. Write lines with money, units and dates, and see
+the answers beside each line. Try `$19 for breakfast + $22 for the Uber` to get `$41.00`.
+Most sheets that use [Soulver's syntax](https://documentation.soulver.app/) work in Calculon too.
 
-![Typing a trip budget sheet in Calculon: the answers show up on the right as each line is written, then the theme switches from Glacier to Ember](docs/demo.gif)
+![A trip budget in Calculon with answers beside each line, shown in Glacier and Ember](docs/demo.gif)
 
 ## Features
 
-- Lines mix words and maths: `$19 for breakfast + $22 for the uber`, `20% off $80`,
-  `100 EUR in USD`, `10 km in miles`, `today + 3 weeks`
-- Variables, totals of the lines above, and answers from earlier lines. A line with just
-  `housing =` names the subtotal above it, so you can use `housing` further down
-- The sheet's total is in the middle of the status bar. Each answer counts once: a line
-  that adds up lines above takes their place, so `housing = rent + food` isn't counted
-  twice
-- List numbers like `1.`, `1)` and `•` at the start of a line are skipped
-- Sheets exported from Soulver keep their line references, like `[$1 000,00](line2)`
-- Big answers are shortened in the answers column, like $386.8M. Copying gives the full
-  number
-- Trip plans with `@from` and `@to`: each stay or leg shows the date it reaches, and `@to`
-  says how much time is left before a date. Soulver marks a trip's start and end in its
-  window instead, so these lines don't carry over to it
-- About 160 currencies, with new rates every day
-- English and Ukrainian, in sheets and in the interface
-- Linux and Windows x64, and macOS on Intel and Apple Silicon
-- Sheets in directories, with search, pins and a trash
-- Focus Mode hides the menu bar, the sidebar and the date of the last rates update, so
-  only the sheet is left. Turn it on with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>,
-  or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> on macOS. On macOS the menu bar stays
-  at the top of the screen. Always on Top keeps the window above other apps. Both are in
-  the View menu
-- Optional Vim mode with Normal, Insert and Visual modes, from
-  [side-vim](https://github.com/sprytnyk/side-vim). To turn it on, open
-  the Vim page in Settings
-- Two themes, Glacier and Ember, each dark, light or following the system, with Glacier by default
-- Spell check for English and Ukrainian on Linux and Windows, and on macOS after a manual setup
+- Mix words and maths in a line. Try `20% off $80`, `10 km in miles` or `today + 3 weeks`.
+- Reuse earlier answers and name subtotals. Write `housing =` on its own to give the
+  subtotal above it a name. If `housing = rent + food` adds two earlier answers, the
+  sheet total counts `housing` in their place. When tagged subtotals overlap, the
+  sheet total counts each amount once.
+- Start a list item with `1.`, `1)` or `•`. Calculon skips the list marker. It also reads
+  line references from Soulver exports, such as `[$1 000,00](line2)`.
+- The results pane shortens large answers, for example to `$386.8M`. Click the answer
+  to copy the full number.
+- Start a trip with `@from` and add a duration for each stay or leg to see when it ends.
+  Use `@to` to see how much time is left before a date. These commands are specific to
+  Calculon. Soulver sets the trip's start and end in its interface.
+- Convert about 160 currencies with daily exchange rates.
+- Write in English or Ukrainian. The app menus and messages are available in both languages.
+- Organise sheets in directories, pin the ones you use often, and restore deleted sheets
+  from Trash.
+- Choose Glacier or Ember, then choose light mode, dark mode or the system setting.
+  Glacier is the default.
+- Use Focus Mode in the View menu to hide the sidebar, menu bar and rates date. Press
+  <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> or
+  <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> on macOS. The macOS menu bar remains at the
+  top of the screen. The View menu also has Always on Top.
+- Turn on Vim mode in Settings to use Normal, Insert and Visual modes. Calculon uses
+  [side-vim](https://github.com/sprytnyk/side-vim).
 
-The Help sheet in the sidebar explains the calculation syntax with examples.
-Keyboard Shortcuts in the Help menu lists the keys, including Vim keys when Vim mode is on.
+Open the Help sheet in the sidebar for worked examples. Choose Keyboard Shortcuts in the
+Help menu to see the keys, including Vim shortcuts when the mode is on. In Vim mode, press
+`d` in the sidebar to move a sheet or directory to Trash. Select an item you moved to Trash
+and press `r` to restore it or `d` to delete it permanently. To empty Trash, select Trash
+itself and press `d`.
 
 | Action | Windows / Linux | macOS |
 | --- | --- | --- |
-| Open Help Sheet | <kbd>F1</kbd> | <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> |
-| Open Keyboard Shortcuts | <kbd>Shift</kbd>+<kbd>F1</kbd> | <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> |
+| Open the help sheet | <kbd>F1</kbd> | <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> |
+| Open keyboard shortcuts | <kbd>Shift</kbd>+<kbd>F1</kbd> | <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> |
+
+## Numbers, dates and times
+
+The default number format is `1,234.56`. The format you choose in Settings applies
+to both input and answers, regardless of the interface language.
+
+You can group digits in threes or leave them ungrouped. Formats that use spaces
+accept ordinary and non-breaking spaces. You can omit the leading zero in a decimal,
+as in `.5` or `,5`.
+Use semicolons between list items and function arguments, as in `total of 10; 20; 30`
+and `round(1234; 2)`.
+
+Write numeric dates as `YYYY-MM-DD`, including in ranges such as
+`2026-11-18 to 2026-11-20`. Add a time after a space, as in `2026-11-18 15:00`.
+If a calculation looks like a date, put spaces around its operators, as in `18 / 11 / 2026`.
+You can write `18 Jan 2026` or `January 18, 2026`. Leave out the year to use the current year.
+Calculon shows times in 24-hour format by default. Choose 12-hour display in Settings.
+
+Hover over a yellow underline in the sheet or a yellow `!` in the results pane to see
+what went wrong. In Vim Normal mode, press `K` to show the message and `K` again to hide it.
+
+Changing the number format recalculates the open sheet and keeps its text intact.
+In older sheets, you may need to update numbers, replace commas between arguments
+or list items with semicolons, and rewrite dates in formats such as `18/11/2026`.
 
 ## Install
 
-Download the archive for your system from the
-[releases](https://github.com/sprytnyk/calculon/releases) page and unpack it.
+Download the archive for your system from [Releases](https://github.com/sprytnyk/calculon/releases)
+and unpack it. Calculon runs on Linux and Windows x64 and on Intel and Apple Silicon Macs.
 
 - **Linux.** Run `./calculon`.
 - **Windows.** Run `calculon.exe`. The build isn't code-signed, so SmartScreen may ask
@@ -58,7 +81,7 @@ Download the archive for your system from the
   time. Try to open it, then go to System Settings, open Privacy & Security and click Open
   Anyway. Or run `xattr -dr com.apple.quarantine /Applications/Calculon.app`.
 
-Check a download against the signed checksums:
+Use the signed checksums to verify the download.
 
 ```bash
 gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum --ignore-missing -c SHA256SUMS
@@ -70,53 +93,55 @@ On first start, Calculon asks where to keep your sheets and suggests
 `~/Documents/Calculon`. Each sheet is a plain `.txt` file in that directory. You can pick
 another directory later in Settings.
 
-Directories are real directories, so the sheets work with any sync tool, `grep` or backups.
-Calculon keeps pins and custom order in a hidden `.calculon.json` in that directory.
-Deleted sheets go to `.trash/` until you empty the trash. Calculon ignores links and
-Windows junctions, such as `My Music` in Documents.
+The sidebar shows directories on disk. Use your usual tools to sync,
+search or back up your sheets. Calculon keeps pins and the custom sort order in
+`.calculon.json` and moves deleted items to `.trash/`. It skips links and Windows
+junctions such as `My Music` in Documents.
 
-Calculon checks the directory by creating it and writing a test file. If that fails, it says
-why and asks for another directory. On Windows the usual cause is Controlled folder access in
-Windows Security. Allow Calculon there, or pick a directory outside Documents.
+Calculon creates the directory if needed and writes a test file. If that fails, it asks
+you to choose another directory. On Windows, Controlled folder access can block the
+test. Allow Calculon in Windows Security or choose a directory outside Documents.
 
-If saving fails, Calculon keeps your edits open and stops you from closing the window,
-switching sheets or changing the sheets directory until it can save. On Windows it retries
-brief file-access errors before reporting a failure.
+If Calculon can't save, it keeps your edits open. Save them before closing the window,
+switching sheets or changing the sheets directory. On Windows, Calculon retries brief
+file-access errors before reporting them.
+
+If the file changed on disk while you were editing, choose Save a copy. Calculon saves
+your edits to a new sheet in the same directory and opens it.
 
 ## Exchange rates
 
 Calculon downloads rates once a day from [open.er-api.com](https://open.er-api.com).
-If that fails, it uses [Frankfurter](https://frankfurter.dev), which publishes the
-European Central Bank's rates. It keeps the last rates for offline use. A snapshot ships
-with the app, so currencies work on the first start without a network.
+If that fails, it tries [Frankfurter](https://frankfurter.dev) for European Central Bank
+rates. When you're offline, Calculon uses the last rates it saved or the rates that came
+with the app on first launch.
+If a sheet total needs a rate Calculon doesn't have, the status bar names the currency.
 
-You can point Calculon at your own source on the Exchange Rates page of Settings. The URL must
-return JSON like this:
+To use another source, enter its URL on the Exchange Rates page in Settings. The URL
+must return JSON in this format.
 
 ```json
 {"base": "USD", "rates": {"EUR": 0.92, "UAH": 41.3, "GBP": 0.79}}
 ```
 
-- `base`: the currency the rates are relative to. `base_code` also works. Without
-  either, Calculon takes USD.
-- `rates`: how many units of each currency one unit of `base` buys.
-- Optional: `time_last_update_unix` in seconds, or `date` as `YYYY-MM-DD`. Calculon
-  shows it as the time of the last update.
+- Set `base` or `base_code` to the currency the rates use as their base. Calculon defaults to USD.
+- In `rates`, give the amount of each currency that one unit of the base currency buys.
+- To show when rates last changed, include `time_last_update_unix` in seconds or `date`
+  in `YYYY-MM-DD` format.
 
-A self-hosted Frankfurter works as is. Besides exchange rates, Calculon goes online only
-when you open About, to ask GitHub whether a newer version is out.
+You can use the URL of your own Frankfurter server. Calculon goes online to get rates.
+When you open About, it checks GitHub for a new version.
 
 ## Spell check
 
-Turn it on with Check Spelling in the View menu, or in Settings. Calculon draws a wavy line
+Choose Check Spelling in the View menu or turn it on in Settings. Calculon draws a wavy line
 under misspelled words. Right-click one for suggestions, Add to Dictionary or Ignore.
 It skips numbers, units, currencies and variable names, and checks only the words
 around them. Words you add go to `words.txt` in Calculon's app data directory, one per
 line. On Linux that's `~/.local/share/sprytnyk.dev/Calculon`.
 
-Calculon doesn't ship a spell checker or dictionaries. It uses the ones already on your
-system: Hunspell on Linux and macOS, and Windows' own spell checker on Windows. Hunspell
-takes about a quarter of a second to load English and Ukrainian.
+Calculon uses Hunspell on Linux and macOS and the built-in spell checker on Windows.
+It uses your system's dictionaries for English and Ukrainian.
 
 **Linux.** On Debian and Ubuntu:
 
@@ -124,7 +149,7 @@ takes about a quarter of a second to load English and Ukrainian.
 sudo apt install libhunspell-1.7-0 hunspell-en-us hunspell-uk
 ```
 
-Other distros have the same packages under similar names. Calculon looks for
+Other Linux distributions may use different package names. Calculon looks for
 dictionaries in `/usr/share/hunspell`, `/usr/share/myspell`, `~/.local/share/hunspell`
 and any directory in `$DICPATH`.
 
@@ -141,16 +166,16 @@ curl -LO $base/uk_UA/uk_UA.aff -LO $base/uk_UA/uk_UA.dic
 
 **Windows.** Calculon uses the spell checker built into Windows. Windows has a dictionary
 for each language added in Settings > Time & language > Language & region. Most systems
-have English already; add Ukrainian there if you write in it. Words you add in Calculon
-go to its own `words.txt`, not to Windows' dictionary.
+have English already. Add Ukrainian there if you write in it. Words you add in Calculon
+go to its own `words.txt`.
 
-The Spell Check page of Settings shows what Calculon found, and the install command for
-anything missing. `calculon --self-test` prints it too.
+The Spell Check page in Settings and `calculon --self-test` show which dictionaries
+Calculon found and how to install any that are missing.
 
 ## Develop
 
-Built with PySide6. Needs [uv](https://docs.astral.sh/uv/), which picks Python 3.14 from
-`.python-version`.
+Calculon uses PySide6. Install [uv](https://docs.astral.sh/uv/) to set up the project.
+It reads the Python version from `.python-version`.
 
 ```bash
 uv sync                 # install dependencies
@@ -163,35 +188,32 @@ make site               # remake the website's example sheets and colours in doc
 make gif                # remake docs/demo.gif and the docs/screenshot*.png files (needs ffmpeg)
 ```
 
-`dist/calculon --self-test` checks that a build has everything it needs: unit data,
-time zones, help sheets, fonts and the rates snapshot. If the system has a spell
-checker, it also checks that spell check works. On macOS, run
+Run `dist/calculon --self-test` to check the bundled unit data, time zones, help sheets,
+fonts and exchange rates. It also tests spell check if one is installed. On macOS, run
 `dist/Calculon.app/Contents/MacOS/calculon --self-test`.
 
-The calculator engine in `calculon/engine/` has no Qt in it.
+The calculator engine lives in `calculon/engine/` and runs without Qt.
 
-The website is plain HTML in `docs/`, served by GitHub Pages from `main`. Its example
-sheets get their answers from the engine, and a test fails when they're out of date.
+GitHub Pages serves the website from `docs/` on `main`. The engine generates the website's
+example answers. The site test checks that those answers are up to date.
 
 ## Release
 
-Pushing a `vX.Y.Z` tag runs the *Release builds* workflow. It runs the checks, then
-builds Linux x64 and Windows x64 binaries and a `Calculon.app` for macOS x64 and arm64.
-On macOS it installs Hunspell and the dictionaries as described under Spell check, and
-the self-test fails if spell check doesn't find both languages. On Windows it runs the
-spell check tests against Windows' own spell checker. It keeps the builds as
-a run artifact with `SHA256SUMS`. The version comes from the tag, and
-there is no version file. The `release` skill in `.claude/skills/release/` does the
-rest: the signed tag, the signed checksums, the release notes and the GitHub release.
+Pushing a `vX.Y.Z` tag starts the *Release builds* workflow. It runs the checks and builds
+Linux x64 and Windows x64 binaries and `Calculon.app` for macOS x64 and arm64. The macOS
+job installs Hunspell and checks that both dictionaries work. The Windows job tests the
+built-in spell checker.
+
+The workflow takes the version from the tag and uploads the builds with `SHA256SUMS`.
+See the `release` skill in `.claude/skills/release/` for signing the tag and checksums,
+writing release notes and publishing a release on GitHub.
 
 ## License
 
-MIT. Fira Code is under the SIL Open Font License, in `assets/fonts/OFL.txt`. The menu
-and sidebar icons are [Phosphor Icons](https://phosphoricons.com) under the MIT license,
-in `assets/icons/LICENSE.txt`.
+Calculon's code uses the MIT license. Fira Code uses the SIL Open Font License in
+`assets/fonts/OFL.txt`. The menu and sidebar use [Phosphor Icons](https://phosphoricons.com)
+under the MIT license in `assets/icons/LICENSE.txt`.
 
-The app icon is **not** MIT. It is Calculon from the *Futurama Calculon* vector logo on
-seeklogo.com, which comes with no license grant. The character is © Matt Groening /
-Comedy Central, as noted in `assets/ICON-LICENSE.txt`. For anything beyond personal
-use, swap it for `assets/robot-icon.svg`, the original robot artwork, which is MIT like
-the rest.
+The app icon uses the *Futurama Calculon* vector logo from seeklogo.com. It comes with
+no license grant. See `assets/ICON-LICENSE.txt` for the credit to Matt Groening and Comedy
+Central. For anything beyond personal use, use the MIT-licensed robot in `assets/robot-icon.svg`.

@@ -237,15 +237,13 @@ T = {
     "rates_url_placeholder": "Leave empty to use open.er-api.com, then Frankfurter (ECB)",
     "rates_help": (
         "Calculon downloads rates once a day and keeps the last ones for offline use.\n\n"
-        "A custom URL must return JSON like this:\n\n"
+        "Use a URL that returns JSON in this format.\n\n"
         '{"base": "USD", "rates": {"EUR": 0.92, "UAH": 41.3, "GBP": 0.79}}\n\n'
-        '• base: the currency the rates are relative to ("base_code" also works; '
-        "defaults to USD).\n"
-        "• rates: how many units of each currency one unit of base buys.\n"
-        '• Optional: "time_last_update_unix" (seconds) or "date" (YYYY-MM-DD) '
-        "to show when the rates were updated.\n\n"
-        "Responses from open.er-api.com and Frankfurter already have this shape, so "
-        "a self-hosted Frankfurter works as is."
+        '• Set "base" or "base_code" to the base currency. The default is USD.\n'
+        '• In "rates", give the amount of each currency that one unit of the base buys.\n'
+        '• To show the update time, add "time_last_update_unix" in seconds or "date" '
+        "in YYYY-MM-DD format.\n\n"
+        "open.er-api.com and Frankfurter already return this format."
     ),
     "test_url": "Test URL",
     "test_ok": "Works: {count} currencies, base {base}.",

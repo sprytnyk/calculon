@@ -1,6 +1,6 @@
 [project]
 name = "calculon"
-description = "A natural-language notepad calculator for Linux, Windows and macOS"
+description = "A notepad that calculates as you type. Available for Linux, Windows and macOS."
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "sprytnyk.dev" }]

@@ -1,4 +1,4 @@
-"""Calculon: a natural-language notepad calculator."""
+"""A notepad that calculates as you type."""
 
 try:
     from ._version import __version__
