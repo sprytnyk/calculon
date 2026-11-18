@@ -225,6 +225,15 @@ def test_calculon_commands_still_work_in_normal_mode(vim, app) -> None:
     assert ed.vim.mode is Mode.NORMAL
 
 
+def test_ctrl_slash_comments_visual_lines(vim) -> None:
+    ed = vim.editor
+    vim.activateWindow()
+    assert QTest.qWaitForWindowActive(vim)
+    QTest.keyClicks(ed, "Vj")
+    QTest.keyClick(ed, Qt.Key.Key_Slash, APP_CTRL)
+    assert ed.toPlainText() == "// rent = $900\n// food = $300\nrent + food"
+
+
 def test_delete_to_line_edge_only_types_in_insert_mode(vim) -> None:
     ed = vim.editor
     edge = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier

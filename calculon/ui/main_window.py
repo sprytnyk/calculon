@@ -1153,7 +1153,8 @@ class MainWindow(QMainWindow):
         return f"{dt.day} {MONTHS_EN[dt.month - 1][:3]} {dt.year}, {time}"
 
     def _toggle_comment(self) -> None:
-        if not self.editor.isReadOnly():
+        # Vim's Visual mode makes the editor read-only while showing its selection.
+        if self.current[0] == SHEET:
             self.editor.toggle_comment()
 
     def _focus_search(self) -> None:
