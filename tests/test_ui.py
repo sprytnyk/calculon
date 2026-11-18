@@ -27,6 +27,8 @@ from PySide6.QtGui import (
     QContextMenuEvent,
     QFont,
     QGuiApplication,
+    QInputMethodEvent,
+    QKeyEvent,
     QKeySequence,
     QTextCharFormat,
     QTextCursor,
@@ -1378,6 +1380,49 @@ def test_autocomplete_lists_variables_first_with_their_kind(window, app) -> None
     assert all(kind for _, kind in rows)
     assert ed.kind_label("unit") == "unit"
     ed._completer.popup().hide()
+
+
+def test_autocomplete_suggests_months(window, app) -> None:
+    window.new_sheet("")
+    ed = window.editor
+    QTest.keyClicks(ed, "jan")
+    pump(app)
+    model = ed._completer.completionModel()
+    assert "january" in [model.index(i, 0).data() for i in range(model.rowCount())]
+    assert "січня" in ed._static_words
+    ed._completer.popup().hide()
+
+
+def test_ukrainian_month_autocomplete_after_language_change(window, app) -> None:
+    window.set_language("uk")
+    window.new_sheet("")
+    ed = window.editor
+    QTest.keyClicks(ed, "18 ")
+    for letter in "січ":
+        QApplication.sendEvent(
+            ed, QKeyEvent(QEvent.Type.KeyPress, 0, Qt.KeyboardModifier.NoModifier, letter)
+        )
+    pump(app)
+    model = ed._completer.completionModel()
+    assert "січня" in [model.index(i, 0).data() for i in range(model.rowCount())]
+    assert ed._completer.popup().isVisible()
+    QTest.keyClick(ed, Qt.Key.Key_Return)
+    assert ed.toPlainText() == "18 січня"
+
+
+def test_ukrainian_month_completion_for_input_method(window, app) -> None:
+    window.set_language("uk")
+    window.new_sheet("")
+    ed = window.editor
+    QTest.keyClicks(ed, "18 ")
+    for letter in "січ":
+        event = QInputMethodEvent()
+        event.setCommitString(letter)
+        QApplication.sendEvent(ed, event)
+    pump(app)
+    assert ed._completer.popup().isVisible()
+    QTest.keyClick(ed, Qt.Key.Key_Return)
+    assert ed.toPlainText() == "18 січня"
 
 
 def test_failed_rates_url_test_is_red(window, app, monkeypatch) -> None:

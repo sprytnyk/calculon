@@ -25,6 +25,7 @@ from PySide6.QtGui import (
     QFont,
     QFontMetrics,
     QGuiApplication,
+    QInputMethodEvent,
     QKeyEvent,
     QKeySequence,
     QMouseEvent,
@@ -60,6 +61,7 @@ from ..engine import units as U
 from ..engine.currency import KNOWN_CODES
 from ..engine.diagnostics import Diagnostic
 from ..engine.interpreter import AGGREGATES, FUNCTIONS, KEYWORDS, ROUNDERS
+from ..engine.months import MONTHS
 from ..engine.numbers import number_sample
 from ..engine.sheet import INPUT_WARNINGS
 from ..spelling import SpellChecker, misspelled, words
@@ -668,6 +670,7 @@ class SheetEdit(QPlainTextEdit):
         popup.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         kinds = {w: "keyword" for w in {k for k in KEYWORDS if len(k) > 2} | set(AGGREGATES)}
         kinds |= {w: "keyword" for w in UK.WORDS}
+        kinds |= dict.fromkeys(MONTHS, "keyword")
         kinds |= dict.fromkeys(U.all_words(), "unit")
         kinds |= dict.fromkeys(KNOWN_CODES, "currency")
         kinds |= dict.fromkeys(set(FUNCTIONS) | ROUNDERS | set(UK.FUNCTIONS), "function")
@@ -1401,10 +1404,18 @@ class SheetEdit(QPlainTextEdit):
                 return
             popup.hide()
         super().keyPressEvent(event)
+        self._complete_after_input(event.text())
+
+    def inputMethodEvent(self, event: QInputMethodEvent) -> None:  # noqa: N802
+        super().inputMethodEvent(event)
+        if text := event.commitString():
+            self._complete_after_input(text)
+
+    def _complete_after_input(self, text: str) -> None:
         if self.isReadOnly():
             return
-        text = event.text()
-        if not text or not (text.isalnum() or text == "_"):
+        popup = self._completer.popup()
+        if not (text.isalnum() or text == "_"):
             popup.hide()
             return
         prefix = self._word_before_cursor()
