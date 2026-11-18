@@ -21,8 +21,8 @@
   --heading: #0f172a;
   --label: #334155;
   --tag: #047857;
-  --misspelled: #e11d48;
-  --invalid-number: #856000;
+  --misspelled: #856000;
+  --invalid-number: #e11d48;
   --error: #e11d48;
   --on-accent: #ffffff;
   --icon-neutral: #64748b;
@@ -59,8 +59,8 @@
     --heading: #ffffff;
     --label: #cbd5e1;
     --tag: #34d399;
-    --misspelled: #fb7185;
-    --invalid-number: #f5d76e;
+    --misspelled: #f5d76e;
+    --invalid-number: #fb7185;
     --error: #fb7185;
     --on-accent: #0f172a;
     --icon-neutral: #94a3b8;

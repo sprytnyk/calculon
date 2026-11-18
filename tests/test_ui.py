@@ -1734,7 +1734,9 @@ def test_spelling_underlines_prose_only(window, app, tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("palette", ["glacier", "ember"])
 @pytest.mark.parametrize("mode", ["light", "dark"])
-def test_invalid_number_has_a_yellow_wave_and_format_hint(window, app, tmp_path, palette, mode):
+def test_diagnostic_underlines_show_yellow_for_spelling_and_red_for_format(
+    window, app, tmp_path, palette, mode
+):
     window.set_colours(palette)
     window.set_theme(mode)
     text = "🧾 teh $1..23"
@@ -1745,16 +1747,22 @@ def test_invalid_number_has_a_yellow_wave_and_format_hint(window, app, tmp_path,
         for r in ed.document().firstBlock().layout().formats()
         if r.format.underlineStyle() != QTextCharFormat.UnderlineStyle.NoUnderline
     }
+    spelling_style = QTextCharFormat.UnderlineStyle.SpellCheckUnderline
+    format_style = QTextCharFormat.UnderlineStyle.WaveUnderline
     assert ranges == {
-        QTextCharFormat.UnderlineStyle.SpellCheckUnderline: (3, 3, window.theme.misspelled),
-        QTextCharFormat.UnderlineStyle.WaveUnderline: (8, 5, window.theme.invalid_number),
+        spelling_style: (3, 3, window.theme.misspelled),
+        format_style: (8, 5, window.theme.invalid_number),
     }
+    spelling_hue = QColor(ranges[spelling_style][2]).hue()
+    format_hue = QColor(ranges[format_style][2]).hue()
+    assert 40 <= spelling_hue <= 65
+    assert format_hue >= 330 or 0 <= format_hue <= 15
     assert ed.result_text(0) == ""
     assert "1,234.56" in ed.hint_at(line_pos(ed, 0, 10))
     assert ed.hint_at(line_pos(ed, 0, 4)) == ""
 
 
-def test_unsupported_date_has_a_yellow_wave_and_iso_hint(window, app):
+def test_unsupported_date_has_a_format_wave_and_iso_hint(window, app):
     ed = window.editor
     ed.setPlainText("18/11/2026")
     ed.recalculate()

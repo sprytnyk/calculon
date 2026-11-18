@@ -94,8 +94,8 @@ DARK = Theme(
     heading="#ffffff",
     label="#cfd1d8",
     tag="#6fcf97",
-    misspelled="#ff6b6b",
-    invalid_number="#f6d365",
+    misspelled="#f6d365",
+    invalid_number="#ff6b6b",
     error="#ff6b6b",
     icons=ICONS_DARK,
 )
@@ -122,8 +122,8 @@ LIGHT = Theme(
     heading="#111827",
     label="#374151",
     tag="#15803d",
-    misspelled="#dc2626",
-    invalid_number="#926600",
+    misspelled="#926600",
+    invalid_number="#dc2626",
     error="#dc2626",
     icons=ICONS_LIGHT,
 )
@@ -163,8 +163,8 @@ GLACIER_DARK = Theme(
     heading="#ffffff",
     label="#cbd5e1",
     tag="#34d399",
-    misspelled="#fb7185",
-    invalid_number="#f5d76e",
+    misspelled="#f5d76e",
+    invalid_number="#fb7185",
     error="#fb7185",
     icons=GLACIER_ICONS_DARK,
 )
@@ -191,8 +191,8 @@ GLACIER_LIGHT = Theme(
     heading="#0f172a",
     label="#334155",
     tag="#047857",
-    misspelled="#e11d48",
-    invalid_number="#856000",
+    misspelled="#856000",
+    invalid_number="#e11d48",
     error="#e11d48",
     icons=GLACIER_ICONS_LIGHT,
 )

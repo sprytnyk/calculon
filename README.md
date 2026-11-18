@@ -61,8 +61,8 @@ If a calculation looks like a date, put spaces around its operators, as in `18 /
 You can write `18 Jan 2026` or `January 18, 2026`. Leave out the year to use the current year.
 Calculon shows times in 24-hour format by default. Choose 12-hour display in Settings.
 
-Hover over a yellow underline in the sheet or a yellow `!` in the results pane to see
-what went wrong. In Vim Normal mode, press `K` to show the message and `K` again to hide it.
+Hover over a red underline or a red `!` in the results pane to see the warning.
+In Vim Normal mode, press `K` to show or hide the warning at the cursor.
 
 Changing the number format recalculates the open sheet and keeps its text intact.
 In older sheets, you may need to update numbers, replace commas between arguments
