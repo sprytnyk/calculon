@@ -16,7 +16,7 @@ FALLBACK_RATES_URL = "https://api.frankfurter.dev/v1/latest?base=USD"
 
 
 def default_sheets_dir() -> str:
-    """The sheets folder Calculon suggests on first start."""
+    """The sheets directory Calculon suggests on first start."""
     docs = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
     return str(Path(docs or Path.home()) / "Calculon")
 
@@ -34,7 +34,7 @@ def read_bool(value: object) -> bool:
 
 @dataclass
 class Settings:
-    sheets_dir: str = ""  # empty until the user picks a folder on first start
+    sheets_dir: str = ""  # empty until the user picks a directory on first start
     theme: str = "dark"  # dark, light, system
     colours: str = "glacier"  # glacier, ember
     language: str = "en"  # en, uk

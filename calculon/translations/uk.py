@@ -8,8 +8,8 @@ T = {
     "menu_view": "&Вигляд",
     "menu_help": "&Довідка",
     "new_sheet": "Новий аркуш",
-    "new_folder": "Нова тека",
-    "open_folder": "Показати теку аркушів",
+    "new_directory": "Нова тека",
+    "open_directory": "Показати теку аркушів",
     "settings": "Налаштування…",
     "quit": "Вийти",
     "undo": "Скасувати",
@@ -107,14 +107,14 @@ T = {
     "pin": "Закріпити",
     "unpin": "Відкріпити",
     "move_to_trash": "У кошик",
-    "show_in_folder": "Показати у файловому менеджері",
+    "show_in_directory": "Показати у файловому менеджері",
     "restore": "Відновити",
     "delete_forever": "Видалити назавжди",
     "empty_trash": "Очистити кошик",
     "confirm_delete": 'Видалити "{name}" назавжди? Це не можна скасувати.',
     "confirm_empty": "Видалити все з кошика назавжди? Це не можна скасувати.",
     "untitled": "Без назви",
-    "folder": "Нова тека",
+    "directory": "Нова тека",
     "no_results": "Аркушів не знайдено",
     # editor
     "read_only_help": (
@@ -150,8 +150,8 @@ T = {
     "section_source": "Джерело",
     "section_json": "Що має повертати власне джерело",
     "hint_sheets_dir": (
-        "Кожен аркуш тут це звичайний файл .txt, тож синхронізація й резервні копії "
-        "працюють без налаштувань."
+        "Calculon зберігає тут кожен аркуш як файл .txt. Цю теку можна синхронізувати "
+        "або зробити її резервну копію."
     ),
     "hint_dollar": "Яку валюту означає знак $ без уточнення.",
     "hint_decimals": "Результати показують до стількох знаків; для грошей окреме налаштування.",
@@ -165,14 +165,14 @@ T = {
     "tab_spelling": "Правопис",
     "tab_vim": "Vim",
     "sheets_dir": "Тека аркушів:",
-    "folder_blocked": "Calculon не може створити теку {folder} або записати в неї. {error}.",
-    "folder_blocked_windows": (
+    "directory_blocked": "Calculon не може створити теку {directory} або записати в неї. {error}.",
+    "directory_blocked_windows": (
         'Це може блокувати "Контрольований доступ до папок" у Безпеці Windows. '
         "Дозвольте там Calculon або виберіть іншу теку."
     ),
-    "folder_pick_another": "Виберіть іншу теку.",
-    "folder_question": "Де Calculon зберігатиме ваші аркуші?",
-    "folder_use": "Використати цю теку",
+    "directory_pick_another": "Виберіть іншу теку.",
+    "directory_question": "Де Calculon зберігатиме ваші аркуші?",
+    "directory_use": "Використати цю теку",
     "browse": "Огляд…",
     "font_size": "Розмір тексту:",
     "ligatures": "Лігатури шрифту",

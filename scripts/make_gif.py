@@ -11,7 +11,7 @@ The screenshots sit on soft glows of the theme's colours. The link previews are
 
 Run with: make gif (needs ffmpeg)
 
-It drives the real app offscreen, with HOME and the XDG folders in a temp dir so
+It drives the real app offscreen, with HOME and the XDG directories in a temp dir so
 nothing touches your own settings or sheets. Rates come from the bundled snapshot.
 """
 
@@ -152,7 +152,7 @@ OTHER_SHEETS = {
 class Shot:
     file: str  # in docs/
     lang: str
-    sheet: str  # the open sheet, as a path in the sheets folder
+    sheet: str  # the open sheet, as a path in the sheets directory
     text: str
     size: tuple[int, int] = SIZE
     focus: bool = False
@@ -177,7 +177,7 @@ SHOTS = [
 
 
 def isolate(home: Path) -> None:
-    """Point HOME and the XDG folders at home, before Qt looks them up."""
+    """Point HOME and the XDG directories at home, before Qt looks them up."""
     os.environ.update(
         HOME=str(home),
         XDG_CONFIG_HOME=str(home / ".config"),
@@ -187,9 +187,11 @@ def isolate(home: Path) -> None:
     )
 
 
-def open_window(folder: Path, lang: str, sheet: str, text: str, focus: bool = False) -> MainWindow:
-    """Fill a new sheets folder in folder, and open the app on sheet, in Glacier."""
-    store = SheetStore(folder)
+def open_window(
+    directory: Path, lang: str, sheet: str, text: str, focus: bool = False
+) -> MainWindow:
+    """Fill a new sheets directory in directory, and open the app on sheet, in Glacier."""
+    store = SheetStore(directory)
     sheets = {**OTHER_SHEETS[lang], sheet: text}
     for rel, body in sheets.items():
         store.path(rel).parent.mkdir(parents=True, exist_ok=True)
@@ -197,7 +199,7 @@ def open_window(folder: Path, lang: str, sheet: str, text: str, focus: bool = Fa
     store.pin(next(iter(sheets)))
     qs = QSettings()
     for key, value in {
-        "sheets_dir": str(folder),
+        "sheets_dir": str(directory),
         "language": lang,
         "colours": "glacier",
         "last_sheet": sheet,
@@ -214,9 +216,9 @@ def settle() -> None:
         QApplication.processEvents()
 
 
-def record(folder: Path) -> list[tuple[Path, float]]:
-    """Save a PNG per step into folder. Return each with how long it shows."""
-    window = open_window(folder / "sheets", "en", LVIV_SHEET["en"], "")
+def record(directory: Path) -> list[tuple[Path, float]]:
+    """Save a PNG per step into directory. Return each with how long it shows."""
+    window = open_window(directory / "sheets", "en", LVIV_SHEET["en"], "")
     window.resize(*SIZE)
     window.show()
     window.editor.setFocus()
@@ -224,7 +226,7 @@ def record(folder: Path) -> list[tuple[Path, float]]:
 
     def snap(seconds: float) -> None:
         settle()
-        path = folder / f"{len(frames):04d}.png"
+        path = directory / f"{len(frames):04d}.png"
         window.grab().save(str(path))
         frames.append((path, seconds))
 
@@ -254,8 +256,8 @@ def record(folder: Path) -> list[tuple[Path, float]]:
     return frames
 
 
-def screenshot(folder: Path, shot: Shot) -> QImage:
-    window = open_window(folder, shot.lang, shot.sheet, shot.text, shot.focus)
+def screenshot(directory: Path, shot: Shot) -> QImage:
+    window = open_window(directory, shot.lang, shot.sheet, shot.text, shot.focus)
     window.resize(*shot.size)
     window.show()
     window.editor.set_results_width(shot.results_width)  # after show(): it caps at half the width
@@ -368,17 +370,17 @@ def write_gif(frames: list[tuple[Path, float]], gif: Path) -> None:
 
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
-        folder = Path(tmp)
-        isolate(folder / "home")
+        directory = Path(tmp)
+        isolate(directory / "home")
         QCoreApplication.setOrganizationName("calculon-gif")
         QCoreApplication.setApplicationName("Calculon")
         app = QApplication(sys.argv)
         app.setDesktopFileName("calculon")
         rates.RatesService.refresh = lambda self: None  # keep the bundled snapshot
-        write_gif(record(folder / "gif"), GIF)
+        write_gif(record(directory / "gif"), GIF)
         print(GIF)
         for shot in SHOTS:
-            image = framed(screenshot(folder / Path(shot.file).stem, shot), shot.picture)
+            image = framed(screenshot(directory / Path(shot.file).stem, shot), shot.picture)
             image.save(str(DOCS / shot.file))
             print(DOCS / shot.file)
     return 0

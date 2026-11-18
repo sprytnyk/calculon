@@ -60,9 +60,9 @@ from ..translations import LANGUAGES, tr
 from . import icons
 from . import theme as themes
 from .about_dialog import AboutDialog
+from .directory_dialog import directory_error
 from .editor import EDIT_MENU, KIND_ORDER, SheetEdit
 from .find_bar import FindBar
-from .folder_dialog import folder_error
 from .panes import PaneKeys
 from .settings_dialog import SettingsDialog
 from .shortcuts_dialog import ShortcutsDialog, key_text
@@ -105,8 +105,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self, settings: Settings | None = None) -> None:
         super().__init__()
-        # main() passes what choose_sheets_folder() returned: the settings file may not
-        # hold the chosen folder if Calculon can't write to it
+        # main() passes what choose_sheets_directory() returned: the settings file may not
+        # hold the chosen directory if Calculon can't write to it
         self.settings = settings or Settings.load()
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, self.settings.always_on_top)
         self.theme = themes.resolve(self.settings.theme, self.settings.colours)
@@ -230,13 +230,13 @@ class MainWindow(QMainWindow):
         s.open_help.connect(self.open_help)
         s.open_trashed.connect(self.open_trashed)
         s.new_sheet.connect(self.new_sheet)
-        s.new_folder.connect(self.new_folder)
+        s.new_directory.connect(self.new_directory)
         s.rename.connect(self.rename)
         s.trash.connect(self.trash)
         s.restore.connect(self.restore)
         s.delete_forever.connect(self.delete_forever)
         s.empty_trash.connect(self.empty_trash)
-        s.show_in_folder.connect(self.show_in_folder)
+        s.show_in_directory.connect(self.show_in_directory)
         s.changed.connect(self._sidebar_changed)
 
         # what spell check can use here; dictionaries load only once it's turned on
@@ -254,13 +254,13 @@ class MainWindow(QMainWindow):
     def t(self, key: str, **kw) -> str:
         return tr(self.settings.language, key, **kw)
 
-    def _folder_error(self, folder: str, exc: OSError) -> str:
-        return folder_error(self.settings.language, folder, exc)
+    def _directory_error(self, directory: str, exc: OSError) -> str:
+        return directory_error(self.settings.language, directory, exc)
 
-    def _open_store(self, folder: str) -> SheetStore:
-        if not folder:
-            raise StorageError("no sheets folder chosen")
-        store = SheetStore(Path(folder).expanduser())
+    def _open_store(self, directory: str) -> SheetStore:
+        if not directory:
+            raise StorageError("no sheets directory chosen")
+        store = SheetStore(Path(directory).expanduser())
         if not store.all_sheets() and not store.trashed() and not store.meta["order"]:
             store.create_sheet("", "Welcome", WELCOME)
         return store
@@ -334,12 +334,18 @@ class MainWindow(QMainWindow):
         mac = sys.platform == "darwin"
         m = bar.addMenu(self.t("menu_file"))
         self._action(
-            m, "new_sheet", lambda: self.new_sheet(self.sidebar.current_folder()), standard_key.New
+            m,
+            "new_sheet",
+            lambda: self.new_sheet(self.sidebar.current_directory()),
+            standard_key.New,
         )
         self._action(
-            m, "new_folder", lambda: self.new_folder(self.sidebar.current_folder()), "Ctrl+Shift+N"
+            m,
+            "new_directory",
+            lambda: self.new_directory(self.sidebar.current_directory()),
+            "Ctrl+Shift+N",
         )
-        self._action(m, "open_folder", lambda: self.show_in_folder(""))
+        self._action(m, "open_directory", lambda: self.show_in_directory(""))
         m.addSeparator()
         self._action(m, "settings", self.open_settings, "Ctrl+,")
         m.addSeparator()
@@ -543,17 +549,17 @@ class MainWindow(QMainWindow):
         if dlg.exec() != SettingsDialog.DialogCode.Accepted:
             return
         new = dlg.result_settings()
-        folder_changed = (
+        directory_changed = (
             Path(new.sheets_dir).expanduser() != Path(self.settings.sheets_dir).expanduser()
         )
-        if folder_changed:
+        if directory_changed:
             if not self.save_current():
                 return
             try:
                 store = self._open_store(new.sheets_dir)
             except OSError as exc:
                 QMessageBox.warning(
-                    self, self.t("settings_title"), self._folder_error(new.sheets_dir, exc)
+                    self, self.t("settings_title"), self._directory_error(new.sheets_dir, exc)
                 )
                 new.sheets_dir = self.settings.sheets_dir
             else:
@@ -565,7 +571,7 @@ class MainWindow(QMainWindow):
         self.settings.save()
         self.rates.set_sources(new.rates_sources())
         self.apply_settings()
-        if folder_changed:
+        if directory_changed:
             self._open_initial()
 
     def set_theme(self, key: str) -> None:
@@ -829,25 +835,25 @@ class MainWindow(QMainWindow):
             else:
                 self.open_help()
 
-    def new_sheet(self, folder: str = "") -> None:
+    def new_sheet(self, directory: str = "") -> None:
         name, ok = self._ask_text(self.t("new_sheet"), self.t("untitled"))
         if not ok or not name.strip():
             return
         if not self.save_current():
             return
         try:
-            rel = self.store.create_sheet(folder, name)
+            rel = self.store.create_sheet(directory, name)
         except OSError as exc:
             QMessageBox.warning(self, self.t("app_name"), str(exc))
             return
         self.open_sheet(rel, focus=True)
 
-    def new_folder(self, parent: str = "") -> None:
-        name, ok = self._ask_text(self.t("new_folder"), self.t("folder"))
+    def new_directory(self, parent: str = "") -> None:
+        name, ok = self._ask_text(self.t("new_directory"), self.t("directory"))
         if not ok or not name.strip():
             return
         try:
-            rel = self.store.create_folder(parent, name)
+            rel = self.store.create_directory(parent, name)
         except OSError as exc:
             QMessageBox.warning(self, self.t("app_name"), str(exc))
             return
@@ -992,10 +998,10 @@ class MainWindow(QMainWindow):
             else:
                 doc.deleteLater()
 
-    def show_in_folder(self, rel: str) -> None:
+    def show_in_directory(self, rel: str) -> None:
         path = self.store.path(rel) if rel else self.store.root
-        folder = path if path.is_dir() else path.parent
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+        directory = path if path.is_dir() else path.parent
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(directory)))
 
     def show_message(self, text: str, ms: int) -> None:
         """Show text in the total's place for ms milliseconds. Unlike QStatusBar's own

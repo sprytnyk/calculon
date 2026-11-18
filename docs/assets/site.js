@@ -212,7 +212,7 @@
     return menu;
   }
 
-  // a click on a sheet in the sidebar opens it, like in the app; folders, Help and Trash
+  // a click on a sheet in the sidebar opens it, like in the app; directories, Help and Trash
   // are only labels
   function heroWindow() {
     const win = document.querySelector("[data-hero]");
@@ -263,10 +263,10 @@
     const title = el("div", "row muted", DATA.ui.sheets);
     title.style.fontSize = "12.5px";
     side.append(title);
-    for (const [folder, keys] of DATA.sidebar) {
-      if (folder) row("folder", folder);
+    for (const [directory, keys] of DATA.sidebar) {
+      if (directory) row("directory", directory);
       for (const key of keys) {
-        const b = row("sheet", DATA.sheets[key].name, folder ? "child" : "", "button");
+        const b = row("sheet", DATA.sheets[key].name, directory ? "child" : "", "button");
         b.type = "button";
         if (key === "hero") {
           b.classList.add("current");

@@ -1,4 +1,4 @@
-"""Asks where to keep sheets, on first start or when the saved folder doesn't work."""
+"""Asks where to keep sheets, on first start or when the saved directory doesn't work."""
 
 import sys
 from pathlib import Path
@@ -24,37 +24,37 @@ from ..translations import tr
 from . import icons
 from . import theme as themes
 from .settings_dialog import Card, stylesheet
-from .theme import Theme
+from .theme import GLACIER_DARK
 
 
-def folder_error(language: str, folder: str, exc: OSError) -> str:
-    """Why folder can't hold sheets, and what to do about it."""
+def directory_error(language: str, directory: str, exc: OSError) -> str:
+    """Why directory can't hold sheets, and what to do about it."""
     # strerror leaves out the path of the test file that failed to write
-    text = tr(language, "folder_blocked", folder=folder, error=exc.strerror or exc)
-    advice = "folder_blocked_windows" if sys.platform == "win32" else "folder_pick_another"
+    text = tr(language, "directory_blocked", directory=directory, error=exc.strerror or exc)
+    advice = "directory_blocked_windows" if sys.platform == "win32" else "directory_pick_another"
     return f"{text}\n\n{tr(language, advice)}"
 
 
-def check_folder(language: str, folder: str) -> str:
-    """Empty if sheets can go in folder, otherwise the reason they can't."""
+def check_directory(language: str, directory: str) -> str:
+    """Empty if sheets can go in directory, otherwise the reason they can't."""
     try:
-        SheetStore(Path(folder).expanduser())
+        SheetStore(Path(directory).expanduser())
     except OSError as exc:
-        return folder_error(language, folder, exc)
+        return directory_error(language, directory, exc)
     return ""
 
 
-class FolderDialog(QDialog):
-    """Stays open until the folder in the box can be created and written to."""
+class DirectoryDialog(QDialog):
+    """Stays open until the directory in the box can be created and written to."""
 
-    def __init__(self, folder: str, error: str, language: str, theme: Theme) -> None:
+    def __init__(self, directory: str, error: str, language: str) -> None:
         super().__init__()
         self.language = language
         self.setObjectName("settings")  # the Settings window's look
         self.setWindowTitle(self.t("app_name"))
         self.setMinimumWidth(640)
 
-        heading = QLabel(self.t("folder_question"))
+        heading = QLabel(self.t("directory_question"))
         heading.setObjectName("pageTitle")
         heading.setWordWrap(True)
         font = QFont(heading.font())
@@ -62,18 +62,18 @@ class FolderDialog(QDialog):
         font.setWeight(QFont.Weight.DemiBold)
         heading.setFont(font)
         self.icon = QLabel()
-        self.icon.setPixmap(icons.icon("folder").pixmap(QSize(40, 40)))
+        self.icon.setPixmap(icons.icon("directory").pixmap(QSize(40, 40)))
         title = QHBoxLayout()
         title.setSpacing(14)
         title.addWidget(self.icon)
         title.addWidget(heading, 1)
 
-        self.folder = QLineEdit(folder)
+        self.directory = QLineEdit(directory)
         browse = QPushButton(self.t("browse").rstrip("…").rstrip("."))
         browse.clicked.connect(self._browse)
         row = QHBoxLayout()
         row.setSpacing(8)
-        row.addWidget(self.folder, 1)
+        row.addWidget(self.directory, 1)
         row.addWidget(browse)
         card = Card()
         card.add(self.t("sheets_dir"), row, self.t("hint_sheets_dir"))
@@ -95,9 +95,9 @@ class FolderDialog(QDialog):
 
         self.quit_button = QPushButton(self.t("quit"))
         self.quit_button.clicked.connect(self.reject)
-        self.use_button = QPushButton(self.t("folder_use"))
+        self.use_button = QPushButton(self.t("directory_use"))
         self.use_button.setObjectName("primary")
-        self.use_button.clicked.connect(self.try_folder)
+        self.use_button.clicked.connect(self.try_directory)
         footer = QFrame()
         footer.setObjectName("footer")
         buttons = QHBoxLayout(footer)
@@ -115,10 +115,10 @@ class FolderDialog(QDialog):
         self.use_button.setDefault(True)  # only sticks once the button is in the dialog
         # Apply the selectors once every child has its final parent and object name.
         self.setStyleSheet(
-            stylesheet(theme)
+            stylesheet(GLACIER_DARK)
             + f"""
-            QLabel#error {{ color: {theme.error}; background: {theme.surface};
-                border: 1px solid {theme.error}; border-radius: 6px; padding: 8px 10px; }}
+            QLabel#error {{ color: {GLACIER_DARK.error}; background: {GLACIER_DARK.surface};
+                border: 1px solid {GLACIER_DARK.error}; border-radius: 6px; padding: 8px 10px; }}
             """
         )
 
@@ -139,15 +139,15 @@ class FolderDialog(QDialog):
             self.resize(self.width(), needed)
 
     def _browse(self) -> None:
-        path = QFileDialog.getExistingDirectory(self, self.t("sheets_dir"), self.folder.text())
+        path = QFileDialog.getExistingDirectory(self, self.t("sheets_dir"), self.directory.text())
         if path:
-            self.folder.setText(path)
+            self.directory.setText(path)
 
-    def try_folder(self) -> None:
-        folder = self.folder.text().strip()
-        if not folder:
+    def try_directory(self) -> None:
+        directory = self.directory.text().strip()
+        if not directory:
             return
-        error = check_folder(self.language, folder)
+        error = check_directory(self.language, directory)
         if error:
             self.error.setText(error)
             self.error.show()
@@ -156,20 +156,19 @@ class FolderDialog(QDialog):
         self.accept()
 
 
-def choose_sheets_folder() -> Settings | None:
-    """Return settings whose sheets folder works. Ask for a folder on first start, or when
+def choose_sheets_directory() -> Settings | None:
+    """Return settings whose sheets directory works. Ask for a directory on first start, or when
     the saved one can't be written to. Return None if the user quits."""
     s = Settings.load()
-    error = check_folder(s.language, s.sheets_dir) if s.sheets_dir else ""
+    error = check_directory(s.language, s.sheets_dir) if s.sheets_dir else ""
     if s.sheets_dir and not error:
         return s
-    theme = themes.resolve(s.theme, s.colours)
     app = QApplication.instance()
     if isinstance(app, QApplication):
-        themes.apply(app, theme)  # the main window isn't open yet to do it
-    dialog = FolderDialog(s.sheets_dir or default_sheets_dir(), error, s.language, theme)
+        themes.apply(app, GLACIER_DARK)  # the main window isn't open yet to do it
+    dialog = DirectoryDialog(s.sheets_dir or default_sheets_dir(), error, s.language)
     if dialog.exec() != QDialog.DialogCode.Accepted:
         return None
-    s.sheets_dir = dialog.folder.text().strip()
+    s.sheets_dir = dialog.directory.text().strip()
     s.save()
     return s

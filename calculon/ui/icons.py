@@ -17,9 +17,9 @@ from ..paths import ARROWS, ICONS
 SOURCES = {
     "sheet": "file-text",
     "new_sheet": "file-plus",
-    "folder": "folder-simple",
-    "new_folder": "folder-simple-plus",
-    "open_folder": "folder-open",
+    "directory": "folder-simple",
+    "new_directory": "folder-simple-plus",
+    "open_directory": "folder-open",
     "settings": "gear-six",
     "quit": "sign-out",
     "undo": "arrow-u-up-left",
@@ -82,7 +82,7 @@ NAMES = frozenset(SOURCES)
 # Each icon gets a colour by what it does; the theme supplies the actual shades.
 GROUPS = {
     "sheet": "blue", "new_sheet": "blue", "help": "blue", "about": "blue",
-    "folder": "amber", "new_folder": "amber", "open_folder": "amber",
+    "directory": "amber", "new_directory": "amber", "open_directory": "amber",
     "cut": "violet", "copy": "violet", "paste": "violet", "select_all": "violet",
     "insert_total": "blue", "insert_reference": "blue",
     "copy_result": "green", "copy_with_results": "green", "refresh": "green", "rates": "green",

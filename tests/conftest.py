@@ -1,4 +1,4 @@
-"""Fixtures for the UI tests: the real window, offscreen, with every user folder in a temp dir."""
+"""UI fixtures with an offscreen window and user directories in a temporary directory."""
 
 import os
 from pathlib import Path

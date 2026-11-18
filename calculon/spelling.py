@@ -85,9 +85,9 @@ def dictionary_dirs() -> list[Path]:
 
 def find_dictionary(lang: str, dirs: Iterable[Path] | None = None) -> Path | None:
     """The Hunspell .aff/.dic pair for `lang`, as a path without the extension."""
-    for folder in dictionary_dirs() if dirs is None else dirs:
+    for directory in dictionary_dirs() if dirs is None else dirs:
         for name in DICTIONARY_NAMES[lang]:
-            base = folder / name
+            base = directory / name
             if base.with_suffix(".aff").is_file() and base.with_suffix(".dic").is_file():
                 return base
     return None

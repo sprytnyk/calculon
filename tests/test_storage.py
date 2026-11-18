@@ -102,10 +102,10 @@ def test_write_retries_real_windows_replace_errors(tmp_path, monkeypatch) -> Non
     assert not list(tmp_path.glob(".tmp-*"))
 
 
-def test_folders_and_tree(tmp_path: Path) -> None:
+def test_directories_and_tree(tmp_path: Path) -> None:
     store = SheetStore(tmp_path)
-    folder = store.create_folder(name="Work")
-    store.create_sheet(folder, "Budget")
+    directory = store.create_directory(name="Work")
+    store.create_sheet(directory, "Budget")
     store.create_sheet(name="Groceries")
     tree = store.tree()
     assert names(tree.children) == ["Work", "Groceries"]
@@ -123,7 +123,7 @@ def test_rename_keeps_pin(tmp_path: Path) -> None:
         store.rename(new, "")
 
 
-def test_pinned_sheets_leave_the_folder_list(tmp_path: Path) -> None:
+def test_pinned_sheets_leave_the_directory_list(tmp_path: Path) -> None:
     store = SheetStore(tmp_path)
     store.create_sheet(name="A")
     store.create_sheet(name="B")
@@ -140,12 +140,12 @@ def test_reorder_and_move(tmp_path: Path) -> None:
         store.create_sheet(name=n)
     store.move("C.txt", "", 0)
     assert names(store.tree().children) == ["C", "A", "B"]
-    folder = store.create_folder(name="F")
-    moved = store.move("A.txt", folder)
+    directory = store.create_directory(name="F")
+    moved = store.move("A.txt", directory)
     assert moved == "F/A.txt"
     assert names(store.tree().children) == ["F", "C", "B"]
     with pytest.raises(StorageError):
-        store.move(folder, folder)
+        store.move(directory, directory)
 
 
 def test_order_survives_reload(tmp_path: Path) -> None:
@@ -161,17 +161,17 @@ def test_directories_stay_above_sheets(tmp_path: Path) -> None:
     store.create_sheet(name="B")
     store.create_sheet(name="A")
     store.move("B.txt", "", 0)
-    store.create_folder(name="Work")
+    store.create_directory(name="Work")
     assert names(store.tree().children) == ["Work", "B", "A"]
-    store.create_folder(name="Archive")
+    store.create_directory(name="Archive")
     store.move("Archive", "", 0)
     assert names(SheetStore(tmp_path).tree().children) == ["Archive", "Work", "B", "A"]
 
 
 def test_trash_restore_delete(tmp_path: Path) -> None:
     store = SheetStore(tmp_path)
-    folder = store.create_folder(name="F")
-    rel = store.create_sheet(folder, "A", "5")
+    directory = store.create_directory(name="F")
+    rel = store.create_sheet(directory, "A", "5")
     store.pin(rel)
     name = store.trash(rel)
     assert not store.is_pinned(rel)
@@ -236,7 +236,7 @@ def test_scans_skip_junctions_and_unreadable_entries(
 def test_windows_junctions(tmp_path: Path, target_kind: str) -> None:
     store = SheetStore(tmp_path / "Documents")
     store.create_sheet(name="Notes", text="groceries")
-    store.create_folder(name="Work")
+    store.create_directory(name="Work")
     store.create_sheet("Work", "Budget", "groceries")
     target = tmp_path / "Music"
     target.mkdir()
@@ -264,9 +264,9 @@ def test_windows_junctions(tmp_path: Path, target_kind: str) -> None:
 def test_scans_skip_symbolic_links(tmp_path: Path) -> None:
     store = SheetStore(tmp_path / "sheets")
     store.create_sheet(name="Notes", text="groceries")
-    store.create_folder(name="Work")
+    store.create_directory(name="Work")
     store.create_sheet("Work", "Budget", "groceries")
-    (store.root / "folder.txt").mkdir()
+    (store.root / "directory.txt").mkdir()
     outside = tmp_path / "outside.txt"
     outside.write_text("groceries", encoding="utf-8")
     try:
@@ -275,12 +275,12 @@ def test_scans_skip_symbolic_links(tmp_path: Path) -> None:
         (store.root / "broken.txt").symlink_to(tmp_path / "missing.txt")
     except OSError as exc:
         pytest.skip(f"symbolic links unavailable: {exc}")
-    assert names(store.tree().children) == ["folder.txt", "Work", "Notes"]
+    assert names(store.tree().children) == ["directory.txt", "Work", "Notes"]
     assert store.all_sheets() == ["Notes.txt", "Work/Budget.txt"]
     assert store.search("groceries") == ["Notes.txt", "Work/Budget.txt"]
 
 
-def test_search_includes_pins_and_skips_hidden_folders(tmp_path: Path) -> None:
+def test_search_includes_pins_and_skips_hidden_directories(tmp_path: Path) -> None:
     store = SheetStore(tmp_path)
     store.create_sheet(name="Notes", text="groceries")
     store.pin("Notes.txt")
@@ -292,7 +292,7 @@ def test_search_includes_pins_and_skips_hidden_folders(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(os.name == "nt" or os.geteuid() == 0, reason="needs POSIX permissions")
-def test_folder_that_cannot_be_written_is_refused(tmp_path: Path) -> None:
+def test_directory_that_cannot_be_written_is_refused(tmp_path: Path) -> None:
     locked = tmp_path / "locked"
     locked.mkdir()
     locked.chmod(0o500)

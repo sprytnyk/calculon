@@ -1,4 +1,4 @@
-"""UI smoke tests: the real window, offscreen, with every user folder in a temp dir."""
+"""UI smoke tests: the real window, offscreen, with every user directory in a temp dir."""
 
 import os
 import subprocess
@@ -39,7 +39,7 @@ from calculon.settings import Settings
 from calculon.spelling import SpellChecker, Status, probe
 from calculon.storage import SheetStore
 from calculon.translations import tr
-from calculon.ui import folder_dialog, icons, main_window, settings_dialog
+from calculon.ui import directory_dialog, icons, main_window, settings_dialog
 from calculon.ui import theme as themes
 from calculon.ui.about_dialog import AboutDialog
 from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu
@@ -47,8 +47,8 @@ from calculon.ui.main_window import MainWindow
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog, key_text
 from calculon.ui.sidebar import HELP, Sidebar
-from calculon.ui.theme import GLACIER_DARK, GLACIER_LIGHT
-from tests.test_folder_dialog import assert_error_colour
+from calculon.ui.theme import GLACIER_DARK
+from tests.test_directory_dialog import assert_error_colour
 
 
 def pump(app) -> None:
@@ -72,33 +72,35 @@ def test_first_start_creates_welcome_sheet(window, app) -> None:
     assert "$64.00" in texts  # 20% off $80
 
 
-def drive_folder_dialog(monkeypatch, *folders: str) -> list[folder_dialog.FolderDialog]:
-    """Stand in for the user: type each folder in turn and press "Use this folder".
-    With no folders, press Quit. Returns the dialogs that opened."""
+def drive_directory_dialog(
+    monkeypatch, *directories: str
+) -> list[directory_dialog.DirectoryDialog]:
+    """Stand in for the user: type each directory in turn and press "Use this directory".
+    With no directories, press Quit. Returns the dialogs that opened."""
     opened = []
 
     def run(dialog) -> int:
         opened.append(dialog)
-        for folder in folders:
-            dialog.folder.setText(folder)
-            dialog.try_folder()
-            if dialog.result() == folder_dialog.QDialog.DialogCode.Accepted:
+        for directory in directories:
+            dialog.directory.setText(directory)
+            dialog.try_directory()
+            if dialog.result() == directory_dialog.QDialog.DialogCode.Accepted:
                 break
         return dialog.result()
 
-    monkeypatch.setattr(folder_dialog.FolderDialog, "exec", run)
+    monkeypatch.setattr(directory_dialog.DirectoryDialog, "exec", run)
     return opened
 
 
-def test_first_start_asks_for_sheets_folder(app, home, tmp_path, monkeypatch) -> None:
+def test_first_start_asks_for_sheets_directory(app, home, tmp_path, monkeypatch) -> None:
     qs = QSettings()
     qs.clear()
-    blocker = tmp_path / "not-a-folder"
+    blocker = tmp_path / "not-a-directory"
     blocker.write_text("")
     chosen = tmp_path / "My sheets"
-    opened = drive_folder_dialog(monkeypatch, str(blocker / "Calculon"), str(chosen))
+    opened = drive_directory_dialog(monkeypatch, str(blocker / "Calculon"), str(chosen))
     try:
-        assert folder_dialog.choose_sheets_folder() is not None
+        assert directory_dialog.choose_sheets_directory() is not None
         dialog = opened[0]
         assert dialog.error.text().startswith(f"Calculon can't create or write to {blocker}")
         assert Settings.load().sheets_dir == str(chosen)
@@ -109,24 +111,50 @@ def test_first_start_asks_for_sheets_folder(app, home, tmp_path, monkeypatch) ->
 
 def test_first_start_suggests_documents(app, home, monkeypatch) -> None:
     QSettings().clear()
-    opened = drive_folder_dialog(monkeypatch)
-    assert folder_dialog.choose_sheets_folder() is None
-    assert opened[0].folder.text() == settings.default_sheets_dir()
+    opened = drive_directory_dialog(monkeypatch)
+    assert directory_dialog.choose_sheets_directory() is None
+    assert opened[0].directory.text() == settings.default_sheets_dir()
     assert opened[0].error.isHidden()
     assert Settings.load().sheets_dir == ""
 
 
-def test_chosen_folder_reaches_the_window_when_settings_cannot_be_saved(
+def test_directory_dialog_uses_dark_theme_with_saved_light_settings(
+    app, tmp_path, monkeypatch
+) -> None:
+    blocker = tmp_path / "not-a-directory"
+    blocker.write_text("")
+    qs = QSettings()
+    qs.clear()
+    qs.setValue("sheets_dir", str(blocker / "Calculon"))
+    qs.setValue("theme", "light")
+    opened = drive_directory_dialog(monkeypatch)
+    try:
+        assert directory_dialog.choose_sheets_directory() is None
+        dialog = opened[0]
+        dialog.show()
+        pump(app)
+        assert_error_colour(dialog.error, GLACIER_DARK.error)
+        page = dialog.findChild(QWidget, "page")
+        assert page.palette().color(page.backgroundRole()).name() == GLACIER_DARK.bg
+    finally:
+        if opened:
+            opened[0].close()
+            opened[0].deleteLater()
+            QCoreApplication.sendPostedEvents(opened[0], QEvent.Type.DeferredDelete)
+        qs.clear()
+
+
+def test_chosen_directory_reaches_the_window_when_settings_cannot_be_saved(
     app, home, tmp_path, monkeypatch
 ) -> None:
-    """In a home folder Calculon can't write to, QSettings drops the save without an
-    error. So the window must get the folder from the dialog, not from the settings file."""
+    """In a home directory Calculon can't write to, QSettings drops the save without an
+    error. So the window must get the directory from the dialog, not from the settings file."""
     QSettings().clear()
     monkeypatch.setattr(Settings, "save", lambda self: None)
     monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
     chosen = tmp_path / "My sheets"
-    drive_folder_dialog(monkeypatch, str(chosen))
-    w = MainWindow(folder_dialog.choose_sheets_folder())
+    drive_directory_dialog(monkeypatch, str(chosen))
+    w = MainWindow(directory_dialog.choose_sheets_directory())
     try:
         assert w.store.root == chosen
     finally:
@@ -134,33 +162,33 @@ def test_chosen_folder_reaches_the_window_when_settings_cannot_be_saved(
         w.deleteLater()
 
 
-def test_saved_sheets_folder_opens_without_asking(app, tmp_path, monkeypatch) -> None:
+def test_saved_sheets_directory_opens_without_asking(app, tmp_path, monkeypatch) -> None:
     qs = QSettings()
     qs.clear()
     qs.setValue("sheets_dir", str(tmp_path / "sheets"))
-    opened = drive_folder_dialog(monkeypatch)
+    opened = drive_directory_dialog(monkeypatch)
     try:
-        assert folder_dialog.choose_sheets_folder() is not None
+        assert directory_dialog.choose_sheets_directory() is not None
         assert opened == []
     finally:
         qs.clear()
 
 
-def test_blocked_saved_folder_asks_again_and_explains(app, tmp_path, monkeypatch) -> None:
+def test_blocked_saved_directory_asks_again_and_explains(app, tmp_path, monkeypatch) -> None:
     """Windows' Controlled folder access can block Documents. Say why and ask again,
-    with the saved folder in the box so a retry is one click."""
-    blocker = tmp_path / "not-a-folder"
+    with the saved directory in the box so a retry is one click."""
+    blocker = tmp_path / "not-a-directory"
     blocker.write_text("")
     blocked = blocker / "Calculon"
     qs = QSettings()
     qs.clear()
     qs.setValue("sheets_dir", str(blocked))
-    monkeypatch.setattr(folder_dialog, "sys", SimpleNamespace(platform="win32"))
-    opened = drive_folder_dialog(monkeypatch)
+    monkeypatch.setattr(directory_dialog, "sys", SimpleNamespace(platform="win32"))
+    opened = drive_directory_dialog(monkeypatch)
     try:
-        assert folder_dialog.choose_sheets_folder() is None
+        assert directory_dialog.choose_sheets_directory() is None
         dialog = opened[0]
-        assert dialog.folder.text() == str(blocked)
+        assert dialog.directory.text() == str(blocked)
         assert str(blocked) in dialog.error.text()
         assert "Controlled folder access" in dialog.error.text()
         assert Settings.load().sheets_dir == str(blocked)
@@ -169,13 +197,13 @@ def test_blocked_saved_folder_asks_again_and_explains(app, tmp_path, monkeypatch
 
 
 @pytest.mark.skipif(os.name == "nt" or os.geteuid() == 0, reason="needs POSIX permissions")
-def test_folder_error_names_the_reason_not_the_test_file(app, tmp_path) -> None:
+def test_directory_error_names_the_reason_not_the_test_file(app, tmp_path) -> None:
     locked = tmp_path / "locked"
     locked.mkdir()
     locked.chmod(0o500)
-    dialog = folder_dialog.FolderDialog(str(locked), "", "en", GLACIER_DARK)
+    dialog = directory_dialog.DirectoryDialog(str(locked), "", "en")
     try:
-        dialog.try_folder()
+        dialog.try_directory()
     finally:
         locked.chmod(0o700)
     assert dialog.error.text() == (
@@ -183,23 +211,22 @@ def test_folder_error_names_the_reason_not_the_test_file(app, tmp_path) -> None:
     )
 
 
-@pytest.mark.parametrize("theme", [GLACIER_DARK, GLACIER_LIGHT])
-def test_folder_dialog_follows_the_theme_and_fits_the_error(app, tmp_path, theme) -> None:
-    blocker = tmp_path / "not-a-folder"
+def test_directory_dialog_fits_the_error(app, tmp_path) -> None:
+    blocker = tmp_path / "not-a-directory"
     blocker.write_text("")
-    themes.apply(app, theme)
-    dialog = folder_dialog.FolderDialog(str(blocker / "Calculon"), "", "en", theme)
+    themes.apply(app, GLACIER_DARK)
+    dialog = directory_dialog.DirectoryDialog(str(blocker / "Calculon"), "", "en")
     dialog.show()
     pump(app)
     height = dialog.height()
-    QTest.keyClick(dialog.folder, Qt.Key.Key_Return)  # Enter means "Use this folder"
+    QTest.keyClick(dialog.directory, Qt.Key.Key_Return)  # Enter means "Use this directory"
     pump(app)
     error = dialog.error
     try:
         assert dialog.isVisible() and error.isVisible()
-        assert_error_colour(error, theme.error)
+        assert_error_colour(error, GLACIER_DARK.error)
         page = dialog.findChild(QWidget, "page")
-        assert page.palette().color(page.backgroundRole()).name() == theme.bg
+        assert page.palette().color(page.backgroundRole()).name() == GLACIER_DARK.bg
         assert dialog.use_button.objectName() == "primary"
         assert not dialog.icon.pixmap().isNull() and dialog.icon.isVisible()
         # the whole wrapped message shows without resizing the window by hand
@@ -267,8 +294,8 @@ def test_switch_number_style_with_money_in_sheet(window, app) -> None:
 
 def test_folders_pins_trash_restore(window, app) -> None:
     store = window.store
-    folder = store.create_folder("", "Work")
-    rel = store.create_sheet(folder, "Budget", "$5")
+    directory = store.create_directory("", "Work")
+    rel = store.create_sheet(directory, "Budget", "$5")
     window.open_sheet(rel)
     store.pin(rel)
     window.sidebar.rebuild()
@@ -283,8 +310,8 @@ def test_folders_pins_trash_restore(window, app) -> None:
 
 def test_trashed_directory_shows_its_sheets(window, app) -> None:
     store = window.store
-    store.create_folder("", "Work")
-    store.create_folder("Work", "Plans")
+    store.create_directory("", "Work")
+    store.create_directory("Work", "Plans")
     store.create_sheet("Work/Plans", "Budget", "123")
     window.trash("Work")
     root = window.sidebar.tree
@@ -305,7 +332,7 @@ def test_trashed_directory_shows_its_sheets(window, app) -> None:
 def test_trash_directories_stay_above_sheets(window) -> None:
     store = window.store
     store.create_sheet("", "A", "1")
-    store.create_folder("", "Z")
+    store.create_directory("", "Z")
     window.trash("A.txt")
     window.trash("Z")
     trash = window.sidebar.tree.topLevelItem(window.sidebar.tree.topLevelItemCount() - 1)
@@ -314,31 +341,31 @@ def test_trash_directories_stay_above_sheets(window) -> None:
 
 def test_trashed_directories_with_same_name_show_original_locations(window) -> None:
     store = window.store
-    store.create_folder("", "New folder")
-    store.create_folder("New folder", "New folder 2")
-    store.create_folder("", "New folder 2")
-    store.create_sheet("New folder/New folder 2", "Inside", "1")
-    store.create_sheet("New folder 2", "Outside", "2")
-    window.trash("New folder/New folder 2")
-    window.trash("New folder 2")
+    store.create_directory("", "New directory")
+    store.create_directory("New directory", "New directory 2")
+    store.create_directory("", "New directory 2")
+    store.create_sheet("New directory/New directory 2", "Inside", "1")
+    store.create_sheet("New directory 2", "Outside", "2")
+    window.trash("New directory/New directory 2")
+    window.trash("New directory 2")
     trash = window.sidebar.tree.topLevelItem(window.sidebar.tree.topLevelItemCount() - 1)
     entries = {trash.child(i).text(0): trash.child(i) for i in range(trash.childCount())}
-    assert set(entries) == {"New folder", "New folder 2"}
-    parent = entries["New folder"]
+    assert set(entries) == {"New directory", "New directory 2"}
+    parent = entries["New directory"]
     assert parent.childCount() == 1
-    assert parent.child(0).text(0) == "New folder 2"
+    assert parent.child(0).text(0) == "New directory 2"
     assert parent.child(0).child(0).text(0) == "Inside"
-    assert entries["New folder 2"].child(0).text(0) == "Outside"
+    assert entries["New directory 2"].child(0).text(0) == "Outside"
     for name, _original in store.trashed():
         window.restore(name)
-    assert store.read("New folder/New folder 2/Inside.txt") == "1"
-    assert store.read("New folder 2/Outside.txt") == "2"
+    assert store.read("New directory/New directory 2/Inside.txt") == "1"
+    assert store.read("New directory 2/Outside.txt") == "2"
 
 
 def test_trash_combines_original_paths_with_a_deleted_parent(window) -> None:
     store = window.store
-    store.create_folder("", "Work")
-    store.create_folder("Work", "Plans")
+    store.create_directory("", "Work")
+    store.create_directory("Work", "Plans")
     store.create_sheet("Work/Plans", "Old", "1")
     store.create_sheet("Work/Plans", "Current", "2")
     window.trash("Work/Plans/Old.txt")
@@ -353,12 +380,12 @@ def test_trash_combines_original_paths_with_a_deleted_parent(window) -> None:
     assert {plans.child(i).text(0) for i in range(plans.childCount())} == {"Old", "Current"}
 
 
-@pytest.mark.parametrize("action_name", ["new_folder", "move_to_trash"])
+@pytest.mark.parametrize("action_name", ["new_directory", "move_to_trash"])
 def test_sidebar_context_menu_finishes_before_action(window, app, action_name) -> None:
     sidebar = window.sidebar
     calls = []
     during_menu = []
-    signal = sidebar.new_folder if action_name == "new_folder" else sidebar.trash
+    signal = sidebar.new_directory if action_name == "new_directory" else sidebar.trash
     signal.disconnect()
     signal.connect(lambda path: calls.append(path))
 
@@ -378,17 +405,17 @@ def test_sidebar_context_menu_finishes_before_action(window, app, action_name) -
     assert during_menu == []
     assert calls == []
     pump(app)
-    assert calls == ([""] if action_name == "new_folder" else ["Welcome.txt"])
+    assert calls == ([""] if action_name == "new_directory" else ["Welcome.txt"])
 
 
 def test_context_menu_trashes_directory_with_open_nested_sheet(window, app) -> None:
     store = window.store
-    store.create_folder("", "Work")
-    store.create_folder("Work", "Plans")
+    store.create_directory("", "Work")
+    store.create_directory("Work", "Plans")
     store.create_sheet("Work/Plans", "Budget", "123")
     window.open_sheet("Work/Plans/Budget.txt")
     window.sidebar.rebuild()
-    directory = window.sidebar._find("folder", "Work")
+    directory = window.sidebar._find("directory", "Work")
     assert directory is not None
 
     def choose():
@@ -409,8 +436,8 @@ def test_context_menu_trashes_directory_with_open_nested_sheet(window, app) -> N
 
 def test_trashing_directory_releases_watches_before_move(window, monkeypatch) -> None:
     store = window.store
-    store.create_folder("", "Work")
-    store.create_folder("Work", "Plans")
+    store.create_directory("", "Work")
+    store.create_directory("Work", "Plans")
     store.create_sheet("Work/Plans", "Budget", "123")
     window.open_sheet("Work/Plans/Budget.txt")
     window.sidebar.rebuild()
@@ -433,7 +460,7 @@ def test_trashing_directory_releases_watches_before_move(window, monkeypatch) ->
 
 def test_failed_directory_trash_restores_watches(window, monkeypatch) -> None:
     store = window.store
-    store.create_folder("", "Work")
+    store.create_directory("", "Work")
     sheet = store.create_sheet("Work", "Budget", "123")
     window.open_sheet(sheet)
     window.sidebar.rebuild()
@@ -461,9 +488,9 @@ def test_search_filters_sheets(window, app) -> None:
     assert [tree.topLevelItem(i).text(0) for i in range(tree.topLevelItemCount())] == ["Holiday"]
 
 
-def test_sidebar_watches_only_real_sheet_folders(window, tmp_path: Path) -> None:
+def test_sidebar_watches_only_real_sheet_directories(window, tmp_path: Path) -> None:
     root = window.store.root
-    window.store.create_folder(name="Work")
+    window.store.create_directory(name="Work")
     (root / ".hidden").mkdir()
     window.store.trash_dir.mkdir()
     outside = tmp_path / "Music"
@@ -749,12 +776,12 @@ def test_settings_switch_to_folder_with_directory_link(
     old_sheet = window.current[1]
     documents = tmp_path / "Documents"
     store = SheetStore(documents)
-    store.create_folder(name="Work")
+    store.create_directory(name="Work")
     new_sheet = old_sheet if same_name else "Work/Budget.txt"
     store.write(new_sheet, "5 + 6")
     music = tmp_path / "Music"
     music.mkdir()
-    (music / "Other.txt").write_text("outside the sheets folder", encoding="utf-8")
+    (music / "Other.txt").write_text("outside the sheets directory", encoding="utf-8")
     link = documents / "My Music"
     if sys.platform == "win32":
         subprocess.run(
@@ -872,7 +899,7 @@ def test_a_freed_sidebar_leaves_no_timer_behind(app, tmp_path, monkeypatch) -> N
 
 
 def test_sidebar_draws_one_highlight_per_row(window, app) -> None:
-    window.store.create_folder("", "Work")
+    window.store.create_directory("", "Work")
     rel = window.store.create_sheet("Work", "Budget", "1")
     window.sidebar.expanded.add("Work")
     window.open_sheet(rel)
@@ -886,18 +913,18 @@ def test_sidebar_draws_one_highlight_per_row(window, app) -> None:
     assert image.pixelColor(6, y) == tree.palette().highlight().color()
 
 
-def test_switching_sheets_between_folders_keeps_the_sidebar_still(
+def test_switching_sheets_between_directories_keeps_the_sidebar_still(
     app, home, tmp_path, monkeypatch, reopen
 ) -> None:
-    """Startup: folder A closed, B open, last sheet in A. Switching between them must not
+    """Startup: directory A closed, B open, last sheet in A. Switching between them must not
     close A again or move any row (it used to collapse A, so the list jumped)."""
     monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
     sheets = tmp_path / "sheets"
     store = SheetStore(sheets)
-    for folder in ("A", "B"):
-        store.create_folder("", folder)
+    for directory in ("A", "B"):
+        store.create_directory("", directory)
         for n in range(3):
-            store.create_sheet(folder, f"{folder}{n}", "1")
+            store.create_sheet(directory, f"{directory}{n}", "1")
     qs = QSettings()
     qs.clear()
     qs.setValue("sheets_dir", str(sheets))
@@ -912,14 +939,14 @@ def test_switching_sheets_between_folders_keeps_the_sidebar_still(
         item = tree.findItems(name, Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchRecursive)[0]
         return tree.visualItemRect(item).y()
 
-    folder_a = tree.findItems("A", Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchRecursive)[0]
-    assert folder_a.isExpanded()
+    directory_a = tree.findItems("A", Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchRecursive)[0]
+    assert directory_a.isExpanded()
     before = {name: row_of(name) for name in ("A0", "B0", "B2")}
     items_before = [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())]
     for rel in ("B/B2.txt", "A/A0.txt", "B/B0.txt", "A/A2.txt"):
         w.open_sheet(rel)
         pump(app)
-        assert folder_a.isExpanded()
+        assert directory_a.isExpanded()
         assert {name: row_of(name) for name in before} == before
     # the same row objects: nothing was rebuilt
     assert [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())] == items_before
@@ -1487,8 +1514,8 @@ def test_spelling_loads_real_dictionaries_in_background(
     window, app, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # the window looks in the test's HOME, so point it at the dictionaries found above
-    folders = {str(Path(base).parent) for base in SYSTEM_SPELLING.dictionaries.values()}
-    monkeypatch.setenv("DICPATH", os.pathsep.join(sorted(folders)))
+    directories = {str(Path(base).parent) for base in SYSTEM_SPELLING.dictionaries.values()}
+    monkeypatch.setenv("DICPATH", os.pathsep.join(sorted(directories)))
     window.spell_status = probe()
     window.new_sheet("")
     window.editor.setPlainText("Taxi to airprot\n")

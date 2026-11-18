@@ -57,7 +57,7 @@ exe_options = dict(
 
 if MACOS:
     # PyInstaller warns against packing an .app into one file. It starts slower, and an
-    # .app is a folder anyway. Finder shows one Calculon.app either way.
+    # .app is a directory anyway. Finder shows one Calculon.app either way.
     exe = EXE(pyz, a.scripts, [], exclude_binaries=True, **exe_options)
     coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="calculon")
     # macOS wants plain numbers here, so a test build's 0.0.0.dev0+... becomes 0.0.0

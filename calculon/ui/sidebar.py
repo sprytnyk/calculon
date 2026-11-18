@@ -1,4 +1,4 @@
-"""The sheet list: pinned sheets, folders and sheets, help and trash."""
+"""The sheet list: pinned sheets, directories and sheets, help and trash."""
 
 from PySide6.QtCore import (
     QFileSystemWatcher,
@@ -32,7 +32,7 @@ ROLE = Qt.ItemDataRole.UserRole
 # item kinds
 SECTION = "section"
 SHEET = "sheet"
-FOLDER = "folder"
+DIRECTORY = "directory"
 PINNED = "pinned"
 HELP = "help"
 TRASH = "trash"
@@ -93,14 +93,14 @@ class Sidebar(QWidget):
     open_sheet = Signal(str)  # rel path
     open_help = Signal()
     open_trashed = Signal(str)  # name in trash
-    new_sheet = Signal(str)  # folder
-    new_folder = Signal(str)  # parent folder
+    new_sheet = Signal(str)  # directory
+    new_directory = Signal(str)  # parent directory
     rename = Signal(str)
     trash = Signal(str)
     restore = Signal(str)
     delete_forever = Signal(str)
     empty_trash = Signal()
-    show_in_folder = Signal(str)
+    show_in_directory = Signal(str)
     changed = Signal()  # something changed on disk
 
     def __init__(self, store: SheetStore, tr, parent: QWidget | None = None):
@@ -131,12 +131,14 @@ class Sidebar(QWidget):
         buttons.setContentsMargins(0, 0, 0, 0)
         self.btn_sheet = QToolButton()
         self.btn_sheet.setObjectName("sidebarButton")
-        self.btn_sheet.clicked.connect(lambda: self.new_sheet.emit(self.current_folder()))
-        self.btn_folder = QToolButton()
-        self.btn_folder.setObjectName("sidebarButton")
-        self.btn_folder.clicked.connect(lambda: self.new_folder.emit(self.current_folder()))
+        self.btn_sheet.clicked.connect(lambda: self.new_sheet.emit(self.current_directory()))
+        self.btn_directory = QToolButton()
+        self.btn_directory.setObjectName("sidebarButton")
+        self.btn_directory.clicked.connect(
+            lambda: self.new_directory.emit(self.current_directory())
+        )
         buttons.addWidget(self.btn_sheet)
-        buttons.addWidget(self.btn_folder)
+        buttons.addWidget(self.btn_directory)
         buttons.addStretch()
         layout.addLayout(buttons)
         self._rename_action = QAction(self)
@@ -163,12 +165,12 @@ class Sidebar(QWidget):
     def retranslate(self) -> None:
         self.search.setPlaceholderText(self.t("search"))
         self.btn_sheet.setToolTip(self.t("new_sheet"))
-        self.btn_folder.setToolTip(self.t("new_folder"))
+        self.btn_directory.setToolTip(self.t("new_directory"))
         self.btn_sheet.setIcon(icons.icon("new_sheet"))
-        self.btn_folder.setIcon(icons.icon("new_folder"))
+        self.btn_directory.setIcon(icons.icon("new_directory"))
         size = QSize(icons.ICON_SIZE, icons.ICON_SIZE)
         self.btn_sheet.setIconSize(size)
-        self.btn_folder.setIconSize(size)
+        self.btn_directory.setIconSize(size)
         self.tree.setIconSize(size)
         self.rebuild()
 
@@ -198,11 +200,11 @@ class Sidebar(QWidget):
 
     def _watch(self) -> None:
         dirs = []
-        folders = [self.store.tree()]
-        while folders:
-            folder = folders.pop()
-            dirs.append(str(self.store.root / folder.rel))
-            folders.extend(node for node in folder.children if node.is_dir)
+        directories = [self.store.tree()]
+        while directories:
+            directory = directories.pop()
+            dirs.append(str(self.store.root / directory.rel))
+            directories.extend(node for node in directory.children if node.is_dir)
         if self.store.trash_dir.is_dir():
             dirs.append(str(self.store.trash_dir))
         old = self.watcher.directories()
@@ -216,9 +218,9 @@ class Sidebar(QWidget):
         if icon is not None:
             it.setIcon(0, icon)
         flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-        if kind in (SHEET, PINNED, FOLDER):
+        if kind in (SHEET, PINNED, DIRECTORY):
             flags |= Qt.ItemFlag.ItemIsDragEnabled
-        if kind in (FOLDER, SECTION):
+        if kind in (DIRECTORY, SECTION):
             flags |= Qt.ItemFlag.ItemIsDropEnabled
         if kind == SECTION:
             flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsDropEnabled
@@ -234,21 +236,21 @@ class Sidebar(QWidget):
     def rebuild(self) -> None:
         tree = self.tree
         scroll = tree.verticalScrollBar().value()
-        tree.setAnimated(False)  # re-adding open folders must not replay the open animation
+        tree.setAnimated(False)  # re-adding open directories must not replay the open animation
         tree.blockSignals(True)
         tree.clear()
         sheet_icon = icons.icon("sheet")
         pin_icon = icons.icon("pin")
-        folder_icon = icons.icon("folder")
+        directory_icon = icons.icon("directory")
         query = self.search.text().strip()
         selected: QTreeWidgetItem | None = None
         if query:
             hits = self.store.search(query)
             for rel in hits:
                 it = self._item(self.store.display_name(rel), SHEET, rel, sheet_icon)
-                folder = rel.rsplit("/", 1)[0] if "/" in rel else ""
-                if folder:
-                    it.setText(0, f"{self.store.display_name(rel)}  ·  {folder}")
+                directory = rel.rsplit("/", 1)[0] if "/" in rel else ""
+                if directory:
+                    it.setText(0, f"{self.store.display_name(rel)}  ·  {directory}")
                 tree.addTopLevelItem(it)
                 if self.current == (SHEET, rel):
                     selected = it
@@ -274,7 +276,7 @@ class Sidebar(QWidget):
                 nonlocal selected
                 for node in nodes:
                     if node.is_dir:
-                        it = self._item(node.name, FOLDER, node.rel, folder_icon)
+                        it = self._item(node.name, DIRECTORY, node.rel, directory_icon)
                         parent.addChild(it)
                         add(it, node.children)
                         it.setExpanded(node.rel in self.expanded)
@@ -339,7 +341,7 @@ class Sidebar(QWidget):
                     else:
                         label = child.name if is_dir else self.store.display_name(child.name)
                         it = self._item(
-                            label, kind, child_key, folder_icon if is_dir else sheet_icon
+                            label, kind, child_key, directory_icon if is_dir else sheet_icon
                         )
                         add_trash_item(parent, it, is_dir)
                     if is_dir:
@@ -357,17 +359,17 @@ class Sidebar(QWidget):
                 for index in range(len(parts) - 1):
                     parent_key = "/".join(parts[: index + 1])
                     if parent_key not in parents:
-                        folder = self._item(parts[index], TRASH_PATH, parent_key, folder_icon)
-                        add_trash_item(parent, folder, True)
-                        folder.setExpanded(True)
-                        parents[parent_key] = folder
+                        directory = self._item(parts[index], TRASH_PATH, parent_key, directory_icon)
+                        add_trash_item(parent, directory, True)
+                        directory.setExpanded(True)
+                        parents[parent_key] = directory
                     parent = parents[parent_key]
                 it = parents.get(original) if is_dir else None
                 if it is not None and it.data(0, ROLE)[0] == TRASH_PATH:
                     it.setData(0, ROLE, (kind, name))
                 else:
                     label = parts[-1] if is_dir else self.store.display_name(original)
-                    it = self._item(label, kind, name, folder_icon if is_dir else sheet_icon)
+                    it = self._item(label, kind, name, directory_icon if is_dir else sheet_icon)
                     add_trash_item(parent, it, is_dir)
                 if is_dir:
                     parents.setdefault(original, it)
@@ -386,7 +388,7 @@ class Sidebar(QWidget):
         self._watch()
 
     def _show_current(self, item: QTreeWidgetItem) -> None:
-        """Select an item and open the folders it sits in, remembering them as open."""
+        """Select an item and open the directories it sits in, remembering them as open."""
         p = item.parent()
         while p is not None:
             if not p.isExpanded():
@@ -402,7 +404,7 @@ class Sidebar(QWidget):
             return
         kind, key = data
         key = TRASH_DIR if kind == TRASH else key
-        if kind in (FOLDER, TRASH):
+        if kind in (DIRECTORY, TRASH):
             (self.expanded.add if expanded else self.expanded.discard)(key)
             QSettings().setValue("sidebar/expanded", sorted(self.expanded))
 
@@ -425,19 +427,19 @@ class Sidebar(QWidget):
         while it.value():
             data = it.value().data(0, ROLE)
             if data and tuple(data) in wanted:
-                if tuple(data)[0] == kind:  # prefer the item in the folder tree over the pin
+                if tuple(data)[0] == kind:  # prefer the item in the directory tree over the pin
                     return it.value()
                 found = found or it.value()
             it += 1
         return found
 
-    def current_folder(self) -> str:
+    def current_directory(self) -> str:
         it = self.tree.currentItem()
         data = it.data(0, ROLE) if it else None
         if not data:
             return ""
         kind, key = data
-        if kind == FOLDER:
+        if kind == DIRECTORY:
             return key
         if kind in (SHEET, PINNED) and "/" in key:
             return key.rsplit("/", 1)[0]
@@ -454,11 +456,11 @@ class Sidebar(QWidget):
             self.open_help.emit()
         elif kind == TRASHED:
             self.open_trashed.emit(key)
-        elif kind in (FOLDER, TRASH, TRASHED_DIR, TRASH_PATH):
+        elif kind in (DIRECTORY, TRASH, TRASHED_DIR, TRASH_PATH):
             item.setExpanded(not item.isExpanded())
 
     def open_current(self) -> bool:
-        """Enter in vim mode: open the selected item, or open or close a folder.
+        """Enter in vim mode: open the selected item, or open or close a directory.
         True if it opened a sheet, help or a trashed sheet."""
         item = self.tree.currentItem()
         if item is None:
@@ -473,12 +475,12 @@ class Sidebar(QWidget):
 
     def _rename_selected(self) -> None:
         data = self._selected()
-        if data and data[0] in (SHEET, PINNED, FOLDER):
+        if data and data[0] in (SHEET, PINNED, DIRECTORY):
             self.rename.emit(data[1])
 
     def _trash_selected(self) -> None:
         data = self._selected()
-        if data and data[0] in (SHEET, PINNED, FOLDER):
+        if data and data[0] in (SHEET, PINNED, DIRECTORY):
             self.trash.emit(data[1])
         elif data and data[0] in (TRASHED, TRASHED_DIR) and "/" not in data[1]:
             self.delete_forever.emit(data[1])
@@ -494,13 +496,13 @@ class Sidebar(QWidget):
             action = menu.addAction(icons.icon(icon_name or name), self.t(name))
             actions[action] = slot
 
-        if kind in (SHEET, PINNED, FOLDER, SECTION):
-            folder = key if kind == FOLDER else (key.rsplit("/", 1)[0] if "/" in key else "")
+        if kind in (SHEET, PINNED, DIRECTORY, SECTION):
+            directory = key if kind == DIRECTORY else (key.rsplit("/", 1)[0] if "/" in key else "")
             if kind == SECTION:
-                folder = ""
-            add("new_sheet", lambda: self.new_sheet.emit(folder))
-            add("new_folder", lambda: self.new_folder.emit(folder))
-        if kind in (SHEET, PINNED, FOLDER):
+                directory = ""
+            add("new_sheet", lambda: self.new_sheet.emit(directory))
+            add("new_directory", lambda: self.new_directory.emit(directory))
+        if kind in (SHEET, PINNED, DIRECTORY):
             menu.addSeparator()
             add("rename", lambda: self.rename.emit(key))
             if kind in (SHEET, PINNED):
@@ -508,7 +510,7 @@ class Sidebar(QWidget):
                     add("unpin", lambda: self._unpin(key))
                 else:
                     add("pin", lambda: self._pin(key))
-            add("show_in_folder", lambda: self.show_in_folder.emit(key), "open_folder")
+            add("show_in_directory", lambda: self.show_in_directory.emit(key), "open_directory")
             menu.addSeparator()
             add("move_to_trash", lambda: self.trash.emit(key), "trash")
         elif kind in (TRASHED, TRASHED_DIR) and "/" not in key:
@@ -531,7 +533,7 @@ class Sidebar(QWidget):
         self.rebuild()
 
     def _dropped(self, dragged, target, position: int) -> None:
-        """Reorder, move into folders, pin or unpin by dragging."""
+        """Reorder, move into directories, pin or unpin by dragging."""
         if not dragged:
             return
         kind, rel = dragged
@@ -547,21 +549,21 @@ class Sidebar(QWidget):
                         if rel in pins and pins.index(rel) < index:
                             index -= 1
                     self.store.pin(rel, index)
-            elif tkind in (FOLDER, SECTION) and position == 0:
+            elif tkind in (DIRECTORY, SECTION) and position == 0:
                 if kind == PINNED:
                     self.store.unpin(rel)
-                self.store.move(rel, tkey if tkind == FOLDER else "")
-            elif tkind in (SHEET, FOLDER):
+                self.store.move(rel, tkey if tkind == DIRECTORY else "")
+            elif tkind in (SHEET, DIRECTORY):
                 if kind == PINNED:
                     self.store.unpin(rel)
-                folder = tkey.rsplit("/", 1)[0] if "/" in tkey else ""
-                siblings = [n.rel for n in self._siblings(folder)]
+                directory = tkey.rsplit("/", 1)[0] if "/" in tkey else ""
+                siblings = [n.rel for n in self._siblings(directory)]
                 siblings = [s for s in siblings if s != rel]
                 index = (
                     siblings.index(tkey) + (1 if position == 2 else 0) if tkey in siblings else None
                 )
-                self.store.move(rel, folder, index)
-            elif tkind == TRASH and kind in (SHEET, PINNED, FOLDER):
+                self.store.move(rel, directory, index)
+            elif tkind == TRASH and kind in (SHEET, PINNED, DIRECTORY):
                 self.trash.emit(rel)
                 return
         except OSError:
@@ -569,9 +571,9 @@ class Sidebar(QWidget):
         self.rebuild()
         self.changed.emit()
 
-    def _siblings(self, folder: str):
+    def _siblings(self, directory: str):
         node = self.store.tree()
-        if folder:
-            for part in folder.split("/"):
+        if directory:
+            for part in directory.split("/"):
                 node = next((c for c in node.children if c.is_dir and c.rel.endswith(part)), node)
         return node.children

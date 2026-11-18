@@ -107,10 +107,10 @@ days between 14.11.2026 and 25.12.2026""",
 # suggests for it. Browsers have no Hunspell, so this is written down here.
 MISSPELLED = "Шпаклівкаа"
 SUGGESTIONS = ["Шпаклівка", "Шпаклівкам", "Шпаклівках", "Шпаклівка а", "Шпаківка"]
-# the sidebar of the window at the top of the page: (folder, [sheets]), then loose sheets.
+# the sidebar of the window at the top of the page: (directory, [sheets]), then loose sheets.
 # The Examples section shows basics, money and dates, so the sidebar leaves them out
 SIDEBAR = [("trips", ["hero"]), ("home", ["spelling"])]
-FOLDERS = {"en": {"trips": "Trips", "home": "Home"}, "uk": {"trips": "Подорожі", "home": "Дім"}}
+DIRECTORIES = {"en": {"trips": "Trips", "home": "Home"}, "uk": {"trips": "Подорожі", "home": "Дім"}}
 # right-click menu: Edit menu items, their shortcuts and icons, as in the app
 MENU = [
     [("undo", "Ctrl+Z", "undo"), ("redo", "Ctrl+Shift+Z", "redo")],
@@ -128,8 +128,8 @@ MENU = [
 ]
 # icons the page shows, besides the menu's
 PAGE_ICONS = [
-    "sheet", "folder", "help", "trash", "spell_add", "spell_ignore",
-    "colours", "rates", "open_folder", "language", "numbers", "shortcuts", "pin", "sidebar",
+    "sheet", "directory", "help", "trash", "spell_add", "spell_ignore",
+    "colours", "rates", "open_directory", "language", "numbers", "shortcuts", "pin", "sidebar",
 ]  # fmt: skip
 COPIES = {
     "assets/icon.png": "icon.png",
@@ -206,7 +206,10 @@ def page_data(lang: str, table: RateTable) -> dict[str, Any]:
             "spell_ignore": t("spell_ignore"),
         },
         "icon_groups": {name: GROUPS.get(name, "neutral") for name in icon_names()},
-        "sidebar": [[FOLDERS[lang][folder] if folder else None, keys] for folder, keys in SIDEBAR],
+        "sidebar": [
+            [DIRECTORIES[lang][directory] if directory else None, keys]
+            for directory, keys in SIDEBAR
+        ],
         "sheets": sheets,
     }
 

@@ -126,7 +126,7 @@ gh run watch <id> --exit-status
 Run `gh run watch` with `run_in_background`. *Release builds* must end with `success`. If it
 fails, stop and show the user `gh run view <id> --log-failed`.
 
-Download CI's artifact into an empty folder in the scratchpad and check it:
+Download CI's artifact into an empty directory in the scratchpad and check it:
 
 ```bash
 gh run download <id> -n calculon_X.Y.Z -D <scratchpad>/ci-vX.Y.Z
@@ -161,7 +161,7 @@ something in them. Save them to `dist/vX.Y.Z/RELEASE_NOTES.md`, next to the arch
 checksums, without the fence below. They aren't in `SHA256SUMS`.
 
 Check Install against README's Install and Sheets sections before each release. Keep the
-platform security prompts and folder-access guidance current.
+platform security prompts and directory-access guidance current.
 
 ````markdown
 One-line summary of the release.
@@ -187,7 +187,7 @@ One-line summary of the release.
 - Windows: unpack and run `calculon.exe`. It isn't code-signed, so SmartScreen may ask
   to confirm the first start. Click More info, then Run anyway. If Windows Security's
   Controlled folder access blocks saving sheets, allow Calculon there or pick a sheets
-  folder outside Documents.
+  directory outside Documents.
 - macOS: pick `macos_arm64` for Apple Silicon, `macos_x64` for Intel, and drag
   `Calculon.app` into Applications. It isn't notarized, so macOS blocks it the first time.
   Try to open it, then go to System Settings, open Privacy & Security and click Open

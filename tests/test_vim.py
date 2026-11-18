@@ -397,21 +397,21 @@ def test_ctrl_w_is_typing_in_insert_mode(vim, app) -> None:
 
 def test_j_k_and_enter_in_the_sheet_list(vim, app) -> None:
     store, sidebar, ed = vim.store, vim.sidebar, vim.editor
-    store.create_folder("", "Work")
+    store.create_directory("", "Work")
     other = store.create_sheet("Work", "Plans", "1 + 1")
     sidebar.rebuild()
     pump(app)
     ctrl_w(ed, "h")
     tree = sidebar.tree
-    folder = tree.findItems("Work", Qt.MatchFlag.MatchRecursive)[0]
-    folder.setExpanded(False)
-    tree.setCurrentItem(folder)
-    QTest.keyClick(tree, Qt.Key.Key_Return)  # Enter opens a folder
-    assert folder.isExpanded()
+    directory = tree.findItems("Work", Qt.MatchFlag.MatchRecursive)[0]
+    directory.setExpanded(False)
+    tree.setCurrentItem(directory)
+    QTest.keyClick(tree, Qt.Key.Key_Return)  # Enter opens a directory
+    assert directory.isExpanded()
     QTest.keyClicks(tree, "j")
     assert tree.currentItem().text(0) == "Plans"
     QTest.keyClicks(tree, "k")
-    assert tree.currentItem() is folder
+    assert tree.currentItem() is directory
     QTest.keyClicks(tree, "j")
     QTest.keyClick(tree, Qt.Key.Key_Return)  # Enter opens a sheet and goes to it
     assert vim.current == ("sheet", other)

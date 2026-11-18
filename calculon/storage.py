@@ -1,7 +1,7 @@
-"""Sheets on disk: one .txt per sheet, folders are real folders.
+"""Sheets on disk: one .txt per sheet, directories are real directories.
 
 Pins, custom order and where trashed sheets came from live in a small hidden
-file, .calculon.json, in the sheets folder. Trashed sheets go to .trash/.
+file, .calculon.json, in the sheets directory. Trashed sheets go to .trash/.
 """
 
 import contextlib
@@ -22,7 +22,7 @@ _REPLACE_ATTEMPTS = 6
 @dataclass
 class Node:
     name: str  # display name (file name without .txt)
-    rel: str  # path relative to the sheets folder, with "/" separators
+    rel: str  # path relative to the sheets directory, with "/" separators
     is_dir: bool
     children: list[Node] = field(default_factory=list)
 
@@ -35,7 +35,7 @@ class SheetStore:
     def __init__(self, root: Path):
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
-        # mkdir doesn't fail on an existing folder Calculon can't write to, so write a test file
+        # mkdir doesn't fail on an existing directory Calculon can't write to, so write a test file
         with tempfile.TemporaryFile(dir=self.root, prefix=".tmp-"):
             pass
         self.meta = self._load_meta()
@@ -58,7 +58,7 @@ class SheetStore:
     def path(self, rel: str) -> Path:
         p = (self.root / rel).resolve()
         if not p.is_relative_to(self.root.resolve()):
-            raise StorageError(f"outside the sheets folder: {rel}")
+            raise StorageError(f"outside the sheets directory: {rel}")
         return p
 
     def rel(self, path: Path) -> str:
@@ -72,15 +72,15 @@ class SheetStore:
     def tree(self) -> Node:
         return Node("", "", True, self._children(""))
 
-    def _entries(self, folder: str) -> list[Node]:
+    def _entries(self, directory: str) -> list[Node]:
         nodes = []
         try:
-            with os.scandir(self.path(folder)) as entries:
+            with os.scandir(self.path(directory)) as entries:
                 for entry in entries:
                     if entry.name.startswith("."):
                         continue
                     try:
-                        # Links can point outside the folder or back into it. A Windows
+                        # Links can point outside the directory or back into it. A Windows
                         # junction is a link too, but is_symlink() doesn't count it.
                         if entry.is_symlink() or entry.is_junction():
                             continue
@@ -89,23 +89,23 @@ class SheetStore:
                             continue
                     except OSError:
                         continue
-                    rel = f"{folder}/{entry.name}" if folder else entry.name
+                    rel = f"{directory}/{entry.name}" if directory else entry.name
                     name = entry.name if is_dir else self.display_name(rel)
                     nodes.append(Node(name, rel, is_dir))
         except OSError:
             pass
         return nodes
 
-    def _children(self, folder: str) -> list[Node]:
+    def _children(self, directory: str) -> list[Node]:
         pinned = set(self.meta["pinned"])
         nodes: dict[str, Node] = {}
-        for node in self._entries(folder):
+        for node in self._entries(directory):
             if node.is_dir:
                 node.children = self._children(node.rel)
             elif node.rel in pinned:
                 continue
             nodes[node.rel.rsplit("/", 1)[-1]] = node
-        order = [n for n in self.meta["order"].get(folder, []) if n in nodes]
+        order = [n for n in self.meta["order"].get(directory, []) if n in nodes]
         rest = sorted(
             (n for n in nodes if n not in order),
             key=lambda n: (not nodes[n].is_dir, n.lower()),
@@ -121,11 +121,11 @@ class SheetStore:
 
     def all_sheets(self) -> list[str]:
         out = []
-        folders = [""]
-        while folders:
-            for node in self._entries(folders.pop()):
+        directories = [""]
+        while directories:
+            for node in self._entries(directories.pop()):
                 if node.is_dir:
-                    folders.append(node.rel)
+                    directories.append(node.rel)
                 else:
                     out.append(node.rel)
         return sorted(out, key=str.lower)
@@ -159,14 +159,14 @@ class SheetStore:
         except OSError:
             return 0.0
 
-    def create_sheet(self, folder: str = "", name: str = "Untitled", text: str = "") -> str:
-        base = self.path(folder) if folder else self.root
+    def create_sheet(self, directory: str = "", name: str = "Untitled", text: str = "") -> str:
+        base = self.path(directory) if directory else self.root
         base.mkdir(parents=True, exist_ok=True)
         target = _unique(base, _safe(name), EXT)
         _atomic_write(target, text)
         return self.rel(target)
 
-    def create_folder(self, parent: str = "", name: str = "New directory") -> str:
+    def create_directory(self, parent: str = "", name: str = "New directory") -> str:
         base = self.path(parent) if parent else self.root
         target = _unique(base, _safe(name), "")
         target.mkdir(parents=True)
@@ -186,20 +186,20 @@ class SheetStore:
         src.rename(dst)
         new_rel = self.rel(dst)
         self._replace_refs(rel, new_rel)
-        folder = _parent(rel)
-        order = self.meta["order"].get(folder)
+        directory = _parent(rel)
+        order = self.meta["order"].get(directory)
         if order and src.name in order:
             order[order.index(src.name)] = dst.name
         self._save_meta()
         return new_rel
 
-    def move(self, rel: str, folder: str, index: int | None = None) -> str:
-        """Move a sheet or folder into folder, at position index among its siblings."""
+    def move(self, rel: str, directory: str, index: int | None = None) -> str:
+        """Move a sheet or directory into directory, at position index among its siblings."""
         src = self.path(rel)
-        dest_dir = self.path(folder) if folder else self.root
+        dest_dir = self.path(directory) if directory else self.root
         if src.is_dir() and (dest_dir == src or src in dest_dir.parents):
-            raise StorageError("can't move a folder into itself")
-        old_folder = _parent(rel)
+            raise StorageError("can't move a directory into itself")
+        old_directory = _parent(rel)
         if dest_dir != src.parent:
             dst = _unique(dest_dir, src.stem if not src.is_dir() else src.name, src.suffix)
             src.rename(dst)
@@ -207,15 +207,15 @@ class SheetStore:
             dst = src
         new_rel = self.rel(dst)
         self._replace_refs(rel, new_rel)
-        old_order = self.meta["order"].get(old_folder, [])
+        old_order = self.meta["order"].get(old_directory, [])
         if src.name in old_order:
             old_order.remove(src.name)
-        siblings = [n.rel.rsplit("/", 1)[-1] for n in self._children(folder)]
+        siblings = [n.rel.rsplit("/", 1)[-1] for n in self._children(directory)]
         siblings = [s for s in siblings if s != dst.name]
         if index is None or index > len(siblings):
             index = len(siblings)
         siblings.insert(index, dst.name)
-        self.meta["order"][folder] = siblings
+        self.meta["order"][directory] = siblings
         self._save_meta()
         return new_rel
 
@@ -279,8 +279,8 @@ class SheetStore:
     def restore(self, name: str) -> str:
         src = self.trash_dir / _safe_component(name)
         original = self.meta["trash"].pop(name, name)
-        folder = _parent(original)
-        dest_dir = self.path(folder) if folder else self.root
+        directory = _parent(original)
+        dest_dir = self.path(directory) if directory else self.root
         dest_dir.mkdir(parents=True, exist_ok=True)
         base = Path(original).name
         stem, suffix = (base[: -len(EXT)], EXT) if base.endswith(EXT) else (base, "")
@@ -319,12 +319,12 @@ def _safe_component(name: str) -> str:
     return name
 
 
-def _unique(folder: Path, stem: str, suffix: str) -> Path:
+def _unique(directory: Path, stem: str, suffix: str) -> Path:
     stem = stem or "Untitled"
-    candidate = folder / f"{stem}{suffix}"
+    candidate = directory / f"{stem}{suffix}"
     n = 2
     while candidate.exists():
-        candidate = folder / f"{stem} {n}{suffix}"
+        candidate = directory / f"{stem} {n}{suffix}"
         n += 1
     return candidate
 

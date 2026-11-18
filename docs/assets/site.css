@@ -275,7 +275,7 @@ p {
 .side .row.child {
   padding-left: 26px;
 }
-/* sheets open on a click; folders, Help and Trash are plain labels */
+/* sheets open on a click; directories, Help and Trash are plain labels */
 .side button.row {
   width: 100%;
   border: 0;

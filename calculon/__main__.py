@@ -17,7 +17,7 @@ from calculon.engine import Config, FormatOptions, RateTable, evaluate_sheet
 from calculon.engine.format import LANGUAGE_NUMBER_STYLES
 from calculon.paths import APP_ICON, FALLBACK_RATES, FONTS, HELP_DIR
 from calculon.spelling import SpellChecker, probe
-from calculon.ui.folder_dialog import choose_sheets_folder
+from calculon.ui.directory_dialog import choose_sheets_directory
 from calculon.ui.icons import NAMES, svg
 from calculon.ui.main_window import MainWindow
 
@@ -42,9 +42,9 @@ def self_test() -> int:
                 failed.append(f"{lang}: {src}")
     if not list(FONTS.glob("*.ttf")):
         failed.append("fonts missing")
-    folder = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
-    if not QTranslator().load("qtbase_uk", folder):
-        failed.append(f"Qt translations missing in {folder}")
+    directory = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+    if not QTranslator().load("qtbase_uk", directory):
+        failed.append(f"Qt translations missing in {directory}")
     bad = []
     for n in sorted(NAMES):
         try:
@@ -90,7 +90,7 @@ def main() -> int:
     app.setDesktopFileName("calculon")
     icon = QIcon(str(APP_ICON))
     app.setWindowIcon(icon)
-    settings = choose_sheets_folder()
+    settings = choose_sheets_directory()
     if settings is None:
         return 0
     window = MainWindow(settings)
