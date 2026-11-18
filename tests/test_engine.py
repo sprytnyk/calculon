@@ -72,6 +72,12 @@ def test_long_malformed_formula_is_not_reparsed_at_every_operator(monkeypatch) -
     assert attempts <= 3
 
 
+@pytest.mark.parametrize("rate", ["0", "-1"])
+def test_custom_exchange_rate_must_be_positive(rate: str) -> None:
+    line = evaluate_sheet(f"50 EUR in USD at {rate} USD/EUR", RATES, CONFIG).lines[0]
+    assert line.value is None
+
+
 def test_failed_assignment_does_not_reuse_old_value() -> None:
     lines = evaluate_sheet(
         "rent = 1900\nrent = 1/0\nrent / 2\nrent += 10\nrent = 2000\nrent / 2",
@@ -669,6 +675,14 @@ def test_average_of_lines() -> None:
 
 def test_total_mixed_currencies_uses_last() -> None:
     assert calc("$90\n€90\ntotal") == ["$90.00", "€90.00", "€171.00"]
+
+
+def test_total_with_missing_rate_rejects_partial_answer() -> None:
+    source = "100 CHF\n50 USD\ntotal"
+    res = evaluate_sheet(source, RATES, CONFIG)
+    assert [line.text for line in res.lines] == ["100.00 CHF", "$50.00", ""]
+    assert res.lines[-1].error == "no exchange rate for CHF"
+    assert res.total is None
 
 
 def test_tags() -> None:

@@ -133,6 +133,7 @@ class SettingsDialog(QDialog):
         self.t = tr
         self.original = settings
         theme: Theme = getattr(parent, "theme", GLACIER_DARK)
+        self._error_colour = theme.error
         self.setObjectName("settings")
         self.setWindowTitle(tr("settings_title"))
         self.setWindowIcon(icons.icon("settings"))
@@ -387,6 +388,7 @@ class SettingsDialog(QDialog):
         if not url:
             return
         self.test_result.show()
+        self.test_result.setStyleSheet("")
         self.test_result.setText("…")
         req = QNetworkRequest(QUrl(url))
         req.setTransferTimeout(15000)
@@ -395,11 +397,13 @@ class SettingsDialog(QDialog):
         def done() -> None:
             reply.deleteLater()
             if reply.error() != QNetworkReply.NetworkError.NoError:
+                self.test_result.setStyleSheet(f"color: {self._error_colour};")
                 self.test_result.setText(self.t("test_fail", error=reply.errorString()))
                 return
             try:
                 table = RateTable.parse(bytes(reply.read(2_000_000).data()))
             except RatesError as exc:
+                self.test_result.setStyleSheet(f"color: {self._error_colour};")
                 self.test_result.setText(self.t("test_fail", error=str(exc)))
                 return
             self.test_result.setText(self.t("test_ok", count=len(table.rates), base=table.base))

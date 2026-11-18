@@ -31,6 +31,7 @@ from .values import (
     Q,
     Value,
     add,
+    compatible,
     convert,
     date_diff,
     div,
@@ -1310,6 +1311,8 @@ def _rebase_rate(q: Q, per: U.Units, rates: RateTable) -> Q:
 def _custom_rate(value: Q, target: U.Units, rate: Value) -> Q:
     if not isinstance(rate, Q):
         raise CalcError("rate must be a number")
+    if rate.mag <= 0:
+        raise CalcError("rate must be positive")
     if rate.unitless:
         return Q(value.mag * rate.mag, target)
     try:
@@ -1416,10 +1419,9 @@ def aggregate(kind: str, values: list[Value], rates: RateTable, lines: bool = Tr
     mags: list[Decimal] = []
     for q in qs:
         if q.units and q.units != target:
-            try:
-                q = convert(q, target, rates)
-            except CalcError:
+            if not compatible(q.units, target):
                 continue
+            q = convert(q, target, rates)
         mags.append(q.mag)
     if not mags:
         return Q(ZERO, target)

@@ -108,6 +108,7 @@ class SheetResult:
     lines: list[LineResult]
     total: Value | None
     variables: list[str]
+    total_diagnostic: Diagnostic | None = None
 
 
 def evaluate_sheet(
@@ -157,7 +158,8 @@ def evaluate_sheet(
                 taken_by[j] = i
         live[i] = res.value
     names = sorted(set(ctx.var_names.values()), key=str.lower)
-    return SheetResult(results, _sheet_total(list(live.values()), rates), names)
+    total, diagnostic = _sheet_total(list(live.values()), rates)
+    return SheetResult(results, total, names, diagnostic)
 
 
 def _in_place_of(line: int, taken_by: dict[int, int]) -> int:
@@ -175,16 +177,18 @@ def _added_up(value: Value | None, total: Value) -> bool:
     return U.dims_of(value.units) == U.dims_of(total.units)
 
 
-def _sheet_total(values: list[Value], rates: RateTable) -> Q | None:
+def _sheet_total(values: list[Value], rates: RateTable) -> tuple[Q | None, Diagnostic | None]:
     """The status bar's total. Money wins when there's any; otherwise the kind of unit
     used most, as in a total line."""
     if not any(isinstance(v, Q) for v in values):
-        return None
+        return None, None
     money = [v for v in values if isinstance(v, Q) and is_money(v)]
     try:
-        return aggregate("sum", money or values, rates)
-    except CalcError, ArithmeticError:  # 9e999999 + 9e999999 overflows
-        return None
+        return aggregate("sum", money or values, rates), None
+    except CalcError as exc:
+        return None, exc.diagnostic
+    except ArithmeticError:  # 9e999999 + 9e999999 overflows
+        return None, None
 
 
 def _evaluate_directive(

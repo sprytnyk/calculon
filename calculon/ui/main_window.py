@@ -49,7 +49,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..engine import format_value
+from ..engine import SheetResult, format_value
 from ..engine.format import MONTHS_EN, MONTHS_UK, format_time
 from ..help_sheet import read_help
 from ..paths import FONTS
@@ -1059,11 +1059,14 @@ class MainWindow(QMainWindow):
         if result is not None and result.total is not None:
             self._copy(format_value(result.total, self.settings.format_options()))
 
-    def _show_total(self, result) -> None:
-        if result.total is None:
+    def _show_total(self, result: SheetResult) -> None:
+        if diagnostic := result.total_diagnostic:
+            text = diagnostic.render(self.t(diagnostic.template))
+        elif result.total is None:
             self.total_label.setText("")
             return
-        text = format_value(result.total, self.settings.format_options())
+        else:
+            text = format_value(result.total, self.settings.format_options())
         self.total_label.setText(self.t("total", text=text))
 
     def _update_rates_label(self) -> None:

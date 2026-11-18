@@ -43,6 +43,7 @@ from PySide6.QtWidgets import (
 )
 
 from calculon import rates, settings, spelling
+from calculon.engine import RateTable
 from calculon.settings import Settings
 from calculon.spelling import SpellChecker, Status, probe
 from calculon.storage import SheetStore
@@ -269,6 +270,19 @@ def test_high_precision_total_updates(window, app) -> None:
     pump(app)
     assert window.editor.result_text(1) == "99,000,000"
     assert window.total_label.text() == "Total: 198,000,000"
+
+
+def test_total_label_shows_missing_exchange_rate(window, app) -> None:
+    window.rates.table = RateTable()
+    window.rates.changed.emit()
+    window.new_sheet("")
+    window.editor.setPlainText("100 CHF\n50 USD")
+    pump(app)
+    assert "no exchange rate for CHF" in window.total_label.text()
+
+    window.editor.setPlainText("50 USD")
+    pump(app)
+    assert window.total_label.text() == "Total: $50.00"
 
 
 @pytest.mark.parametrize(("size", "step"), [(8, -1), (40, 1)])
@@ -1302,6 +1316,34 @@ def test_autocomplete_lists_variables_first_with_their_kind(window, app) -> None
     assert all(kind for _, kind in rows)
     assert ed.kind_label("unit") == "unit"
     ed._completer.popup().hide()
+
+
+def test_failed_rates_url_test_is_red(window, app, monkeypatch) -> None:
+    dlg = SettingsDialog(window.settings, window.t, window)
+    reply = SimpleNamespace(
+        deleteLater=lambda: None,
+        error=lambda: QNetworkReply.NetworkError.HostNotFoundError,
+        errorString=lambda: "Host not found",
+        finished=SimpleNamespace(connect=lambda callback: callback()),
+    )
+    monkeypatch.setattr(dlg._net, "get", lambda request: reply)
+    dlg.rates_url.setText("https://example.invalid/rates")
+    dlg._test_url()
+    pump(app)
+    assert "Host not found" in dlg.test_result.text()
+    dlg.test_result.ensurePolished()
+    assert (
+        dlg.test_result.palette().color(dlg.test_result.foregroundRole()).name()
+        == window.theme.error
+    )
+    reply.error = lambda: QNetworkReply.NetworkError.NoError
+    reply.read = lambda size: QByteArray(b'{"base":"USD","rates":{"EUR":0.9}}')
+    dlg._test_url()
+    assert dlg.test_result.text() == window.t("test_ok", count=2, base="USD")
+    assert (
+        dlg.test_result.palette().color(dlg.test_result.foregroundRole()).name()
+        != window.theme.error
+    )
 
 
 def test_sheet_scrollbar_shows_while_scrolling_then_fades(window, app) -> None:
