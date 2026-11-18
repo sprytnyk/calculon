@@ -91,6 +91,7 @@ T = {
     "vim_list_enter": "Open a sheet or directory, or copy an answer",
     "vim_list_delete": "Move to Trash, delete forever, or empty Trash",
     "vim_list_restore": "Restore a sheet or directory from Trash",
+    "vim_hint": "Show or hide the hint at the cursor",
     "refresh_rates": "Refresh Exchange Rates",
     "about": "About Calculon",
     # autocomplete: what kind of word a suggestion is

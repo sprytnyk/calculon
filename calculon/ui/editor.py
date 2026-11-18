@@ -627,6 +627,7 @@ class SheetEdit(QPlainTextEdit):
         self.show_line_numbers = True
         self._last_text: str | None = None
         self.vim = None  # side-vim's VimMode, made the first time vim mode is turned on
+        self._vim_pending = ""
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.setVerticalScrollBar(SheetScrollBar(self))
         self.setTabChangesFocus(False)
@@ -752,12 +753,43 @@ class SheetEdit(QPlainTextEdit):
             self.vim.mode_changed.connect(lambda mode: self.vim_mode_changed.emit(vim.label(mode)))
             self.vim.mode_changed.connect(self._update_typing)
             self.vim.pending_changed.connect(self.vim_pending_changed)
+            self.vim.pending_changed.connect(self._remember_vim_pending)
+            self.installEventFilter(self)
         if self.vim.enabled != on:
             self.vim.set_enabled(on)
         if not on and self.results.hasFocus():
             self.setFocus()  # only vim mode's keys work in the answers
         # set_enabled(False) leaves vim's mode as it was, so the label goes here
         self.vim_mode_changed.emit(vim.label(self.vim.mode) if on else "")
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+        if (
+            watched is self
+            and event.type() == QEvent.Type.KeyPress
+            and self.vim_on()
+            and self.vim.mode is Mode.NORMAL
+            and not self._vim_pending
+            and isinstance(event, QKeyEvent)
+            and event.text() == "K"
+        ):
+            self._show_cursor_hint()
+            return True
+        return super().eventFilter(watched, event)
+
+    def _remember_vim_pending(self, text: str) -> None:
+        self._vim_pending = text
+
+    def _show_cursor_hint(self) -> None:
+        pos = self.cursorRect().center()
+        text = self.hint_at(pos)
+        line = self.textCursor().blockNumber()
+        if not text:
+            text = self.result_warning(line)
+        if text:
+            if QToolTip.isVisible() and QToolTip.text() == text:
+                QToolTip.hideText()
+            else:
+                QToolTip.showText(self.viewport().mapToGlobal(pos), text, self.viewport())
         self._update_typing()
 
     def vim_on(self) -> bool:

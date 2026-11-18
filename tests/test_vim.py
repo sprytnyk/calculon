@@ -7,7 +7,7 @@ import pytest
 from PySide6.QtCore import QEvent, QPoint, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QKeyEvent, qt_set_sequence_auto_mnemonic
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QToolTip
 from side_vim import Mode
 from side_vim.keys import control_modifier
 
@@ -85,6 +85,59 @@ def test_normal_mode_types_nothing_and_edits_like_vim(vim) -> None:
     assert ed.toPlainText() == TEXT[1:]
     QTest.keyClicks(ed, "u")
     assert ed.toPlainText() == TEXT
+
+
+def test_k_shows_invalid_number_hint_in_normal_mode(vim, monkeypatch) -> None:
+    ed = vim.editor
+    ed.setPlainText("100 100 1")
+    ed.recalculate()
+    ed.moveCursor(ed.textCursor().MoveOperation.Start)
+    hint = "Use 1,234.56. Group digits in threes or leave them ungrouped."
+    assert ed.hint_at(ed.cursorRect().center()) == hint
+    shown = []
+    monkeypatch.setattr(QToolTip, "showText", lambda _pos, text, *_args: shown.append(text))
+    QTest.keyClicks(ed, "K")
+    assert shown == [hint]
+
+
+def test_k_still_types_in_insert_mode_and_after_replace(vim) -> None:
+    ed = vim.editor
+    QTest.keyClicks(ed, "rK")
+    assert ed.toPlainText().startswith("Kent")
+    QTest.keyClicks(ed, "iK")
+    assert ed.toPlainText().startswith("KKent")
+
+
+@pytest.mark.parametrize(
+    ("language", "source", "message"),
+    [("en", "2026-19-18", "no such date"), ("uk", "10 / 0", "Ділення на нуль.")],
+)
+def test_k_shows_calculation_error(vim, monkeypatch, language, source, message) -> None:
+    vim.set_language(language)
+    ed = vim.editor
+    ed.setPlainText(source)
+    ed.recalculate()
+    ed.moveCursor(ed.textCursor().MoveOperation.Start)
+    shown = []
+    monkeypatch.setattr(QToolTip, "showText", lambda _pos, text, *_args: shown.append(text))
+    QTest.keyClicks(ed, "K")
+    assert shown == [message]
+
+
+def test_k_again_hides_the_message(vim, monkeypatch) -> None:
+    ed = vim.editor
+    ed.setPlainText("100 100 1")
+    ed.recalculate()
+    ed.moveCursor(ed.textCursor().MoveOperation.Start)
+    shown = []
+    hidden = []
+    monkeypatch.setattr(QToolTip, "showText", lambda _pos, text, *_args: shown.append(text))
+    monkeypatch.setattr(QToolTip, "isVisible", lambda: bool(shown) and not hidden)
+    monkeypatch.setattr(QToolTip, "text", lambda: shown[-1] if shown else "")
+    monkeypatch.setattr(QToolTip, "hideText", lambda: hidden.append(True))
+    QTest.keyClicks(ed, "KK")
+    assert shown == ["Use 1,234.56. Group digits in threes or leave them ungrouped."]
+    assert hidden == [True]
 
 
 def test_yank_uses_the_system_clipboard(vim) -> None:
