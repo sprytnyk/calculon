@@ -950,6 +950,17 @@ def test_division_by_zero_gives_no_answer() -> None:
     assert one("5 / 0") == ""
 
 
+@pytest.mark.parametrize("text", ["5 km mod 2 m", "5 km % 2 m", "remainder of 5 km divided by 2 m"])
+def test_remainder_converts_compatible_units(text: str) -> None:
+    assert one(text) == "0 km"
+
+
+def test_remainder_rejects_incompatible_units() -> None:
+    line = evaluate_sheet("5 km mod 2 seconds", RATES, CONFIG).lines[0]
+    assert line.value is None
+    assert line.error == "incompatible units"
+
+
 def test_huge_power_is_refused() -> None:
     assert one("9^9^9") == ""
 

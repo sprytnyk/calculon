@@ -646,7 +646,7 @@ class Parser:
                         return div(left, Q(ONE, unit), r)
                 right = self.expr(21, stops)
                 if key == "mod":
-                    return modulo(left, right)
+                    return modulo(left, right, r)
                 if key in MUL_OPS or key == "multiplied":
                     return mul(left, self._money_rate(right), r)
                 return div(left, right, r)
@@ -654,7 +654,7 @@ class Parser:
                 if min_bp > 20:
                     return None
                 self.pos += 1
-                return modulo(left, self.expr(21, stops))
+                return modulo(left, self.expr(21, stops), r)
             if key in ("a", "an") and isinstance(left, Q):
                 # $24 a day -> $24/day
                 if min_bp > 20:
@@ -841,7 +841,7 @@ class Parser:
             a = self.expr(0, stops | {"divided", "by"})
             self.take("divided")  # "остача від ділення 21 на 5" has no "divided"
             self.expect("by")
-            return modulo(a, self.expr(21, stops))
+            return modulo(a, self.expr(21, stops), self.rates)
         if key in ("square", "cube") and self.at("root", offset=1):
             self.pos += 2
             self.take("of")

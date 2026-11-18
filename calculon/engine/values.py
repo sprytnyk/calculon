@@ -243,8 +243,10 @@ def power(a: Value, b: Value) -> Q:
     return Q(mag, units)
 
 
-def modulo(a: Value, b: Value) -> Q:
+def modulo(a: Value, b: Value, rates: RateTable) -> Q:
     a, b = _need_q(a), _need_q(b)
+    if b.units:
+        b = convert(b, a.units, rates)
     if b.mag == 0:
         raise CalcError("division by zero")
     return Q(a.mag % b.mag, a.units)
