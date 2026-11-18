@@ -121,14 +121,15 @@ def evaluate_sheet(
     config = replace(config or Config(), number_style=opts.number_style)
     ctx = Context(rates=rates, config=config)
     results: list[LineResult] = []
-    # The sheet total adds up each answer once. A line that adds up earlier answers, as
-    # "t = rent + food" does, takes their place in it; "deposit = rent × 2" doesn't.
+    # Keep the original amounts available to overlapping subtotals. Arithmetic that
+    # changes a subtotal takes the place of the amounts it covers.
     live: dict[int, Value] = {}  # the lines the total adds up
+    subtotals: dict[int, set[int]] = {}  # a subtotal -> the lines that make it up
     taken_by: dict[int, int] = {}  # a line that left the total -> the line in its place
     out: set[int] = set()  # lines not in the total, nor anything worked out from them
     timeline: Timeline | None = None
     for i, raw in enumerate(text.split("\n")):
-        ctx.used, ctx.adds_up = set(), set()
+        ctx.used, ctx.adds_up, ctx.subtotal = set(), set(), None
         directive = DIRECTIVE_RE.match(raw)
         try:
             if directive:
@@ -149,11 +150,19 @@ def evaluate_sheet(
             continue
         replaced = ctx.adds_up
         if res.aggregate:
-            # a total adds up whole lines, so it takes the place of what stands for them
-            # now, as a total of #food does for the lines tagged #food
-            added = (j for j in ctx.used if _added_up(ctx.line_values[j], res.value))
-            replaced = {_in_place_of(j, taken_by) for j in added}
+            summands = {j for j in ctx.used if _added_up(ctx.line_values[j], res.value)}
+            if summands and res.value is ctx.subtotal:
+                subtotals[i] = {line for j in summands for line in subtotals.get(j, {j})}
+                continue
+            replaced = {_in_place_of(j, taken_by) for j in summands}
+        covered: set[int] = set()
         for j in replaced:
+            if j in subtotals and j not in taken_by:
+                covered.update(_in_place_of(line, taken_by) for line in subtotals[j])
+                taken_by[j] = i
+            else:
+                covered.add(j)
+        for j in covered:
             if live.pop(j, None) is not None:
                 taken_by[j] = i
         live[i] = res.value
@@ -459,7 +468,9 @@ def _evaluate_items(
         ctx.block.append(line)
     for i, it in enumerate(items):
         if it.kind == "tag" and not (i and items[i - 1].key == "of"):
-            ctx.tags.setdefault(it.key, []).append(line)
+            tagged_lines = ctx.tags.setdefault(it.key, [])
+            if not tagged_lines or tagged_lines[-1] != line:
+                tagged_lines.append(line)
 
 
 def _aggregate_of(items: list[Item]) -> tuple[str, bool]:

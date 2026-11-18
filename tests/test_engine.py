@@ -690,6 +690,13 @@ def test_tags() -> None:
     assert calc(text)[-2:] == ["$50.00", "$25.00"]
 
 
+def test_repeated_tag_counts_once() -> None:
+    source = "$100 #food #Food\n$50 #food\ntotal of #food\ncount of #food"
+    res = evaluate_sheet(source, RATES, CONFIG)
+    assert [line.text for line in res.lines[-2:]] == ["$150.00", "2"]
+    assert res.total is not None and res.total.mag == Decimal(150)
+
+
 def test_sheet_total() -> None:
     res = evaluate_sheet("$10\n$20\ntotal\n$5", RATES, CONFIG)
     assert res.total is not None
@@ -744,6 +751,15 @@ def test_a_total_below_a_tag_total_counts_each_line_once() -> None:
     res = evaluate_sheet("$20 lunch #food\n$15 taxi\ntotal of #food\ntotal", RATES, CONFIG)
     assert [line.text for line in res.lines][-2:] == ["$20.00", "$35.00"]
     assert not res.lines[2].is_total  # not bold, and the block goes on past it
+
+
+@pytest.mark.parametrize(
+    ("tail", "expected"), [("", "$150.00"), ("\ntotal", "$150.00"), ("\n* 2", "$250.00")]
+)
+def test_overlapping_tag_totals_keep_unshared_lines(tail: str, expected: str) -> None:
+    text = "$100 #a #b\n$50 #a\ntotal of #a\ntotal of #b" + tail
+    assert calc(text)[2:4] == ["$150.00", "$100.00"]
+    assert sheet_total(text) == expected
 
 
 def test_money_wins_the_sheet_total() -> None:

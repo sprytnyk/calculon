@@ -236,6 +236,7 @@ class Context:
     # it used, and those it only adds to or takes from, as "rent + food" does
     used: set[int] = field(default_factory=set)
     adds_up: set[int] = field(default_factory=set)
+    subtotal: Q | None = None  # a sum of earlier answers, before any further arithmetic
 
     def set_var(self, name: str, value: Value) -> None:
         key = var_key(name)
@@ -492,6 +493,7 @@ class Parser:
         self.rates = ctx.rates
         self.plain: list[int] = []  # positions of soft keywords read as plain text
         self.used: set[int] = set()  # earlier lines read
+        self.subtotal: Q | None = None
         # id(value) -> (value, the earlier lines it is a sum of); the value is kept so
         # its id can't go to another one
         self._sums: dict[int, tuple[Value, frozenset[int]]] = {}
@@ -1186,7 +1188,10 @@ class Parser:
                 return self._sum_of(total, frozenset().union(*map(self.adds_up, values)))
         else:
             values = self.read_lines(self.ctx.block)
-        return aggregate(kind, values, self.rates)
+        total = aggregate(kind, values, self.rates)
+        if kind == "sum":
+            self.subtotal = total
+        return total
 
     def rate_apply(self, left: Value, right: Value, key: str) -> Value:
         """'30 hours at $30/hour' multiplies; '$500 at $20/hour' divides."""
@@ -1696,6 +1701,7 @@ def evaluate_tokens(
                 skipped.update(id(it) for it in items if id(it) not in kept)
             ctx.used = parser.used
             ctx.adds_up = set(parser.adds_up(value))
+            ctx.subtotal = parser.subtotal
             return value
     if len(dates) == 2:
         start, end = dates
