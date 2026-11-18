@@ -27,9 +27,11 @@ from PySide6.QtGui import (
     QContextMenuEvent,
     QFont,
     QGuiApplication,
+    QImage,
     QInputMethodEvent,
     QKeyEvent,
     QKeySequence,
+    QPainter,
     QTextCharFormat,
     QTextCursor,
 )
@@ -40,7 +42,10 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QMenu,
     QMessageBox,
+    QPushButton,
     QStyle,
+    QStyleOptionFocusRect,
+    QToolTip,
     QWidget,
 )
 
@@ -65,6 +70,19 @@ from tests.test_directory_dialog import assert_error_colour
 def pump(app) -> None:
     for _ in range(5):
         app.processEvents()
+
+
+def test_tooltip_has_transparent_corners(window, app) -> None:
+    QToolTip.showText(window.mapToGlobal(QPoint(20, 20)), "A tooltip", window)
+    try:
+        tooltip = next(
+            w
+            for w in app.topLevelWidgets()
+            if w.isVisible() and w.windowType() == Qt.WindowType.ToolTip
+        )
+        assert tooltip.grab().toImage().pixelColor(0, 0).alpha() == 0
+    finally:
+        QToolTip.hideText()
 
 
 def off_centre(label, app) -> int:
@@ -704,6 +722,22 @@ def test_each_theme_uses_its_accent(
     assert f"QPushButton:focus {{ border-color: {accent}; }}" in sheet
     assert f"QPushButton#primary {{ background: {accent}; border-color: {accent};" in sheet
     assert f"color: {on_accent}; font-weight: 600;" in sheet
+
+
+def test_dialog_button_has_no_extra_inner_focus_rectangle(window) -> None:
+    button = QPushButton("Delete", window)
+    option = QStyleOptionFocusRect()
+    option.initFrom(button)
+    option.rect = QRect(2, 2, 80, 24)
+    option.state |= QStyle.StateFlag.State_HasFocus | QStyle.StateFlag.State_KeyboardFocusChange
+    image = QImage(100, 40, QImage.Format.Format_ARGB32)
+    image.fill(QColor("white"))
+    painter = QPainter(image)
+    themes._style[0].drawPrimitive(
+        QStyle.PrimitiveElement.PE_FrameFocusRect, option, painter, button
+    )
+    painter.end()
+    assert all(image.pixelColor(x, y) == QColor("white") for y in range(40) for x in range(100))
 
 
 def test_default_formats_are_independent_of_ui_language(window, app) -> None:

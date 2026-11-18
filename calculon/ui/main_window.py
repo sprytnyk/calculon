@@ -203,6 +203,7 @@ class MainWindow(QMainWindow):
         status.addWidget(self.total_label, 0, 1)
         # a short note like "Copied $30.00" shows in the total's place for a moment
         self.message_label = QLabel()
+        self.message_label.setObjectName("statusMessage")
         self.message_label.hide()
         status.addWidget(self.message_label, 0, 1)
         self._message_timer = QTimer(self)

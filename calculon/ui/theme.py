@@ -10,9 +10,11 @@ from PySide6.QtWidgets import (
     QComboBox,
     QLineEdit,
     QProxyStyle,
+    QPushButton,
     QStyle,
     QStyledItemDelegate,
     QStyleFactory,
+    QWidget,
 )
 
 from . import icons
@@ -211,6 +213,11 @@ class _Style(QProxyStyle):
             return icons.ICON_SIZE
         return super().pixelMetric(metric, option, widget)
 
+    def drawPrimitive(self, element, option, painter, widget=None) -> None:  # noqa: N802
+        if element == QStyle.PrimitiveElement.PE_FrameFocusRect and isinstance(widget, QPushButton):
+            return  # the themed border already shows keyboard focus
+        super().drawPrimitive(element, option, painter, widget)
+
     def styleHint(self, hint, option=None, widget=None, data=None) -> int:  # noqa: N802
         # no stock icons (red cross, green tick) on OK, Cancel, Yes, No, Close
         if hint == QStyle.StyleHint.SH_DialogButtonBox_ButtonsHaveIcons:
@@ -267,9 +274,9 @@ def apply(app: QApplication, theme: Theme) -> None:
         QPalette.ColorRole.WindowText,
     ):
         p.setColor(QPalette.ColorGroup.Disabled, role, QColor(theme.muted))
-    app.setPalette(p)
-    app.setStyleSheet(
-        f"""
+    if app.palette() != p:
+        app.setPalette(p)
+    css = f"""
         QMainWindow::separator {{ background: {theme.border}; width: 1px; }}
         QSplitter::handle {{ background: {theme.border}; }}
         QStatusBar {{ background: {theme.sidebar}; color: {theme.muted};
@@ -311,8 +318,9 @@ def apply(app: QApplication, theme: Theme) -> None:
                           margin: 1px 1px; border: none; border-radius: 6px; }}
         QMenuBar::item:selected {{ background: {theme.surface}; }}
         QMenuBar::item:pressed {{ background: {theme.selection}; }}
-        QToolTip {{ background: {theme.surface}; color: {theme.text};
-                    border: 1px solid {theme.border}; }}
+        QToolTip, QStatusBar QLabel#statusMessage {{
+            background: {theme.surface}; color: {theme.text};
+            border: 1px solid {theme.border}; border-radius: 6px; padding: 3px 8px; }}
         QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px 1px; }}
         QScrollBar:horizontal {{ background: transparent; height: 10px; margin: 1px 2px; }}
         QScrollBar::handle {{ background: {theme.border}; border-radius: 4px; }}
@@ -324,9 +332,9 @@ def apply(app: QApplication, theme: Theme) -> None:
         QScrollBar::add-page, QScrollBar::sub-page {{ background: none; }}
         QScrollBar#sheetScroll:vertical {{ width: 12px; margin: 0; }}
         QScrollBar#sheetScroll::handle {{ background: transparent; min-height: 32px; }}
-        """
-        + controls_stylesheet(theme)
-    )
+        """ + controls_stylesheet(theme)
+    if app.styleSheet() != css:
+        app.setStyleSheet(css)
     install_input_margins(app)
 
 
@@ -386,6 +394,12 @@ class _InputMargins(QObject):
     """
 
     def eventFilter(self, obj, event) -> bool:  # noqa: N802
+        if (
+            event.type() == QEvent.Type.Polish
+            and isinstance(obj, QWidget)
+            and obj.windowType() == Qt.WindowType.ToolTip
+        ):
+            obj.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         if event.type() == QEvent.Type.Show and isinstance(obj, QAbstractSpinBox):
             edit = obj.findChild(QLineEdit)
             if edit is not None and edit.textMargins().left() == 0:
