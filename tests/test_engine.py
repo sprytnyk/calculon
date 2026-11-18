@@ -24,10 +24,30 @@ NOW = datetime(2026, 11, 10, 18, 30)
 CONFIG = Config(now=lambda: NOW)
 
 
-@pytest.mark.parametrize("text", ["100 + sqrt(-1)", "2 * (3 +)", "2 + (3 +", "1 + 2) + 4"])
+@pytest.mark.parametrize(
+    "text", ["sqrt(-1)", "100 + sqrt(-1)", "2 * (3 +)", "2 + (3 +", "1 + 2) + 4"]
+)
 def test_invalid_math_never_becomes_a_partial_answer(text: str) -> None:
     line = evaluate_sheet(text, RATES, CONFIG).lines[0]
     assert line.value is None
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("sqrt(1e-400)", "1e-200"),
+        ("square root of 1e400", "1e200"),
+        ("sqrt(4e-400 m²)", "2e-200 m"),
+    ],
+)
+def test_square_root_handles_decimal_exponents(text: str, expected: str) -> None:
+    assert one(text) == expected
+
+
+def test_square_root_rejects_even_tiny_negative_numbers() -> None:
+    line = evaluate_sheet("sqrt(-1e-400)", RATES, CONFIG).lines[0]
+    assert line.value is None
+    assert line.error == "invalid function argument"
 
 
 @pytest.mark.parametrize("operator", ["*", "/", "^"])

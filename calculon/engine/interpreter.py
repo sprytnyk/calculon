@@ -11,7 +11,7 @@ import zoneinfo
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, DecimalException
 from functools import cache
 from itertools import groupby, pairwise
 from statistics import median, stdev
@@ -86,10 +86,8 @@ SOFT = {
     "and", "by", "with", "what", "from", "then", "x", "this", "next", "last", "if", "time",
     "line", "since", "until", "till", "between", "through", "after", "before", "ago",
 }  # fmt: skip
-FUNCTIONS: dict[str, Callable[[float], float]] = {
-    "sqrt": math.sqrt,
+FLOAT_FUNCTIONS: dict[str, Callable[[float], float]] = {
     "cbrt": lambda v: math.copysign(abs(v) ** (1 / 3), v),
-    "abs": abs,
     "ln": math.log,
     "log": math.log10,
     "log10": math.log10,
@@ -107,9 +105,8 @@ FUNCTIONS: dict[str, Callable[[float], float]] = {
     "sinh": math.sinh,
     "cosh": math.cosh,
     "tanh": math.tanh,
-    "fact": lambda v: float(math.factorial(int(v))),
-    "factorial": lambda v: float(math.factorial(int(v))),
 }
+FUNCTIONS = FLOAT_FUNCTIONS.keys() | {"abs", "fact", "factorial", "sqrt"}
 ROUNDERS = {"round", "floor", "ceil", "ceiling"}
 TRIG = {"sin", "cos", "tan"}
 CONSTANTS = {"pi": Decimal("3.14159265358979323846264338327950288"), "π": None, "e": None}
@@ -1330,6 +1327,19 @@ def _apply_fn(name: str, arg: Value) -> Q:
     if not isinstance(arg, Q):
         raise CalcError("functions need numbers")
     x = arg
+    units: U.Units = ()
+    if name in ("sqrt", "cbrt") and x.units:
+        root = 2 if name == "sqrt" else 3
+        if any(p % root for _, p in x.units):
+            raise CalcError("can't take that root of these units")
+        units = tuple((a, p // root) for a, p in x.units)
+    if name == "sqrt":
+        if not x.mag.is_finite() or x.mag < 0:
+            raise CalcError("invalid function argument")
+        try:
+            return Q(x.mag.sqrt(), units)
+        except DecimalException as exc:
+            raise CalcError("invalid function argument") from exc
     if name in TRIG and x.units:
         if x.units == (("degree", 1),):
             v = math.radians(float(x.mag))
@@ -1338,22 +1348,20 @@ def _apply_fn(name: str, arg: Value) -> Q:
         else:
             raise CalcError("angle expected")
     else:
-        if x.units and name not in ("abs", "sqrt", "cbrt"):
+        if x.units and name not in ("abs", "cbrt"):
             raise CalcError("plain number expected")
         v = float(x.mag)
-    if name in ("sqrt", "cbrt") and x.units:
-        root = 2 if name == "sqrt" else 3
-        if any(p % root for _, p in x.units):
-            raise CalcError("can't take that root of these units")
-        units = tuple((a, p // root) for a, p in x.units)
-        return Q(_dec(FUNCTIONS[name](v)), units)
     if name == "abs":
         return Q(abs(x.mag), x.units, pct=x.pct)
     if name in ("fact", "factorial"):
         if v < 0 or v > 1000 or v != int(v):
             raise CalcError("factorial needs a whole number up to 1000")
         return Q(Decimal(math.factorial(int(v))))
-    return Q(_dec(FUNCTIONS[name](v)))
+    try:
+        result = _dec(FLOAT_FUNCTIONS[name](v))
+    except (ValueError, OverflowError) as exc:
+        raise CalcError("invalid function argument") from exc
+    return Q(result, units)
 
 
 def _dec(f: float) -> Decimal:
