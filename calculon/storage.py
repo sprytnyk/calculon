@@ -283,12 +283,39 @@ class SheetStore:
         dest_dir = self.path(directory) if directory else self.root
         dest_dir.mkdir(parents=True, exist_ok=True)
         base = Path(original).name
-        stem, suffix = (base[: -len(EXT)], EXT) if base.endswith(EXT) else (base, "")
-        dst = _unique(dest_dir, stem, suffix)
-        src.rename(dst)
+        dst = dest_dir / base
+        if not self._discard_restored_empty_directory(src, dst):
+            stem, suffix = (base[: -len(EXT)], EXT) if base.endswith(EXT) else (base, "")
+            dst = _unique(dest_dir, stem, suffix)
+            src.rename(dst)
         self.meta["trash"].pop(name, None)
+        restored = self.rel(dst)
+        with contextlib.suppress(OSError):
+            self._discard_empty_trash_parents(restored)
         self._save_meta()
-        return self.rel(dst)
+        return restored
+
+    def _discard_empty_trash_parents(self, restored: str) -> None:
+        """Remove empty Trash directories that match parents of the restored item."""
+        parents = {p.as_posix() for p in Path(restored).parents}
+        for name, original in self.trashed():
+            if original in parents and self._discard_restored_empty_directory(
+                self.trash_dir / name, self.root / original
+            ):
+                self.meta["trash"].pop(name, None)
+
+    @staticmethod
+    def _discard_restored_empty_directory(src: Path, dst: Path) -> bool:
+        """Discard an empty Trash directory if its original directory exists."""
+        if not dst.is_dir() or dst.is_symlink() or dst.is_junction():
+            return False
+        if src.is_symlink() or src.is_junction():
+            return False
+        try:
+            src.rmdir()
+        except OSError:  # files and directories with contents remain recoverable
+            return False
+        return True
 
     def delete_forever(self, name: str) -> None:
         target = self.trash_dir / _safe_component(name)

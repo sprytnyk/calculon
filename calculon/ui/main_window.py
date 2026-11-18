@@ -56,7 +56,7 @@ from ..paths import FONTS
 from ..rates import RatesService
 from ..settings import Settings, own_words_file, read_bool
 from ..spelling import SpellChecker, probe
-from ..storage import SheetStore, StorageError
+from ..storage import EXT, SheetStore, StorageError
 from ..translations import LANGUAGES, tr
 from . import icons
 from . import theme as themes
@@ -1076,7 +1076,7 @@ class MainWindow(QMainWindow):
             return
         if current_kind == TRASHED and current_name.startswith(name + "/"):
             self.open_sheet(rel + current_name[len(name) :])
-        elif rel.endswith(".txt"):
+        elif rel.endswith(EXT) and self.store.path(rel).is_file():
             self.open_sheet(rel)
         else:
             self.sidebar.rebuild()

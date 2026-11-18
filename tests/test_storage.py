@@ -31,6 +31,35 @@ def test_failed_restore_keeps_original_location(tmp_path, monkeypatch) -> None:
     assert store.restore(name) == "Work/Budget.txt"
 
 
+def test_restores_files_before_their_empty_directories(tmp_path) -> None:
+    store = SheetStore(tmp_path)
+    parent = store.create_directory(name="New directory")
+    child = store.create_directory(parent, "New directory")
+    leaf = store.create_directory(child, "New directory")
+    outer = store.create_sheet(parent, "Outer", "outer notes")
+    inner = store.create_sheet(leaf, "Inner", "inner notes")
+    inner_trash = store.trash(inner)
+    outer_trash = store.trash(outer)
+    store.trash(leaf)
+    store.trash(child)
+    store.trash(parent)
+    store.create_sheet(parent, "Stashed", "keep this too")
+    nonempty_trash = store.trash(parent)
+    unrelated = store.create_directory(name="Other empty directory")
+    unrelated_trash = store.trash(unrelated)
+
+    assert store.restore(outer_trash) == outer
+    assert store.restore(inner_trash) == inner
+
+    assert store.read(outer) == "outer notes"
+    assert store.read(inner) == "inner notes"
+    reopened = SheetStore(tmp_path)
+    remaining = dict(reopened.trashed())
+    assert remaining == {nonempty_trash: parent, unrelated_trash: unrelated}
+    assert reopened.meta["trash"] == remaining
+    assert reopened.read_trashed(f"{nonempty_trash}/Stashed.txt") == "keep this too"
+
+
 def test_create_read_write(tmp_path: Path) -> None:
     store = SheetStore(tmp_path)
     rel = store.create_sheet(text="1 + 1")

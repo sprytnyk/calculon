@@ -445,6 +445,24 @@ def test_trashed_directory_shows_its_sheets(window, app) -> None:
     assert window.editor.toPlainText() == "123"
 
 
+def test_restoring_a_directory_with_a_txt_suffix(window, monkeypatch) -> None:
+    store = window.store
+    directory = store.create_directory(name="Archive.txt")
+    sheet = store.create_sheet(directory, "Budget", "123")
+    current = window.current
+    warnings = []
+    monkeypatch.setattr(QMessageBox, "warning", lambda *args: warnings.append(args[-1]))
+    window.trash(directory)
+    name, _ = store.trashed()[0]
+
+    window.restore(name)
+
+    assert warnings == []
+    assert window.current == current
+    assert store.read(sheet) == "123"
+    assert window.sidebar._find(DIRECTORY, directory) is not None
+
+
 def test_trash_directories_stay_above_sheets(window) -> None:
     store = window.store
     store.create_sheet("", "A", "1")
