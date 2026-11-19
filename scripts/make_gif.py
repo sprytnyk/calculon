@@ -152,10 +152,10 @@ SHOTS = [
         "en",
         "Short.txt",
         SHORT,
-        size=(500, 500),
+        size=(540, 540),  # room for the full hotel line
         focus=True,
-        results_width=150,
-        picture=(696, 696),  # the 600 px window at full size, with MARGIN on every side
+        results_width=135,
+        picture=(744, 744),  # the 648 px window at full size, with MARGIN on every side
     ),
 ]
 
