@@ -1557,12 +1557,19 @@ def test_failed_rates_url_test_is_red(window, app, monkeypatch) -> None:
 
 def test_sheet_scrollbar_shows_while_scrolling_then_fades(window, app) -> None:
     window.open_help()
+    pump(app)
     bar = window.editor.verticalScrollBar()
     assert isinstance(bar, SheetScrollBar)
-    bar._hide_timer.setInterval(0)
-    bar.setValue(bar.maximum() // 2)
+    # Settle layout and leave the scrollbar before simulating a scroll and idle period.
+    QCoreApplication.sendEvent(bar, QEvent(QEvent.Type.Leave))
+    timer = bar._hide_timer
+    timer.stop()
+    assert bar.maximum() > bar.minimum()
+    bar.setValue(bar.maximum() if bar.value() != bar.maximum() else bar.minimum())
     assert bar.opacity == 1.0
-    app.processEvents()
+    assert timer.isActive()
+    timer.stop()
+    timer.timeout.emit()
     bar._fade.setCurrentTime(bar._fade.duration() // 2)
     assert 0.0 < bar.opacity < 1.0
     bar._fade.setCurrentTime(bar._fade.duration())
