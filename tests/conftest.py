@@ -8,6 +8,7 @@ from PySide6.QtCore import QCoreApplication, QEvent, QSettings
 from PySide6.QtWidgets import QApplication
 
 from calculon import rates
+from calculon.settings import Settings
 from calculon.ui.main_window import MainWindow
 
 
@@ -32,35 +33,40 @@ def app(home: Path):
 
 
 @pytest.fixture
-def window(app, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+def window_settings(app, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> QSettings:
     monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
     qs = QSettings()
     qs.clear()
     qs.setValue("sheets_dir", str(tmp_path / "sheets"))
     qs.setValue("number_date_notice_seen", True)
-    qs.sync()
-    w = MainWindow()
-    monkeypatch.setattr(w, "_ask_text", lambda title, default: (default, True))
-    w.show()
-    yield w
-    dispose(w)
+    return qs
 
 
 @pytest.fixture
-def reopen(app):
-    """Open the window again on the saved settings, as starting the app again does.
-    Every window it opens is deleted after the test."""
+def open_window(window_settings):
+    """Start real windows and clean them up after the test."""
     opened: list[MainWindow] = []
 
-    def open_again() -> MainWindow:
-        w = MainWindow()
-        w.show()
+    def start(settings: Settings | None = None, *, show: bool = True) -> MainWindow:
+        w = MainWindow(settings)
         opened.append(w)
+        if show:
+            w.show()
         return w
 
-    yield open_again
-    for w in opened:
+    yield start
+    for w in reversed(opened):
         dispose(w)
+
+
+@pytest.fixture
+def window(open_window, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> MainWindow:
+    sheets = tmp_path / "sheets"
+    sheets.mkdir()
+    (sheets / "Sheet.txt").touch()
+    w = open_window()
+    monkeypatch.setattr(w, "_ask_text", lambda title, default: (default, True))
+    return w
 
 
 def dispose(w: MainWindow) -> None:

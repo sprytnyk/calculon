@@ -50,7 +50,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from calculon import rates, settings, spelling
+from calculon import settings, spelling
 from calculon.engine import RateTable
 from calculon.settings import Settings
 from calculon.spelling import SpellChecker, Status, probe
@@ -60,7 +60,6 @@ from calculon.ui import directory_dialog, icons, main_window, settings_dialog
 from calculon.ui import theme as themes
 from calculon.ui.about_dialog import AboutDialog
 from calculon.ui.editor import KIND_ROLE, SheetScrollBar, fit_menu, sheet_text
-from calculon.ui.main_window import MainWindow
 from calculon.ui.settings_dialog import SettingsDialog
 from calculon.ui.shortcuts_dialog import ShortcutsDialog, key_text
 from calculon.ui.sidebar import DIRECTORY, HELP, ROLE, Sidebar
@@ -101,7 +100,8 @@ def off_centre(label, app) -> int:
     return label.mapTo(window, label.rect().center()).x() - window.rect().center().x()
 
 
-def test_first_start_creates_welcome_sheet(window, app) -> None:
+def test_first_start_creates_welcome_sheet(open_window, app) -> None:
+    window = open_window()
     assert window.store.all_sheets() == ["Welcome.txt"]
     assert window.current == ("sheet", "Welcome.txt")
     pump(app)
@@ -182,21 +182,16 @@ def test_directory_dialog_uses_dark_theme_with_saved_light_settings(
 
 
 def test_chosen_directory_reaches_the_window_when_settings_cannot_be_saved(
-    app, home, tmp_path, monkeypatch
+    open_window, tmp_path, monkeypatch
 ) -> None:
     """In a home directory Calculon can't write to, QSettings drops the save without an
     error. So the window must get the directory from the dialog, not from the settings file."""
     QSettings().clear()
     monkeypatch.setattr(Settings, "save", lambda self: None)
-    monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
     chosen = tmp_path / "My sheets"
     drive_directory_dialog(monkeypatch, str(chosen))
-    w = MainWindow(directory_dialog.choose_sheets_directory())
-    try:
-        assert w.store.root == chosen
-    finally:
-        w.close()
-        w.deleteLater()
+    w = open_window(directory_dialog.choose_sheets_directory(), show=False)
+    assert w.store.root == chosen
 
 
 def test_saved_sheets_directory_opens_without_asking(app, tmp_path, monkeypatch) -> None:
@@ -525,6 +520,7 @@ def test_trash_combines_original_paths_with_a_deleted_parent(window) -> None:
 @pytest.mark.parametrize("action_name", ["new_directory", "move_to_trash"])
 def test_sidebar_context_menu_finishes_before_action(window, app, action_name) -> None:
     sidebar = window.sidebar
+    sheet = window.current[1]
     calls = []
     during_menu = []
     signal = sidebar.new_directory if action_name == "new_directory" else sidebar.trash
@@ -547,7 +543,7 @@ def test_sidebar_context_menu_finishes_before_action(window, app, action_name) -
     assert during_menu == []
     assert calls == []
     pump(app)
-    assert calls == ([""] if action_name == "new_directory" else ["Welcome.txt"])
+    assert calls == ([""] if action_name == "new_directory" else [sheet])
 
 
 def test_context_menu_trashes_directory_with_open_nested_sheet(window, app) -> None:
@@ -618,13 +614,13 @@ def test_creating_a_directory_selects_it_in_the_sidebar(window) -> None:
 @pytest.mark.parametrize("open_inside", [False, True])
 def test_deleting_a_directory_selects_the_next_sibling(window, open_inside) -> None:
     store, sidebar = window.store, window.sidebar
+    initial = window.current
     parent = store.create_directory(name="Work")
     removed = store.create_directory(parent, "First")
     next_directory = store.create_directory(parent, "Second")
     sheet = store.create_sheet(removed, "Budget", "123")
     if open_inside:
         window.open_sheet(sheet)
-    current = window.current
     sidebar.rebuild()
     sidebar.tree.setCurrentItem(sidebar._find(DIRECTORY, removed))
 
@@ -634,7 +630,7 @@ def test_deleting_a_directory_selects_the_next_sibling(window, open_inside) -> N
     assert sidebar.tree.currentItem().data(0, ROLE) == (DIRECTORY, next_directory)
     sidebar.rebuild()
     assert sidebar.tree.currentItem().data(0, ROLE) == (DIRECTORY, next_directory)
-    assert window.current == (("sheet", "Welcome.txt") if open_inside else current)
+    assert window.current == initial
 
 
 def test_failed_directory_trash_restores_watches(window, monkeypatch) -> None:
@@ -850,7 +846,7 @@ def test_icons_are_coloured_from_the_start(window) -> None:
     assert icons.color_for("quit") in colours
 
 
-def test_sidebar_toggle_keeps_the_tick_and_survives_a_restart(window, app, reopen) -> None:
+def test_sidebar_toggle_keeps_the_tick_and_survives_a_restart(window, app, open_window) -> None:
     tick = window._actions["toggle_sidebar"]
     window.sidebar_button.click()
     assert window.sidebar.isHidden() and not tick.isChecked()
@@ -858,7 +854,7 @@ def test_sidebar_toggle_keeps_the_tick_and_survives_a_restart(window, app, reope
     assert not window.sidebar.isHidden() and tick.isChecked()
     tick.trigger()
     window.close()
-    w = reopen()
+    w = open_window()
     pump(app)
     assert w.sidebar.isHidden() and not w._actions["toggle_sidebar"].isChecked()
     w.set_sidebar_visible(True)
@@ -881,11 +877,11 @@ def test_focus_mode_hides_everything_but_the_sheet(window, app) -> None:
     window.set_language("en")
 
 
-def test_focus_mode_brings_the_sidebar_back_as_it_was(window, app, reopen) -> None:
+def test_focus_mode_brings_the_sidebar_back_as_it_was(window, app, open_window) -> None:
     window.set_sidebar_visible(False)
     window.set_focus_mode(True)
     window.close()
-    w = reopen()  # focus mode survives a restart
+    w = open_window()  # focus mode survives a restart
     pump(app)
     assert w.menuBar().isHidden() and w.sidebar.isHidden()
     w.set_focus_mode(False)
@@ -893,7 +889,7 @@ def test_focus_mode_brings_the_sidebar_back_as_it_was(window, app, reopen) -> No
     w.set_sidebar_visible(True)
     w.set_focus_mode(True)
     w.close()
-    w = reopen()
+    w = open_window()
     pump(app)
     w.set_focus_mode(False)
     assert not w.sidebar.isHidden()
@@ -999,10 +995,15 @@ def test_ligatures_form_across_coloured_operators(window, app) -> None:
 
 
 def test_settings_dialog_round_trip(window) -> None:
-    dlg = SettingsDialog(window.settings, window.t, window)
+    prefs = replace(window.settings, number_style="space_comma", time_format="12h")
+    dlg = SettingsDialog(prefs, window.t, window)
     pages = [dlg.nav.item(i).text() for i in range(dlg.nav.count())]
     assert pages == ["General", "Appearance", "Numbers", "Exchange Rates", "Spell Check", "Vim"]
     assert dlg.pages.count() == len(pages)
+    assert dlg.number_style.count() == 4
+    assert dlg.time_format.count() == 2
+    assert dlg.number_style.currentData() == prefs.number_style
+    assert dlg.time_format.currentData() == prefs.time_format
     dlg.max_decimals.setValue(4)
     dlg.rates_url.setText(" https://example.invalid/rates.json ")
     dlg.dollar.setCurrentText("cad")
@@ -1181,24 +1182,20 @@ def test_sidebar_draws_one_highlight_per_row(window, app) -> None:
 
 
 def test_switching_sheets_between_directories_keeps_the_sidebar_still(
-    app, home, tmp_path, monkeypatch, reopen
+    app, tmp_path, window_settings, open_window
 ) -> None:
     """Startup: directory A closed, B open, last sheet in A. Switching between them must not
     close A again or move any row (it used to collapse A, so the list jumped)."""
-    monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
     sheets = tmp_path / "sheets"
     store = SheetStore(sheets)
     for directory in ("A", "B"):
         store.create_directory("", directory)
         for n in range(3):
             store.create_sheet(directory, f"{directory}{n}", "1")
-    qs = QSettings()
-    qs.clear()
-    qs.setValue("sheets_dir", str(sheets))
-    qs.setValue("last_sheet", "A/A1.txt")
-    qs.setValue("sidebar/expanded", ["B"])
-    qs.sync()
-    w = reopen()
+    window_settings.setValue("sheets_dir", str(sheets))
+    window_settings.setValue("last_sheet", "A/A1.txt")
+    window_settings.setValue("sidebar/expanded", ["B"])
+    w = open_window()
     pump(app)
     tree = w.sidebar.tree
 
@@ -1259,26 +1256,23 @@ def test_unknown_settings_fall_back_to_defaults(app) -> None:
         (("auto", "12h"), ("comma_dot", "12h")),
     ],
 )
-def test_format_preferences_on_startup(window, reopen, saved, expected) -> None:
-    qs = QSettings()
+def test_format_preferences_on_startup(window_settings, open_window, saved, expected) -> None:
     for key, value in zip(("number_style", "time_format"), saved, strict=True):
         if value is None:
-            qs.remove(key)
+            window_settings.remove(key)
         else:
-            qs.setValue(key, value)
+            window_settings.setValue(key, value)
 
-    restored = reopen()
+    restored = open_window()
     assert (restored.settings.number_style, restored.settings.time_format) == expected
+    assert restored.editor.config.number_style == expected[0]
+    assert restored.editor.opts.time_24h == (expected[1] == "24h")
     assert restored.startup_notice.isHidden()
-    dialog = SettingsDialog(restored.settings, restored.t, restored)
-    assert dialog.number_style.count() == 4
-    assert dialog.time_format.count() == 2
-    assert (dialog.number_style.currentData(), dialog.time_format.currentData()) == expected
 
 
-def test_legacy_date_order_uses_24_hour_default(window, reopen, monkeypatch) -> None:
-    QSettings().setValue("date_order", "MDY")
-    restored = reopen()
+def test_legacy_date_order_uses_24_hour_default(window_settings, open_window, monkeypatch) -> None:
+    window_settings.setValue("date_order", "MDY")
+    restored = open_window()
     restored.open_sheet(restored.store.create_sheet("", "Time", "15:45"))
     assert restored.settings.time_format == "24h"
     assert restored.editor.result_text(0) == "15:45"
@@ -1291,12 +1285,12 @@ def test_legacy_date_order_uses_24_hour_default(window, reopen, monkeypatch) -> 
     restored.open_settings()
     assert restored.editor.result_text(0) == "3:45pm"
     assert Settings.load().time_format == "12h"
-    assert reopen().editor.result_text(0) == "3:45pm"
+    assert open_window().editor.result_text(0) == "3:45pm"
 
 
-def test_startup_number_and_date_notice_is_shown_once(window, reopen, app) -> None:
-    QSettings().remove("number_date_notice_seen")
-    restored = reopen()
+def test_startup_number_and_date_notice_is_shown_once(window_settings, open_window, app) -> None:
+    window_settings.remove("number_date_notice_seen")
+    restored = open_window()
     pump(app)
     assert restored.startup_notice.isVisible()
     notice = restored.notice_text.text()
@@ -1309,7 +1303,7 @@ def test_startup_number_and_date_notice_is_shown_once(window, reopen, app) -> No
     assert restored.startup_notice.isHidden()
     assert Settings.load().number_date_notice_seen
 
-    assert reopen().startup_notice.isHidden()
+    assert open_window().startup_notice.isHidden()
 
 
 @pytest.mark.parametrize(
@@ -1588,13 +1582,13 @@ def test_sheet_scrollbar_shows_while_scrolling_then_fades(window, app) -> None:
     window.open_help()
     bar = window.editor.verticalScrollBar()
     assert isinstance(bar, SheetScrollBar)
-    bar.HIDE_AFTER_MS = 0
     bar._hide_timer.setInterval(0)
     bar.setValue(bar.maximum() // 2)
     assert bar.opacity == 1.0
-    end = time.time() + 1
-    while bar.opacity > 0 and time.time() < end:
-        app.processEvents()
+    app.processEvents()
+    bar._fade.setCurrentTime(bar._fade.duration() // 2)
+    assert 0.0 < bar.opacity < 1.0
+    bar._fade.setCurrentTime(bar._fade.duration())
     assert bar.opacity == 0.0
     window.find_bar.open()
     window.find_bar.field.setText("percent")
@@ -2272,23 +2266,21 @@ def test_always_on_top_menu_toggles_without_losing_placement_or_edits(
 
 
 @pytest.mark.parametrize("enabled", [True, False])
-def test_always_on_top_saved_choice_applies_before_first_show(window, app, enabled) -> None:
-    QSettings().setValue("always_on_top", enabled)
-    restored = MainWindow()
-    try:
-        assert not restored.isVisible()
-        assert restored.settings.always_on_top is enabled
-        assert bool(restored.windowFlags() & TOP) is enabled
-        assert restored._actions["always_on_top"].isChecked() is enabled
-        expected_icon = icons.icon("pin" if enabled else "unpin").pixmap(20).toImage()
-        assert restored._actions["always_on_top"].icon().pixmap(20).toImage() == expected_icon
-        restored.show()
-        pump(app)
-        assert restored.isVisible()
-        assert bool(restored.windowFlags() & TOP) is enabled
-    finally:
-        restored.close()
-        restored.deleteLater()
+def test_always_on_top_saved_choice_applies_before_first_show(
+    window_settings, open_window, app, enabled
+) -> None:
+    window_settings.setValue("always_on_top", enabled)
+    restored = open_window(show=False)
+    assert not restored.isVisible()
+    assert restored.settings.always_on_top is enabled
+    assert bool(restored.windowFlags() & TOP) is enabled
+    assert restored._actions["always_on_top"].isChecked() is enabled
+    expected_icon = icons.icon("pin" if enabled else "unpin").pixmap(20).toImage()
+    assert restored._actions["always_on_top"].icon().pixmap(20).toImage() == expected_icon
+    restored.show()
+    pump(app)
+    assert restored.isVisible()
+    assert bool(restored.windowFlags() & TOP) is enabled
 
 
 @pytest.mark.parametrize("state", ["maximized", "fullscreen", "minimized"])
