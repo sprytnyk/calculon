@@ -1,0 +1,2 @@
+# CPython 3.14, Linux x86-64 wheel for the coverage workflow.
+coverage==7.17.3 --hash=sha256:eb25b51a30d07db8493901e3040284f2e756ec2b6549ee392798b9ef4c0607b3

@@ -1,5 +1,7 @@
 # Calculon
 
+[![Linux test coverage](https://codecov.io/gh/sprytnyk/calculon/branch/main/graph/badge.svg)](https://codecov.io/gh/sprytnyk/calculon)
+
 A notepad that calculates as you type. Write lines with money, units and dates, and see
 the answers beside each line. Try `$19 for breakfast + $22 for the Uber` to get `$41.00`.
 Most sheets that use [Soulver's syntax](https://documentation.soulver.app/) work in Calculon too.
@@ -197,6 +199,9 @@ fonts and exchange rates. It also tests spell check if one is installed. On macO
 `dist/Calculon.app/Contents/MacOS/calculon --self-test`.
 
 The calculator engine lives in `calculon/engine/` and runs without Qt.
+
+On each push to `main`, GitHub Actions runs the Linux test suite and updates the
+coverage badge. The test log lists the 15 slowest setup, test or cleanup steps.
 
 GitHub Pages serves the website from `docs/` on `main`. The engine generates the website's
 example answers. The site test checks that those answers are up to date.
