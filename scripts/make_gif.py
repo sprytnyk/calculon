@@ -66,17 +66,10 @@ BAYER = [
 
 LVIV = {
     "en": """# Weekend in Lviv
-train = 2 × 850 UAH
-hotel = 2 nights × 1,900 UAH
-coffee = 4 × 180 UAH
-museum = 2 × 250 UAH
-trip = train + hotel + coffee + museum in EUR
-trip / 2 // per person
-
-# Shopping
-$80 - 15%
-180 is 10% off what
-20% of 1,250
+train = 2 × 850 UAH in EUR
+hotel = 2 nights × 1,900 UAH in EUR
+coffee = 4 × 180 UAH in EUR
+museum = 2 × 250 UAH in EUR
 
 # Units and time
 5 km in miles
@@ -86,17 +79,10 @@ days until 25 December
 sqrt(2) + 2^10
 """,
     "uk": """# Вихідні у Львові
-потяг = 2 × 850 грн
-готель = 2 ночі × 1 900 грн
-кава = 4 × 180 грн
-музей = 2 × 250 грн
-поїздка = потяг + готель + кава + музей у EUR
-поїздка / 2 // на людину
-
-# Покупки
-80 $ − 15%
-180 це 10% знижки від чого
-20% від 1 250
+потяг = 2 × 850 грн у EUR
+готель = 2 ночі × 1 900 грн у EUR
+кава = 4 × 180 грн у EUR
+музей = 2 × 250 грн у EUR
 
 # Одиниці й час
 5 км у милях
@@ -110,21 +96,15 @@ LVIV_SHEET = {"en": "Trips/Lviv.txt", "uk": "Подорожі/Львів.txt"}
 
 # short lines from the sheet above, for a small square window
 SHORT = """# Weekend in Lviv
-train = 2 × 850 UAH
-hotel = 2 × 1,900 UAH
-coffee = 4 × 180 UAH
-museum = 2 × 250 UAH
-trip = total in EUR
-trip / 2 // each
-
-# Shopping
-$80 - 15%
-180 is 10% off what
-20% of 1,250
+train = 2 × 850 UAH in EUR
+hotel = 2 × 1,900 UAH in EUR
+coffee = 4 × 180 UAH in EUR
+museum = 2 × 250 UAH in EUR
 
 # Units and time
 5 km in miles
 3 hours in minutes
+days until 25 December
 sqrt(2) + 2^10
 """
 
@@ -136,6 +116,8 @@ OTHER_SHEETS = {
             "# Kyiv weekend\ntrain = 2 × 850 UAH\nhotel = 2 nights × 1,900 UAH\n"
         ),
         "Groceries.txt": "# Groceries\nmilk 2 × $1.20\nbread $3.50\n",
+        "Shopping.txt": "# Shopping\n$80 - 15%\n180 is 10% off what\n20% of 1,250\n",
+        "Split the bill.txt": "# Split the bill\n€84 / 3 // each\n",
         "Welcome.txt": WELCOME,
     },
     "uk": {
@@ -144,6 +126,8 @@ OTHER_SHEETS = {
             "# Вихідні в Києві\nпотяг = 2 × 850 грн\nготель = 2 ночі × 1 900 грн\n"
         ),
         "Продукти.txt": "# Продукти\nмолоко 2 × 1,20 $\nхліб 3,50 $\n",
+        "Покупки.txt": "# Покупки\n80 $ − 15%\n180 це 10% знижки від чого\n20% від 1 250\n",
+        "Поділити рахунок.txt": "# Поділити рахунок\n84 € / 3 // кожному\n",
     },
 }
 
