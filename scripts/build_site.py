@@ -33,17 +33,15 @@ NOW = datetime(2026, 11, 14, 10, 0)
 SHEETS = {
     "en": {
         "hero": """# Weekend in Lviv
-Train: 2 × 850 UAH
-Hotel: 2 nights × 1,900 UAH
-Coffee and cake: 4 × 180 UAH
-Museum 2 × 250 UAH
-total in EUR""",
+Train: 2 × 850 UAH in EUR
+Hotel: 2 nights × 1,900 UAH in EUR
+Coffee and cake: 4 × 180 UAH in EUR
+Museum 2 × 250 UAH in EUR""",
         "basics": """# Moving budget
 rent = $1,450
 deposit = rent × 2
 Movers: $380 for the truck + $45 tip
-Sofa $1,200 - 15%
-total""",
+Sofa $1,200 - 15%""",
         "money": """# Shopping in London
 Jacket: £89 in USD
 Coffee £4.50 × 6 in EUR
@@ -55,30 +53,26 @@ Oven 180 °C in °F
 @from 2026-11-14
 Lisbon: 3 days
 Porto: 2 days
-// the flight home is on 18 November
-@to 2026-11-18
+@to
 2026-11-14 + 3 weeks
 days between 2026-11-14 and 2026-12-25""",
         "spelling": """# Ремонт кухні
 Плитка: 650 грн × 12
 Шпаклівкаа: 4 × 380 грн
 Робота 15,000 грн
-Кухонні меблі 48,000 грн − 10%
-разом""",
+Кухонні меблі 48,000 грн − 10%""",
     },
     "uk": {
         "hero": """# Вихідні у Львові
-Потяг: 2 × 850 грн
-Готель: 2 × 1,900 грн
-Кава з тістечком: 4 × 180 грн
-Музей 2 × 250 грн
-разом у EUR""",
+Потяг: 2 × 850 грн у EUR
+Готель: 2 × 1,900 грн у EUR
+Кава з тістечком: 4 × 180 грн у EUR
+Музей 2 × 250 грн у EUR""",
         "basics": """# Переїзд
 оренда = 1,450 $
 застава = оренда × 2
 Вантажники: 380 $ за машину + 45 $ на чай
-Диван 1,200 $ − 15%
-разом""",
+Диван 1,200 $ − 15%""",
         "money": """# Покупки в Лондоні
 Куртка: 89 £ у USD
 Кава 4.50 £ × 6 у EUR
@@ -90,16 +84,14 @@ days between 2026-11-14 and 2026-12-25""",
 @від 2026-11-14
 Лісабон: 3 дні
 Порту: 2 дні
-// літак додому 18 листопада
-@до 2026-11-18
+@до
 2026-11-14 + 3 тижні
 днів між 2026-11-14 і 2026-12-25""",
         "spelling": """# Ремонт кухні
 Плитка: 650 грн × 12
 Шпаклівкаа: 4 × 380 грн
 Робота 15,000 грн
-Кухонні меблі 48,000 грн − 10%
-разом""",
+Кухонні меблі 48,000 грн − 10%""",
     },
 }
 # The misspelled word in the spelling sheet, and what Hunspell's uk_UA dictionary

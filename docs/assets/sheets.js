@@ -126,7 +126,7 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "Train: 2 × 850 UAH",
+      "text": "Train: 2 × 850 UAH in EUR",
       "spans": [
        [
         0,
@@ -152,14 +152,24 @@ window.CALCULON = {
         15,
         18,
         "unit"
+       ],
+       [
+        19,
+        21,
+        "keyword"
+       ],
+       [
+        22,
+        25,
+        "unit"
        ]
       ],
-      "answer": "₴1,700.00",
+      "answer": "€33.39",
       "total": false,
-      "status": "Total: ₴1,700.00"
+      "status": "Total: €33.39"
      },
      {
-      "text": "Hotel: 2 nights × 1,900 UAH",
+      "text": "Hotel: 2 nights × 1,900 UAH in EUR",
       "spans": [
        [
         0,
@@ -190,14 +200,24 @@ window.CALCULON = {
         24,
         27,
         "unit"
+       ],
+       [
+        28,
+        30,
+        "keyword"
+       ],
+       [
+        31,
+        34,
+        "unit"
        ]
       ],
-      "answer": "₴3,800.00",
+      "answer": "€74.64",
       "total": false,
-      "status": "Total: ₴5,500.00"
+      "status": "Total: €108.03"
      },
      {
-      "text": "Coffee and cake: 4 × 180 UAH",
+      "text": "Coffee and cake: 4 × 180 UAH in EUR",
       "spans": [
        [
         0,
@@ -223,14 +243,24 @@ window.CALCULON = {
         25,
         28,
         "unit"
+       ],
+       [
+        29,
+        31,
+        "keyword"
+       ],
+       [
+        32,
+        35,
+        "unit"
        ]
       ],
-      "answer": "₴720.00",
+      "answer": "€14.14",
       "total": false,
-      "status": "Total: ₴6,220.00"
+      "status": "Total: €122.17"
      },
      {
-      "text": "Museum 2 × 250 UAH",
+      "text": "Museum 2 × 250 UAH in EUR",
       "spans": [
        [
         7,
@@ -251,37 +281,24 @@ window.CALCULON = {
         15,
         18,
         "unit"
-       ]
-      ],
-      "answer": "₴500.00",
-      "total": false,
-      "status": "Total: ₴6,720.00"
-     },
-     {
-      "text": "total in EUR",
-      "spans": [
+       ],
        [
-        0,
-        5,
+        19,
+        21,
         "keyword"
        ],
        [
-        6,
-        8,
-        "keyword"
-       ],
-       [
-        9,
-        12,
+        22,
+        25,
         "unit"
        ]
       ],
-      "answer": "€131.99",
-      "total": true,
-      "status": "Total: €263.98"
+      "answer": "€9.82",
+      "total": false,
+      "status": "Total: €131.99"
      }
     ],
-    "total": "Total: €263.98"
+    "total": "Total: €131.99"
    },
    "basics": {
     "name": "Moving budget",
@@ -420,22 +437,9 @@ window.CALCULON = {
       "answer": "$1,020.00",
       "total": false,
       "status": "Total: $5,795.00"
-     },
-     {
-      "text": "total",
-      "spans": [
-       [
-        0,
-        5,
-        "keyword"
-       ]
-      ],
-      "answer": "$5,795.00",
-      "total": true,
-      "status": "Total: $11,590.00"
      }
     ],
-    "total": "Total: $11,590.00"
+    "total": "Total: $5,795.00"
    },
    "money": {
     "name": "Shopping in London",
@@ -755,35 +759,17 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "// the flight home is on 18 November",
-      "spans": [
-       [
-        0,
-        36,
-        "comment"
-       ]
-      ],
-      "answer": "",
-      "total": false,
-      "status": ""
-     },
-     {
-      "text": "@to 2026-11-18",
+      "text": "@to",
       "spans": [
        [
         0,
         3,
         "keyword"
-       ],
-       [
-        4,
-        14,
-        "number"
        ]
       ],
-      "answer": "1 day over",
+      "answer": "19 November",
       "total": false,
-      "status": "Total: -1 day"
+      "status": ""
      },
      {
       "text": "2026-11-14 + 3 weeks",
@@ -811,7 +797,7 @@ window.CALCULON = {
       ],
       "answer": "5 December",
       "total": false,
-      "status": "Total: -1 day"
+      "status": ""
      },
      {
       "text": "days between 2026-11-14 and 2026-12-25",
@@ -844,10 +830,10 @@ window.CALCULON = {
       ],
       "answer": "41 days",
       "total": false,
-      "status": "Total: 40 days"
+      "status": "Total: 41 days"
      }
     ],
-    "total": "Total: 40 days"
+    "total": "Total: 41 days"
    },
    "spelling": {
     "name": "Ремонт кухні",
@@ -981,22 +967,9 @@ window.CALCULON = {
       "answer": "₴43,200.00",
       "total": false,
       "status": "Total: ₴67,520.00"
-     },
-     {
-      "text": "разом",
-      "spans": [
-       [
-        0,
-        5,
-        "keyword"
-       ]
-      ],
-      "answer": "₴67,520.00",
-      "total": true,
-      "status": "Total: ₴135,040.00"
      }
     ],
-    "total": "Total: ₴135,040.00",
+    "total": "Total: ₴67,520.00",
     "misspelled": {
      "line": 2,
      "start": 0,
@@ -1138,7 +1111,7 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "Потяг: 2 × 850 грн",
+      "text": "Потяг: 2 × 850 грн у EUR",
       "spans": [
        [
         0,
@@ -1164,14 +1137,24 @@ window.CALCULON = {
         15,
         18,
         "unit"
+       ],
+       [
+        19,
+        20,
+        "keyword"
+       ],
+       [
+        21,
+        24,
+        "unit"
        ]
       ],
-      "answer": "1,700.00 ₴",
+      "answer": "33.39 €",
       "total": false,
-      "status": "Разом: 1,700.00 ₴"
+      "status": "Разом: 33.39 €"
      },
      {
-      "text": "Готель: 2 × 1,900 грн",
+      "text": "Готель: 2 × 1,900 грн у EUR",
       "spans": [
        [
         0,
@@ -1197,14 +1180,24 @@ window.CALCULON = {
         18,
         21,
         "unit"
+       ],
+       [
+        22,
+        23,
+        "keyword"
+       ],
+       [
+        24,
+        27,
+        "unit"
        ]
       ],
-      "answer": "3,800.00 ₴",
+      "answer": "74.64 €",
       "total": false,
-      "status": "Разом: 5,500.00 ₴"
+      "status": "Разом: 108.03 €"
      },
      {
-      "text": "Кава з тістечком: 4 × 180 грн",
+      "text": "Кава з тістечком: 4 × 180 грн у EUR",
       "spans": [
        [
         0,
@@ -1230,14 +1223,24 @@ window.CALCULON = {
         26,
         29,
         "unit"
+       ],
+       [
+        30,
+        31,
+        "keyword"
+       ],
+       [
+        32,
+        35,
+        "unit"
        ]
       ],
-      "answer": "720.00 ₴",
+      "answer": "14.14 €",
       "total": false,
-      "status": "Разом: 6,220.00 ₴"
+      "status": "Разом: 122.17 €"
      },
      {
-      "text": "Музей 2 × 250 грн",
+      "text": "Музей 2 × 250 грн у EUR",
       "spans": [
        [
         6,
@@ -1258,37 +1261,24 @@ window.CALCULON = {
         14,
         17,
         "unit"
-       ]
-      ],
-      "answer": "500.00 ₴",
-      "total": false,
-      "status": "Разом: 6,720.00 ₴"
-     },
-     {
-      "text": "разом у EUR",
-      "spans": [
+       ],
        [
-        0,
-        5,
+        18,
+        19,
         "keyword"
        ],
        [
-        6,
-        7,
-        "keyword"
-       ],
-       [
-        8,
-        11,
+        20,
+        23,
         "unit"
        ]
       ],
-      "answer": "131.99 €",
-      "total": true,
-      "status": "Разом: 263.98 €"
+      "answer": "9.82 €",
+      "total": false,
+      "status": "Разом: 131.99 €"
      }
     ],
-    "total": "Разом: 263.98 €"
+    "total": "Разом: 131.99 €"
    },
    "basics": {
     "name": "Переїзд",
@@ -1427,22 +1417,9 @@ window.CALCULON = {
       "answer": "1,020.00 $",
       "total": false,
       "status": "Разом: 5,795.00 $"
-     },
-     {
-      "text": "разом",
-      "spans": [
-       [
-        0,
-        5,
-        "keyword"
-       ]
-      ],
-      "answer": "5,795.00 $",
-      "total": true,
-      "status": "Разом: 11,590.00 $"
      }
     ],
-    "total": "Разом: 11,590.00 $"
+    "total": "Разом: 5,795.00 $"
    },
    "money": {
     "name": "Покупки в Лондоні",
@@ -1762,35 +1739,17 @@ window.CALCULON = {
       "status": ""
      },
      {
-      "text": "// літак додому 18 листопада",
-      "spans": [
-       [
-        0,
-        28,
-        "comment"
-       ]
-      ],
-      "answer": "",
-      "total": false,
-      "status": ""
-     },
-     {
-      "text": "@до 2026-11-18",
+      "text": "@до",
       "spans": [
        [
         0,
         3,
         "keyword"
-       ],
-       [
-        4,
-        14,
-        "number"
        ]
       ],
-      "answer": "перевищено: 1 день",
+      "answer": "19 листопада",
       "total": false,
-      "status": "Разом: -1 день"
+      "status": ""
      },
      {
       "text": "2026-11-14 + 3 тижні",
@@ -1818,7 +1777,7 @@ window.CALCULON = {
       ],
       "answer": "5 грудня",
       "total": false,
-      "status": "Разом: -1 день"
+      "status": ""
      },
      {
       "text": "днів між 2026-11-14 і 2026-12-25",
@@ -1851,10 +1810,10 @@ window.CALCULON = {
       ],
       "answer": "41 день",
       "total": false,
-      "status": "Разом: 40 днів"
+      "status": "Разом: 41 день"
      }
     ],
-    "total": "Разом: 40 днів"
+    "total": "Разом: 41 день"
    },
    "spelling": {
     "name": "Ремонт кухні",
@@ -1988,22 +1947,9 @@ window.CALCULON = {
       "answer": "43,200.00 ₴",
       "total": false,
       "status": "Разом: 67,520.00 ₴"
-     },
-     {
-      "text": "разом",
-      "spans": [
-       [
-        0,
-        5,
-        "keyword"
-       ]
-      ],
-      "answer": "67,520.00 ₴",
-      "total": true,
-      "status": "Разом: 135,040.00 ₴"
      }
     ],
-    "total": "Разом: 135,040.00 ₴",
+    "total": "Разом: 67,520.00 ₴",
     "misspelled": {
      "line": 2,
      "start": 0,
