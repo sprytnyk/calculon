@@ -4,7 +4,10 @@ A notepad that calculates as you type. Write lines with money, units and dates, 
 the answers beside each line. Try `$19 for breakfast + $22 for the Uber` to get `$41.00`.
 Most sheets that use [Soulver's syntax](https://documentation.soulver.app/) work in Calculon too.
 
-![A trip budget in Calculon with answers beside each line, shown in Glacier and Ember](docs/demo.gif)
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/demo-light.gif">
+  <img src="docs/demo.gif" alt="A trip budget in Calculon with answers beside each line, shown in Glacier and Ember">
+</picture>
 
 ## Features
 
@@ -186,7 +189,7 @@ make check              # ruff and pytest
 make build              # dist/calculon, or dist/Calculon.app on macOS (test version)
 make icons              # remake assets/icon.png, .ico and .icns from icon-source.png
 make site               # remake the website's example sheets and colours in docs/
-make gif                # remake docs/demo.gif and the docs/screenshot*.png files (needs ffmpeg)
+make gif                # remake the dark and light demos and screenshots (needs ffmpeg)
 ```
 
 Run `dist/calculon --self-test` to check the bundled unit data, time zones, help sheets,

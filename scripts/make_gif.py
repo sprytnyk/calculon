@@ -1,4 +1,4 @@
-"""Make the README's demo and the website's pictures from the real app:
+"""Make the README's demo and the website's pictures in dark and light mode:
 
 - docs/demo.gif: the Lviv trip sheet typed out in Glacier, then Ember.
 - docs/screenshot.png and docs/screenshot-uk.png: the link previews of the English and
@@ -6,8 +6,8 @@
 - docs/screenshot-small.png: a short sheet in a small square window, in focus mode, on a
   square picture.
 
-The screenshots sit on soft glows of the theme's colours. The link previews are
-1200 x 630, the size sites show them at.
+Light-mode files end in -light. The screenshots sit on soft glows of the theme's
+colours. The link previews are 1200 x 630, the size sites show them at.
 
 Run with: make gif (needs ffmpeg)
 
@@ -43,10 +43,9 @@ from PySide6.QtWidgets import (
 from calculon import rates
 from calculon.storage import SheetStore
 from calculon.ui.main_window import WELCOME, MainWindow
-from calculon.ui.theme import GLACIER_DARK
+from calculon.ui.theme import GLACIER_DARK, GLACIER_LIGHT, Theme
 
 DOCS = Path(__file__).resolve().parent.parent / "docs"
-GIF = DOCS / "demo.gif"
 # the same as the old screenshots, a 1414 x 863 window on a screen scaled to 120%
 SCALE = 1.2
 SIZE = (1178, 719)
@@ -54,10 +53,6 @@ SIZE = (1178, 719)
 PREVIEW = (1200, 630)
 MARGIN = 48
 RADIUS = 10
-# The screenshots use Glacier's dark mode, the app's default. The backdrop uses its
-# colours, violet top left, blue top right and green bottom right.
-THEME = GLACIER_DARK
-GLOWS = [((0, 0), THEME.variable), ((1, 0), THEME.accent), ((1, 1), THEME.result)]
 # 4 x 4 ordered dither, what each pixel adds before it's rounded down to 8 bits
 BAYER = [
     [(n + 0.5) / 16 for n in row]
@@ -172,7 +167,7 @@ def isolate(home: Path) -> None:
 
 
 def open_window(
-    directory: Path, lang: str, sheet: str, text: str, focus: bool = False
+    directory: Path, lang: str, sheet: str, text: str, theme: Theme, *, focus: bool = False
 ) -> MainWindow:
     """Fill a new sheets directory in directory, and open the app on sheet, in Glacier."""
     store = SheetStore(directory)
@@ -187,6 +182,7 @@ def open_window(
         "language": lang,
         "number_style": "space_comma" if lang == "uk" else "comma_dot",
         "colours": "glacier",
+        "theme": theme.name,
         "last_sheet": sheet,
         "sidebar/expanded": [str(Path(sheet).parent)],
         "window/focus": focus,
@@ -201,9 +197,9 @@ def settle() -> None:
         QApplication.processEvents()
 
 
-def record(directory: Path) -> list[tuple[Path, float]]:
+def record(directory: Path, theme: Theme) -> list[tuple[Path, float]]:
     """Save a PNG per step into directory. Return each with how long it shows."""
-    window = open_window(directory / "sheets", "en", LVIV_SHEET["en"], "")
+    window = open_window(directory / "sheets", "en", LVIV_SHEET["en"], "", theme)
     window.resize(*SIZE)
     window.show()
     window.editor.setFocus()
@@ -241,8 +237,8 @@ def record(directory: Path) -> list[tuple[Path, float]]:
     return frames
 
 
-def screenshot(directory: Path, shot: Shot) -> QImage:
-    window = open_window(directory, shot.lang, shot.sheet, shot.text, shot.focus)
+def screenshot(directory: Path, shot: Shot, theme: Theme) -> QImage:
+    window = open_window(directory, shot.lang, shot.sheet, shot.text, theme, focus=shot.focus)
     window.resize(*shot.size)
     window.show()
     window.editor.set_results_width(shot.results_width)  # after show(): it caps at half the width
@@ -258,20 +254,22 @@ def screenshot(directory: Path, shot: Shot) -> QImage:
         window.close()
 
 
-def backdrop(size: tuple[int, int]) -> QImage:
+def backdrop(size: tuple[int, int], theme: Theme) -> QImage:
     """Soft glows of the theme's colours on its background, like a mesh gradient.
     It draws with 16 bits a channel and dithers down to 8, so the dark blends show no steps."""
     w, h = size
     deep = QImage(w, h, QImage.Format.Format_RGBA64)
-    deep.fill(QColor(THEME.bg))
+    deep.fill(QColor(theme.bg))
     painter = QPainter(deep)
-    for (x, y), colour in GLOWS:
+    glows = [((0, 0), theme.variable), ((1, 0), theme.accent), ((1, 1), theme.result)]
+    opacity = 0.45 if theme.is_dark else 0.25
+    for (x, y), colour in glows:
         glow = QRadialGradient(QPointF(x * w, y * h), 0.8 * w)
         for i in range(11):
             s = i / 10
             tint = QColor(colour)
             # fades out smoothly, with no ring at the edge
-            tint.setAlphaF(0.45 * (1 - s * s * (3 - 2 * s)))
+            tint.setAlphaF(opacity * (1 - s * s * (3 - 2 * s)))
             glow.setColorAt(s, tint)
         painter.fillRect(deep.rect(), glow)
     painter.end()
@@ -291,7 +289,7 @@ def backdrop(size: tuple[int, int]) -> QImage:
     return QImage(bytes(out), w, h, w * 3, QImage.Format.Format_RGB888).copy()
 
 
-def framed(window: QImage, size: tuple[int, int] = PREVIEW) -> QImage:
+def framed(window: QImage, size: tuple[int, int], theme: Theme) -> QImage:
     """The window with round corners and a shadow, in the middle of the backdrop."""
     room = (size[0] - 2 * MARGIN, size[1] - 2 * MARGIN)
     scale = min(room[0] / window.width(), room[1] / window.height(), 1)
@@ -309,21 +307,20 @@ def framed(window: QImage, size: tuple[int, int] = PREVIEW) -> QImage:
     path.addRoundedRect(QRectF(rounded.rect()), RADIUS, RADIUS)
     painter.setClipPath(path)
     painter.drawImage(0, 0, shown)
-    # A faint light outline, as dark-mode windows have. Without it, the edges fade into the
-    # dark corner of the backdrop.
+    # Keep the window edge visible against the backdrop.
     painter.setClipping(False)
-    painter.setPen(QColor(255, 255, 255, 36))
+    painter.setPen(QColor(255, 255, 255, 36) if theme.is_dark else QColor(theme.border))
     painter.drawRoundedRect(QRectF(rounded.rect()).adjusted(0.5, 0.5, -0.5, -0.5), RADIUS, RADIUS)
     painter.end()
 
     scene = QGraphicsScene(0, 0, *size)
-    scene.addPixmap(QPixmap.fromImage(backdrop(size)))
+    scene.addPixmap(QPixmap.fromImage(backdrop(size, theme)))
     item = scene.addPixmap(QPixmap.fromImage(rounded))
     item.setPos(QPointF((size[0] - shown.width()) / 2, (size[1] - shown.height()) / 2))
     shadow = QGraphicsDropShadowEffect()
     shadow.setBlurRadius(48)
     shadow.setOffset(0, 14)
-    shadow.setColor(QColor(0, 0, 0, 140))
+    shadow.setColor(QColor(0, 0, 0, 140 if theme.is_dark else 75))
     item.setGraphicsEffect(shadow)
     out = QImage(*size, QImage.Format.Format_RGB32)
     painter = QPainter(out)
@@ -362,12 +359,19 @@ def main() -> int:
         app = QApplication(sys.argv)
         app.setDesktopFileName("calculon")
         rates.RatesService.refresh = lambda self: None  # keep the bundled snapshot
-        write_gif(record(directory / "gif"), GIF)
-        print(GIF)
-        for shot in SHOTS:
-            image = framed(screenshot(directory / Path(shot.file).stem, shot), shot.picture)
-            image.save(str(DOCS / shot.file))
-            print(DOCS / shot.file)
+        for theme in (GLACIER_DARK, GLACIER_LIGHT):
+            suffix = "" if theme.is_dark else "-light"
+            captures = directory / theme.name
+            gif = DOCS / f"demo{suffix}.gif"
+            write_gif(record(captures / "gif", theme), gif)
+            print(gif)
+            for shot in SHOTS:
+                stem = Path(shot.file).stem
+                image = framed(screenshot(captures / stem, shot, theme), shot.picture, theme)
+                path = DOCS / f"{stem}{suffix}.png"
+                if not image.save(str(path)):
+                    raise OSError(f"Could not save {path}")
+                print(path)
     return 0
 
 
