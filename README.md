@@ -1,5 +1,9 @@
 # Calculon
 
+[![Latest release](https://img.shields.io/github/v/release/sprytnyk/calculon?label=release)](https://github.com/sprytnyk/calculon/releases/latest)
+[![Platforms: Linux, Windows, and macOS](https://img.shields.io/badge/platform-Linux%2C_Windows%2C_macOS-blue)](#install)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![Made in Ukraine](https://img.shields.io/badge/made_in-Ukraine-ffd700.svg?labelColor=0057b7)
 [![Linux test coverage](https://codecov.io/gh/sprytnyk/calculon/branch/main/graph/badge.svg)](https://codecov.io/gh/sprytnyk/calculon)
 
 A notepad that calculates as you type. Write lines with money, units and dates, and see
