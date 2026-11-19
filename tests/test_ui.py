@@ -1533,24 +1533,20 @@ def test_ukrainian_month_completion_for_input_method(window, app) -> None:
 
 def test_failed_rates_url_test_is_red(window, app, monkeypatch) -> None:
     dlg = SettingsDialog(window.settings, window.t, window)
-    reply = SimpleNamespace(
-        deleteLater=lambda: None,
-        error=lambda: QNetworkReply.NetworkError.HostNotFoundError,
-        errorString=lambda: "Host not found",
-        finished=SimpleNamespace(connect=lambda callback: callback()),
-    )
-    monkeypatch.setattr(dlg._net, "get", lambda request: reply)
+    result = (None, "<b>Host not found</b>")
+    monkeypatch.setattr(settings_dialog, "fetch_rates", lambda manager, url, done: done(*result))
     dlg.rates_url.setText("https://example.invalid/rates")
     dlg._test_url()
     pump(app)
-    assert "Host not found" in dlg.test_result.text()
+    assert "<b>Host not found</b>" in dlg.test_result.text()
+    assert dlg.test_result.textFormat() == Qt.TextFormat.PlainText
+    assert window.rates_label.textFormat() == Qt.TextFormat.PlainText
     dlg.test_result.ensurePolished()
     assert (
         dlg.test_result.palette().color(dlg.test_result.foregroundRole()).name()
         == window.theme.error
     )
-    reply.error = lambda: QNetworkReply.NetworkError.NoError
-    reply.read = lambda size: QByteArray(b'{"base":"USD","rates":{"EUR":0.9}}')
+    result = (RateTable.parse('{"base":"USD","rates":{"EUR":0.9}}'), "")
     dlg._test_url()
     assert dlg.test_result.text() == window.t("test_ok", count=2, base="USD")
     assert (

@@ -120,6 +120,12 @@ class RatesError(DiagnosticError, ValueError):
     pass
 
 
+def _currency_code(value: object) -> str | None:
+    if isinstance(value, str) and len(value) == 3 and value.isascii() and value.isalpha():
+        return value.upper()
+    return None
+
+
 @dataclass
 class RateTable:
     """Rates as 'units of CODE per 1 unit of base'."""
@@ -157,17 +163,17 @@ class RateTable:
         """
         try:
             data = json.loads(payload)
-        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        except (ValueError, RecursionError) as exc:
             raise RatesError("not JSON: {0}", exc) from exc
         if isinstance(data, list) and data:
             if not all(isinstance(row, dict) for row in data):
                 raise RatesError("invalid rates list")
-            bases = {str(row.get("base", "")).upper() for row in data}
-            if len(bases) != 1 or not next(iter(bases)):
+            bases = {_currency_code(row.get("base")) for row in data}
+            if len(bases) != 1 or None in bases:
                 raise RatesError("rates list must have one base currency")
             data = {
                 "base": next(iter(bases)),
-                "date": max((str(row.get("date", "")) for row in data), default=""),
+                "date": max(str(row.get("date") or "") for row in data),
                 "rates": {
                     row.get("quote"): row.get("rate")
                     for row in data
@@ -176,30 +182,37 @@ class RateTable:
             }
         if not isinstance(data, dict) or not isinstance(data.get("rates"), dict):
             raise RatesError('expected an object with a "rates" object')
-        base = str(data.get("base") or data.get("base_code") or "USD").upper()
+        base = _currency_code(data.get("base") or data.get("base_code") or "USD")
+        if base is None:
+            raise RatesError("invalid base currency")
         rates: dict[str, Decimal] = {}
-        for code, value in data["rates"].items():
-            if not isinstance(code, str) or not isinstance(value, int | float | str):
+        for raw_code, value in data["rates"].items():
+            code = _currency_code(raw_code)
+            if code is None or not isinstance(value, int | float | str):
                 continue
             try:
-                dec = Decimal(str(value))
+                rate = Decimal(str(value))
             except ArithmeticError:
                 continue
-            if dec.is_finite() and dec > 0 and len(code) == 3 and code.isalpha():
-                rates[code.upper()] = dec
+            if rate.is_finite() and rate > 0:
+                rates[code] = rate
         if not rates:
             raise RatesError("no usable rates in the document")
-        updated = data.get("time_last_update_unix") or data.get("updated")
-        if updated is None and isinstance(data.get("date"), str):
-            try:
-                updated = datetime.fromisoformat(data["date"]).replace(tzinfo=UTC).timestamp()
-            except ValueError:
-                updated = None
+        updated = data.get("time_last_update_unix")
+        if updated is None:
+            updated = data.get("updated")
         try:
-            updated = float(updated) if updated is not None else time.time()
-        except TypeError, ValueError:
-            updated = time.time()
-        return cls(base=base, rates=rates, updated=updated, source=source)
+            if updated is not None:
+                stamp = float(updated)
+            elif date := data.get("date"):
+                stamp = datetime.fromisoformat(date).replace(tzinfo=UTC).timestamp()
+            else:
+                stamp = time.time()
+            # The UI displays this as local time, whose range depends on the platform.
+            datetime.fromtimestamp(stamp)
+        except (OSError, OverflowError, TypeError, ValueError) as exc:
+            raise RatesError("invalid rate timestamp") from exc
+        return cls(base=base, rates=rates, updated=stamp, source=source)
 
     def to_json(self) -> str:
         return json.dumps(

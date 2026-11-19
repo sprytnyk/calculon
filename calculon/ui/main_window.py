@@ -175,6 +175,7 @@ class MainWindow(QMainWindow):
         self.total_label.setObjectName("total")
         self.total_label.clicked.connect(self._copy_total)
         self.rates_label = ClickLabel()
+        self.rates_label.setTextFormat(Qt.TextFormat.PlainText)
         self.rates_label.clicked.connect(self.rates.refresh)
         # vim mode: the mode at the far left and unfinished keys at the right, as in vim
         self.vim_mode_label = QLabel()

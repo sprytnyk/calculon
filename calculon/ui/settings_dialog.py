@@ -3,9 +3,9 @@
 import html
 from dataclasses import replace
 
-from PySide6.QtCore import QSize, Qt, QUrl
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QFont, QFontDatabase
-from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
+from PySide6.QtNetwork import QNetworkAccessManager
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -26,9 +26,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..engine import RatesError, RateTable
+from ..engine import RateTable
 from ..engine.currency import KNOWN_CODES
 from ..engine.numbers import NUMBER_STYLES, number_sample
+from ..rates import fetch_rates
 from ..settings import TIME_FORMATS, Settings
 from ..spelling import Status, platform_key, probe
 from ..translations import LANGUAGES
@@ -361,6 +362,7 @@ class SettingsDialog(QDialog):
         source.add(tr("rates_url"), row, tr("hint_rates_url"))
         self.test_result = QLabel()
         self.test_result.setObjectName("testResult")
+        self.test_result.setTextFormat(Qt.TextFormat.PlainText)
         self.test_result.setWordWrap(True)
         self.test_result.hide()  # shown once a test has run
         source.add("", self.test_result)
@@ -399,25 +401,15 @@ class SettingsDialog(QDialog):
         self.test_result.show()
         self.test_result.setStyleSheet("")
         self.test_result.setText("…")
-        req = QNetworkRequest(QUrl(url))
-        req.setTransferTimeout(15000)
-        reply = self._net.get(req)
 
-        def done() -> None:
-            reply.deleteLater()
-            if reply.error() != QNetworkReply.NetworkError.NoError:
+        def done(table: RateTable | None, error: str) -> None:
+            if table is None:
                 self.test_result.setStyleSheet(f"color: {self._error_colour};")
-                self.test_result.setText(self.t("test_fail", error=reply.errorString()))
-                return
-            try:
-                table = RateTable.parse(bytes(reply.read(2_000_000).data()))
-            except RatesError as exc:
-                self.test_result.setStyleSheet(f"color: {self._error_colour};")
-                self.test_result.setText(self.t("test_fail", error=str(exc)))
+                self.test_result.setText(self.t("test_fail", error=error))
                 return
             self.test_result.setText(self.t("test_ok", count=len(table.rates), base=table.base))
 
-        reply.finished.connect(done)
+        fetch_rates(self._net, url, done)
 
     def result_settings(self) -> Settings:
         dollar = self.dollar.currentText().strip().upper()

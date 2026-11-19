@@ -3,10 +3,12 @@
 import json
 import logging
 import time
+from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QStandardPaths, QTimer, QUrl, Signal
-from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply
+from PySide6.QtCore import QObject, QStandardPaths, QTimer, Signal
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
 from . import net
 from .engine import RatesError, RateTable
@@ -17,6 +19,56 @@ log = logging.getLogger(__name__)
 STALE_AFTER = 24 * 3600
 CHECK_EVERY_MS = 60 * 60 * 1000
 MAX_BYTES = 2_000_000
+
+
+def fetch_rates(
+    manager: QNetworkAccessManager, url: str, done: Callable[[RateTable | None, str], None]
+) -> None:
+    """Fetch one rates source for either the daily refresh or the Settings test."""
+    request = net.request(url)
+    request.setAttribute(
+        QNetworkRequest.Attribute.RedirectPolicyAttribute,
+        QNetworkRequest.RedirectPolicy.SameOriginRedirectPolicy,
+    )
+    reply = manager.get(request)
+    # Let one extra byte through so we can detect an oversized reply.
+    read_limit = MAX_BYTES + 1
+    reply.setReadBufferSize(read_limit)
+    deadline = QTimer(reply)
+    deadline.setSingleShot(True)
+    abort_reason = ""
+    size_error = "rates response is too large"
+
+    def abort(reason: str) -> None:
+        nonlocal abort_reason
+        abort_reason = reason
+        reply.abort()
+
+    def abort_if_oversized() -> None:
+        if reply.bytesAvailable() > MAX_BYTES:
+            abort(size_error)
+
+    def finish() -> None:
+        deadline.stop()
+        reply.deleteLater()
+        if abort_reason or reply.error() != QNetworkReply.NetworkError.NoError:
+            done(None, abort_reason or reply.errorString())
+            return
+        body = reply.read(read_limit)
+        if len(body) > MAX_BYTES:
+            done(None, size_error)
+            return
+        try:
+            table = RateTable.parse(bytes(body), request.url().host())
+        except RatesError as exc:
+            done(None, str(exc))
+            return
+        done(table, "")
+
+    deadline.timeout.connect(lambda: abort("rates request timed out"))
+    reply.readyRead.connect(abort_if_oversized)
+    reply.finished.connect(finish)
+    deadline.start(net.TIMEOUT_MS)
 
 
 def cache_file() -> Path:
@@ -45,11 +97,17 @@ class RatesService(QObject):
     def _load_initial(self) -> None:
         try:
             data = json.loads(cache_file().read_text(encoding="utf-8"))
-            self.table = RateTable.parse(json.dumps(data["table"]), data["table"].get("source", ""))
-            self.fetched_at = float(data["fetched_at"])
-            return
-        except OSError, ValueError, KeyError, TypeError:
+            cached = data["table"]
+            if not isinstance(cached, dict):
+                raise RatesError("invalid rates cache")
+            fetched_at = float(data["fetched_at"])
+            table = RateTable.parse(json.dumps(cached), cached.get("source", ""))
+        except OSError, ValueError, KeyError, TypeError, OverflowError, RecursionError:
             pass
+        else:
+            self.table = table
+            self.fetched_at = fetched_at
+            return
         try:
             self.table = RateTable.parse(FALLBACK_RATES.read_bytes(), "bundled snapshot")
         except OSError, RatesError:
@@ -88,22 +146,12 @@ class RatesService(QObject):
             self.status_changed.emit()
             return
         url = self._pending.pop(0)
-        reply = self._net.get(net.request(url))
-        reply.finished.connect(lambda: self._done(reply, url))
+        fetch_rates(self._net, url, partial(self._source_finished, url))
 
-    def _done(self, reply: QNetworkReply, url: str) -> None:
-        reply.deleteLater()
-        if reply.error() != QNetworkReply.NetworkError.NoError:
-            self.error = reply.errorString()
-            log.info("rates from %s failed: %s", url, self.error)
-            self._next()
-            return
-        body = bytes(reply.read(MAX_BYTES).data())
-        try:
-            table = RateTable.parse(body, QUrl(url).host())
-        except RatesError as exc:
-            self.error = str(exc)
-            log.info("rates from %s unusable: %s", url, exc)
+    def _source_finished(self, url: str, table: RateTable | None, error: str) -> None:
+        if table is None:
+            self.error = error
+            log.info("rates from %s failed: %s", url, error)
             self._next()
             return
         self.table = table
