@@ -41,7 +41,9 @@ Most sheets that use [Soulver's syntax](https://documentation.soulver.app/) work
   <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> on macOS. The macOS menu bar remains at the
   top of the screen. The View menu also has Always on Top.
 - Turn on Vim mode in Settings to use Normal, Insert and Visual modes. Calculon uses
-  [side-vim](https://github.com/sprytnyk/side-vim).
+  [side-vim](https://github.com/sprytnyk/side-vim). In Normal mode, press
+  <kbd>Ctrl</kbd>+<kbd>O</kbd> and <kbd>Ctrl</kbd>+<kbd>I</kbd> to go back and forward
+  through the sheets you opened.
 
 Open the Help sheet in the sidebar for worked examples. Choose Keyboard Shortcuts in the
 Help menu to see the keys, including Vim shortcuts when the mode is on. In Vim mode, press
@@ -136,8 +138,14 @@ must return JSON in this format.
 
 - Set `base` or `base_code` to the currency the rates use as their base. Calculon defaults to USD.
 - In `rates`, give the amount of each currency that one unit of the base currency buys.
+- Write currency codes as three ASCII letters, such as `EUR`. Calculon rejects a reply
+  with any other code.
 - To show when rates last changed, include `time_last_update_unix` in seconds or `date`
-  in `YYYY-MM-DD` format.
+  in `YYYY-MM-DD` format. Calculon rejects a reply with a timestamp it can't read, so
+  fix it or leave it out.
+- Calculon follows a redirect only if it keeps the same protocol, host and port. A
+  redirect from `http://` to `https://` fails, so enter the final URL.
+- The reply must be 2 MB or less and arrive within 15 seconds.
 
 You can use the URL of your own Frankfurter server. Calculon goes online to get rates.
 When you open About, it checks GitHub for a new version.
@@ -202,7 +210,7 @@ Run `dist/calculon --self-test` to check the bundled unit data, time zones, help
 fonts and exchange rates. It also tests spell check if one is installed. On macOS, run
 `dist/Calculon.app/Contents/MacOS/calculon --self-test`.
 
-The calculator engine lives in `calculon/engine/` and runs without Qt.
+The calculator engine is in `calculon/engine/` and runs without Qt.
 
 On each push to `main`, GitHub Actions runs the Linux test suite and updates the
 coverage badge. The test log lists the 15 slowest setup, test or cleanup steps.
