@@ -1292,3 +1292,101 @@ def test_variables_carry_their_values_for_hover() -> None:
     # the value the line used, then the new one on the name being assigned
     assert sorted(lines[1].hints) == [(0, 4, "$1,050.00"), (7, 11, "$1,000.00")]
     assert lines[2].hints == [(0, 4, "$1,050.00")]  # not the word in the comment
+
+
+@pytest.mark.parametrize(
+    ("text", "answer"),
+    [
+        ("5 light years in km", "47,302,681,035,350 km"),
+        ("1st + 2", "3"),
+        ("5 dec", "5 December"),
+        ("March 2027", "1 March 2027"),
+        ("3 days from March 1", "4 March"),
+        ("minus 5", "-5"),
+        ("$-5", "-$5.00"),
+        ("5 percent", "5%"),
+        ("2 ^ 3 ^ 2", "512"),
+        ("midpoint between 2 and 4", "3"),
+        ("now", "10 November, 18:30"),
+        ("3pm London", "15:00 London"),
+        ("5 in m", "5 m"),
+        ("$5 in EUR at 2", "€10.00"),
+        ("5 m to 500 cm is what %", "0%"),
+        ("5% is 1 in what", "1/20"),
+        ("$30/day is what per year", "$10,957.28/year"),
+        ("10% + 5 m", "5.5 m"),
+        ("10% * 20%", "2%"),
+        ("50% / 25%", "2"),
+        ("$100 / 10%", "$1,000.00"),
+        ("4^0.5", "2"),
+        ("0^0.5", "0"),
+        ("10 mod 3", "1"),
+        ("1.5 years from March 1", "30 August 2027"),
+        ("2 days + today", "12 November"),
+    ],
+)
+def test_less_common_phrasings(text: str, answer: str) -> None:
+    assert one(text) == answer
+
+
+@pytest.mark.parametrize(
+    ("text", "answer"),
+    [
+        ("monday", "16 November"),
+        ("next monday", "16 November"),
+        ("last monday", "9 November"),
+        ("next tuesday", "17 November"),
+        ("last tuesday", "3 November"),
+    ],
+)
+def test_weekdays_count_from_today(text: str, answer: str) -> None:
+    assert one(text) == answer  # today is Tuesday 10 November
+
+
+@pytest.mark.parametrize(
+    ("text", "answer"),
+    [
+        ("sqrt(9 m^2)", "3 m"),
+        ("abs(-5 m)", "5 m"),
+        ("sin(90 degrees)", "1"),
+        ("sin(1 radian)", "0.841"),
+        ("floor(2.7)", "2"),
+        ("ceil(12.345%; 1)", "12.4%"),
+        ("x = 5\nround(x; 2)", "5"),
+        ("3\n4\n5\nstdev", "1"),
+    ],
+)
+def test_functions(text: str, answer: str) -> None:
+    assert one(text) == answer
+
+
+@pytest.mark.parametrize(
+    ("text", "error"),
+    [
+        ("sqrt(5 m)", "can't take that root of these units"),
+        ("sin(5 m)", "angle expected"),
+        ("log(5 m)", "plain number expected"),
+        ("2000!", "factorial needs a whole number up to 1000"),
+        ("asin(2)", "invalid function argument"),
+        ("exp(1000)", "invalid function argument"),
+        ("round(today)", "functions need numbers"),
+        ("round(5; 2 m)", "places must be a number"),
+        ("5 m\nstdev", "need at least two values"),
+        ("February 30", "no such date"),
+        ("today in m", "can't convert a date to a unit"),
+        ("5 m in per day", "not a rate"),
+        ("$5 in EUR at today", "rate must be a number"),
+        ("$5 in EUR at 2 m/s", "rate doesn't match"),
+        ("5 m + 2 kg", "can't add incompatible units"),
+        ("2 ^ 1 m", "exponent must be a plain number"),
+        ("(2 m)^0.5", "unit powers must be whole numbers"),
+        ("(-8)^0.5", "can't take a fractional power of a negative number"),
+        ("10 mod 0", "division by zero"),
+        ("today * 2", "can't do that with a date"),
+        ("today + today", "can't add those"),
+    ],
+)
+def test_maths_that_cannot_be_done_explains_why(text: str, error: str) -> None:
+    line = evaluate_sheet(text, RATES, CONFIG).lines[-1]
+    assert line.value is None
+    assert line.error == error
