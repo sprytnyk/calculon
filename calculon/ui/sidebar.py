@@ -242,7 +242,9 @@ class Sidebar(QWidget):
         scroll = tree.verticalScrollBar().value()
         tree.setAnimated(False)  # re-adding open directories must not replay the open animation
         tree.blockSignals(True)
-        tree.clear()
+        # Detach branches individually to avoid the clear() crash seen on Windows.
+        for index in range(tree.topLevelItemCount() - 1, -1, -1):
+            tree.takeTopLevelItem(index)
         sheet_icon = icons.icon("sheet")
         pin_icon = icons.icon("pin")
         directory_icon = icons.icon("directory")
