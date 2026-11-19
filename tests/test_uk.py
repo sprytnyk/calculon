@@ -1,7 +1,6 @@
 """Ukrainian sheets: 1 234,56 numbers, metric units in Cyrillic, Ukrainian results."""
 
 from dataclasses import replace
-from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -170,6 +169,4 @@ def test_ukrainian_line_references() -> None:
 def test_abbreviated_ukrainian_months(text, expected) -> None:
     config = replace(CONFIG, now=lambda: NOW.replace(year=2025))
     result = evaluate_sheet(text, RATES, config, FormatOptions(lang="uk"))
-    if text.endswith(str(datetime.now().year)):
-        expected = expected.rsplit(" ", 1)[0]
-    assert result.lines[0].text == expected
+    assert result.lines[0].text == expected  # the sheet's clock says 2025

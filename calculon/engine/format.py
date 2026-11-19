@@ -36,6 +36,7 @@ class FormatOptions:
     money_decimals: int = 2
     time_24h: bool = True
     lang: str = "en"  # unit names, month names and where currency symbols go
+    this_year: int | None = None  # dates in other years show the year; None reads the clock
 
 
 def format_number(x: Decimal, opts: FormatOptions, decimals: int | None = None) -> str:
@@ -163,7 +164,7 @@ def format_date(d: DateVal, opts: FormatOptions) -> str:
     if d.has_date:
         month = (MONTHS_UK if opts.lang == "uk" else MONTHS_EN)[dt.month - 1]
         text = f"{dt.day} {month}"
-        if dt.year != datetime.now().year:
+        if dt.year != (opts.this_year or datetime.now().year):
             text += f" {dt.year}"
         parts.append(text)
     if d.has_time:

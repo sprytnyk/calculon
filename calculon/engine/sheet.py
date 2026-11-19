@@ -120,6 +120,8 @@ def evaluate_sheet(
 ) -> SheetResult:
     opts = opts or FormatOptions()
     config = replace(config or Config(), number_style=opts.number_style)
+    if opts.this_year is None:
+        opts = replace(opts, this_year=config.now().year)
     ctx = Context(rates=rates, config=config)
     results: list[LineResult] = []
     timeline: Timeline | None = None

@@ -158,6 +158,12 @@ def test_abbreviated_month_after_day(text: str, expected: str) -> None:
     assert one(text) == expected
 
 
+def test_year_is_shown_only_when_it_differs_from_the_sheets_clock() -> None:
+    config = Config(now=lambda: datetime(2030, 6, 1, 9, 0))
+    lines = evaluate_sheet("11 Dec\n11 Dec 2029\ntoday", RATES, config).lines
+    assert [line.text for line in lines] == ["11 December", "11 December 2029", "1 June"]
+
+
 @pytest.mark.parametrize(
     ("text", "style", "expected"),
     [
