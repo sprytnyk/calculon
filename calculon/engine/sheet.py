@@ -148,7 +148,8 @@ def evaluate_sheet(
 def _sheet_total(
     values: list[Value | None], rates: RateTable
 ) -> tuple[Q | None, Diagnostic | None]:
-    """Sum the sheet's money amounts, or use the usual unit rules for other quantities."""
+    """Add up the sheet's money. With no money, add up the most common kind of unit,
+    or plain numbers when no answer has a unit."""
     quantities = [value for value in values if isinstance(value, Q)]
     if not quantities:
         return None, None
@@ -241,7 +242,8 @@ def _expression_tokens(body: str, offset: int, ctx: Context, res: LineResult) ->
 
 
 def _note_at(line: str, ctx: Context) -> int | None:
-    """Locate a trailing comma note before interpreting the line."""
+    """Return the position of the comma that starts a trailing note, as in
+    "coffee $5, daily", or None when the line has no note."""
     comment_at = line.find("//")
     if comment_at >= 0:
         # A // in an exported Soulver reference is part of its label.

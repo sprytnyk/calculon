@@ -427,7 +427,8 @@ class Sidebar(QWidget):
         return found
 
     def directory_neighbor(self, key: str) -> tuple[str, str] | None:
-        """Choose the next sibling, previous sibling, or enclosing directory."""
+        """The row to select once this directory is gone: the next row beside it,
+        the previous one, or its parent directory."""
         item = self._find(DIRECTORY, key)
         if item is None:
             return None

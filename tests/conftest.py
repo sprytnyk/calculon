@@ -44,7 +44,8 @@ def window_settings(app, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> QSe
 
 @pytest.fixture
 def open_window(window_settings):
-    """Start real windows and clean them up after the test."""
+    """Return a function that opens a main window. Each window it opens is deleted
+    after the test."""
     opened: list[MainWindow] = []
 
     def start(settings: Settings | None = None, *, show: bool = True) -> MainWindow:

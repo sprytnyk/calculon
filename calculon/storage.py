@@ -313,7 +313,7 @@ class SheetStore:
             return False
         try:
             src.rmdir()
-        except OSError:  # files and directories with contents remain recoverable
+        except OSError:  # a file or a directory with contents stays in Trash
             return False
         return True
 
