@@ -91,6 +91,11 @@ class ClickLabel(QLabel):
             self.clicked.emit()
 
 
+def _inside(key: str, rel: str) -> bool:
+    """Whether key is the path rel or a path inside the directory rel."""
+    return key == rel or key.startswith(rel + "/")
+
+
 def load_fonts() -> str:
     family = ""
     for path in sorted(FONTS.glob("*.ttf")):
@@ -1017,14 +1022,13 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, self.t("rename"), str(exc))
             return
         for cache in (self._docs, self._positions):
-            for old_key in [k for k in cache if k == rel or k.startswith(rel + "/")]:
+            for old_key in [k for k in cache if _inside(k, rel)]:
                 cache[new_rel + old_key[len(rel) :]] = cache.pop(old_key)
         self._sheet_history = [
-            new_rel + key[len(rel) :] if key == rel or key.startswith(rel + "/") else key
-            for key in self._sheet_history
+            new_rel + key[len(rel) :] if _inside(key, rel) else key for key in self._sheet_history
         ]
         kind, key = self.current
-        if kind == SHEET and (key == rel or key.startswith(rel + "/")):
+        if kind == SHEET and _inside(key, rel):
             self.current = (SHEET, new_rel + key[len(rel) :])
             self.open_sheet(self.current[1])
         else:
@@ -1057,8 +1061,8 @@ class MainWindow(QMainWindow):
         except OSError as exc:
             QMessageBox.warning(self, self.t("move_to_trash"), str(exc))
             return
-        self._forget_documents(lambda k: k == rel or k.startswith(rel + "/"))
-        if kind == SHEET and (key == rel or key.startswith(rel + "/")):
+        self._forget_documents(lambda k: _inside(k, rel))
+        if kind == SHEET and _inside(key, rel):
             self.current = ("", "")
             sheets = self.store.all_sheets()
             if sheets:
