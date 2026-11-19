@@ -54,6 +54,8 @@ LIST_MARK_RE = re.compile(
 CONTINUE_RE = re.compile(r"^\s*(\+|-|−|\*|/|×|÷|\^)")
 # how Soulver writes a reference into exported text: "[$1 000,00](line2) − 200"
 SOULVER_REF_RE = re.compile(r"\[[^\]\n]*\]\((line\d+)\)")
+REFERENCE_OR_COMMENT_RE = re.compile(rf"{SOULVER_REF_RE.pattern}|(?P<comment>//)")
+QUOTED_TEXT_RE = re.compile(r'"[^"]*(?:"|$)|[“”][^”]*(?:”|$)')
 
 # highlight classes
 SPAN_CLASSES = {
@@ -130,12 +132,15 @@ def evaluate_sheet(
     timeline: Timeline | None = None
     for i, raw in enumerate(text.split("\n")):
         ctx.used, ctx.adds_up, ctx.subtotal = set(), set(), None
-        directive = DIRECTIVE_RE.match(raw)
         try:
+            note_at = _note_at(raw, ctx) if "," in raw else None
+            directive = (
+                DIRECTIVE_RE.match(raw) if note_at is None else DIRECTIVE_RE.match(raw, 0, note_at)
+            )
             if directive:
-                res, timeline = _evaluate_directive(raw, directive, timeline, ctx, opts)
+                res, timeline = _evaluate_directive(raw, directive, timeline, ctx, opts, note_at)
             else:
-                res = _evaluate_line(raw, ctx, opts, timeline)
+                res = _evaluate_line(raw, ctx, opts, timeline, note_at=note_at)
                 if res.kind == "divider":
                     timeline = None
         except Exception:  # noqa: BLE001 - one bad line must never break the sheet
@@ -201,14 +206,19 @@ def _sheet_total(values: list[Value], rates: RateTable) -> tuple[Q | None, Diagn
 
 
 def _evaluate_directive(
-    raw: str, m: re.Match[str], timeline: Timeline | None, ctx: Context, opts: FormatOptions
+    raw: str,
+    m: re.Match[str],
+    timeline: Timeline | None,
+    ctx: Context,
+    opts: FormatOptions,
+    note_at: int | None,
 ) -> tuple[LineResult, Timeline | None]:
     """@from <date> starts a timeline; @to [<date>] ends it."""
     at = m.start("word") - 1
     # blank out the directive so the rest keeps its columns for highlighting
     rest = raw[:at] + " " * (m.end() - at) + raw[m.end() :]
     block = len(ctx.block)
-    res = _evaluate_line(rest, ctx, opts, None)
+    res = _evaluate_line(rest, ctx, opts, note_at=note_at)
     del ctx.block[block:]  # @from/@to answers don't count in totals
     res.spans.insert(0, (at, m.end(), "keyword"))
     if res.kind == "unfinished":
@@ -274,8 +284,58 @@ def _expression_tokens(body: str, offset: int, ctx: Context, res: LineResult) ->
     return [token for token in tokens if token.kind != "INVALID_DATE"]
 
 
+def _note_at(line: str, ctx: Context) -> int | None:
+    """Locate a trailing comma note before interpreting the line."""
+    comment_at = line.find("//")
+    if comment_at >= 0:
+        # A // in an exported Soulver reference is part of its label.
+        if line.find("[", 0, comment_at) >= 0:
+            references_and_comments = REFERENCE_OR_COMMENT_RE.finditer(line)
+            comment_at = next(
+                (match.start() for match in references_and_comments if match["comment"]),
+                len(line),
+            )
+        line = line[:comment_at]
+    line = line.rstrip()
+    if line.endswith(".") and line[-2:-1].isalpha():
+        line = line[:-1]
+    if not line[-1:].isalpha():
+        return None
+    suffix_start = len(line)
+    while (comma := line.rfind(",", 0, suffix_start)) >= 0:
+        clause = line[comma + 1 : suffix_start].strip()
+        if not clause.isalpha():
+            words = clause.replace("’", "'").split()
+            if not words or any(not part.isalpha() for word in words for part in word.split("'")):
+                break
+        suffix_start = comma
+    if suffix_start == len(line) or any(
+        match.start() < suffix_start < match.end() for match in QUOTED_TEXT_RE.finditer(line)
+    ):
+        return None
+
+    # Only check the suffix. A rejected note must leave the sheet's units untouched.
+    items = classify(tokenize_line(line[suffix_start:], ctx), ctx, remember_units=False)
+    note_at = None
+    words_seen = False
+    for item in reversed(items):
+        if item.kind == "noise" and item.tok.kind == "WORD":
+            words_seen = True
+        elif words_seen and item.kind == "op" and item.key == ",":
+            note_at = suffix_start + item.start
+            words_seen = False
+        else:
+            break
+    return note_at
+
+
 def _evaluate_line(
-    raw: str, ctx: Context, opts: FormatOptions, timeline: Timeline | None = None
+    raw: str,
+    ctx: Context,
+    opts: FormatOptions,
+    timeline: Timeline | None = None,
+    *,
+    note_at: int | None = None,
 ) -> LineResult:
     res = LineResult()
     line = raw
@@ -284,6 +344,8 @@ def _evaluate_line(
         line = line[: m.start()] + " " * (start - m.start()) + m[1] + " " + line[m.end() :]
         res.spans += [(m.start(), start, "comment"), (end, m.end(), "comment")]
     comment_at = line.find("//")
+    if note_at is not None and (comment_at == -1 or note_at < comment_at):
+        comment_at = note_at
     if comment_at != -1:
         res.spans.append((comment_at, len(raw), "comment"))
         line = line[:comment_at]

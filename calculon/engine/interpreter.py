@@ -13,7 +13,7 @@ from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal, DecimalException
 from functools import cache
-from itertools import groupby, pairwise
+from itertools import chain, groupby, pairwise
 from statistics import median, stdev
 
 from . import ukrainian as UK
@@ -261,10 +261,15 @@ class ParseError(DiagnosticError):
     pass
 
 
-def classify(toks: list[Tok], ctx: Context) -> list[Item]:
+def classify(toks: list[Tok], ctx: Context, *, remember_units: bool = True) -> list[Item]:
     items: list[Item] = []
-    var_keys = [tuple(k.split()) for k in ctx.variables.keys() | ctx.invalid_variables]
-    max_var = max((len(k) for k in var_keys), default=1)
+    max_var_words = 0
+    if ctx.variables or ctx.invalid_variables:
+        max_var_words = 1
+        if any(left.kind == right.kind == "WORD" for left, right in pairwise(toks)):
+            max_var_words = 1 + max(
+                key.count(" ") for key in chain(ctx.variables, ctx.invalid_variables)
+            )
     tz = tz_table()
     i = 0
     while i < len(toks):
@@ -277,13 +282,13 @@ def classify(toks: list[Tok], ctx: Context) -> list[Item]:
         matched = False
         words = []
         j = i
-        while j < len(toks) and toks[j].kind == "WORD" and len(words) < max_var:
+        while j < len(toks) and toks[j].kind == "WORD" and len(words) < max_var_words:
             words.append(toks[j].text.lower())
             j += 1
         for size in range(len(words), 0, -1):
-            key = tuple(words[:size])
-            if key in var_keys:
-                items.append(Item("var", " ".join(key), t, toks[i + size - 1]))
+            key = " ".join(words[:size])
+            if key in ctx.variables or key in ctx.invalid_variables:
+                items.append(Item("var", key, t, toks[i + size - 1]))
                 i += size
                 matched = True
                 break
@@ -315,26 +320,27 @@ def classify(toks: list[Tok], ctx: Context) -> list[Item]:
         items.append(_classify_word(t, toks, i, items))
         i += 1
     items = UK.apply(items)
-    _mark_custom_units(items, ctx)
+    units = ctx.custom_units if remember_units else ctx.custom_units.copy()
+    _mark_custom_units(items, units)
     _mark_unknown_operands(items)
     _mark_comment_parens(items)
     return items
 
 
-def _mark_custom_units(items: list[Item], ctx: Context) -> None:
+def _mark_custom_units(items: list[Item], units: set[str]) -> None:
     """A plain word after "/" or "per" becomes a unit for the rest of the sheet."""
     for i, it in enumerate(items):
         if it.kind != "noise" or not it.tok.text.isalpha() or len(it.tok.text) < 2 or not i:
             continue
         prev = items[i - 1]
         if (prev.kind == "op" and prev.key == "/") or (prev.kind == "kw" and prev.key == "per"):
-            ctx.custom_units.add(U.singular(it.tok.text))
-    if not ctx.custom_units:
+            units.add(U.singular(it.tok.text))
+    if not units:
         return
     for it in items:
         if it.kind == "noise" and it.tok.text.isalpha():
             name = U.singular(it.tok.text)
-            if name in ctx.custom_units:
+            if name in units:
                 it.kind = "unit"
                 it.key = U.CUSTOM + name
 

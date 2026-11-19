@@ -1,6 +1,7 @@
 """Engine tests, mostly examples from Soulver's documentation."""
 
 import time
+from dataclasses import replace
 from datetime import datetime
 from decimal import Decimal
 
@@ -22,6 +23,7 @@ RATES = RateTable(
 )
 NOW = datetime(2026, 11, 10, 18, 30)
 CONFIG = Config(now=lambda: NOW)
+NUMBER_STYLES = ["comma_dot", "dot_comma", "space_comma", "space_dot"]
 
 
 @pytest.mark.parametrize(
@@ -250,9 +252,142 @@ def test_bad_numbers_cannot_change_sheet_state(style, bad) -> None:
     assert res.total.mag == 450
 
 
-@pytest.mark.parametrize("style", ["comma_dot", "dot_comma", "space_comma", "space_dot"])
+@pytest.mark.parametrize("style", NUMBER_STYLES)
 def test_commas_do_not_separate_function_arguments_or_list_items(style) -> None:
     assert calc("round(1, 9)\ntotal of 1, 9", number_style=style) == ["", ""]
+
+
+@pytest.mark.parametrize("style", NUMBER_STYLES)
+@pytest.mark.parametrize(
+    "text",
+    [
+        "coffee $5, daily",
+        "coffee $5, daily.",
+        "coffee $5, daily // x",
+        "coffee $5, daily, treat. // x\ntotal",
+        "5\n[$5 // label](line1) + 2, daily. // x",
+        "$5k,daily",
+        "coffee 5, daily, treat\ntotal",
+        "rent daily = $99\ncoffee $5 rent, daily",
+        "5\n7\nrent =, daily\ntotal",
+        '5\n7\nrent = "memo", daily\ntotal',
+        "3 in, daily\nprev in cm",
+        "rent = 5\n7\n---, daily\ntotal\nrent",
+        "@from 2026-11-11\nLondon: 1 day\n@to,daily",
+        "3 +, daily\nprev",
+        "3 /, daily\nprev",
+        ", daily",
+        "1. , daily",
+    ],
+)
+def test_note_comma_matches_comment(style, text) -> None:
+    opts = FormatOptions(number_style=style)
+    actual = evaluate_sheet(text, RATES, CONFIG, opts)
+    expected = evaluate_sheet(text.replace(",", " //", 1), RATES, CONFIG, opts)
+    assert replace(actual, lines=[replace(line, spans=[]) for line in actual.lines]) == replace(
+        expected, lines=[replace(line, spans=[]) for line in expected.lines]
+    )
+    source = text.split("\n")
+    assert any(
+        kind == "comment" and "," in source[index][start:end]
+        for index, line in enumerate(actual.lines)
+        for start, end, kind in line.spans
+    )
+
+
+@pytest.mark.parametrize("style", NUMBER_STYLES)
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("5 #a\n7 #b\ntotal of #a, #b daily\ntotal of #b", ["5", "7", "", "7"]),
+        ("5 #food\ntotal of, #food daily\ntotal of #food", ["5", "", "5"]),
+        ("5 #food\ncoffee 5, daily #food\ntotal of #food", ["5", "", "5"]),
+        ("5, (daily 2)\ntotal", ["", "0"]),
+        ("5, [daily]\ntotal", ["", "0"]),
+        ("5, [daily] // x\ntotal", ["", "0"]),
+        ("5, daily..\ntotal", ["", "0"]),
+        ("5, daily2.\ntotal", ["", "0"]),
+        ('5, "memo 2" daily // x\ntotal', ["", "0"]),
+        ("5, then\ntotal", ["", "0"]),
+        ("daily = 7\n5, daily\ntotal", ["7", "", "7"]),
+        ("2026-11-11, daily 11/12/2026\nprev", ["", ""]),
+        ('5 "memo, daily', ["5"]),
+    ],
+)
+def test_non_note_comma_keeps_existing_meaning(style, text, expected) -> None:
+    assert calc(text, number_style=style) == expected
+
+
+@pytest.mark.parametrize(
+    ("style", "money"),
+    [
+        ("comma_dot", "$5,000.00"),
+        ("dot_comma", "$5.000,00"),
+        ("space_comma", "$5 000,00"),
+        ("space_dot", "$5 000.00"),
+    ],
+)
+def test_note_comma_formats_amounts(style, money) -> None:
+    assert one("$5k, rent", number_style=style) == money
+    assert one("coffee 5, daily", number_style=style) == "5"
+    assert one("coffee 5, daily treat", number_style=style) == "5"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("rent daily = $99\ncoffee $5 rent, daily", ["$99.00", "$5.00"]),
+        ("$5\n$7\nx =, coffee\ntotal", ["$5.00", "$7.00", "$12.00", "0"]),
+        ("$5\ncoffee $5, daily, treat\ntotal", ["$5.00", "$5.00", "$10.00"]),
+        ("3 in, daily\nprev in cm", ["3 in", "7.62 cm"]),
+        ('5\n7\nrent = "memo", daily\ntotal', ["5", "7", "", "12"]),
+        (
+            "@from 2026-11-11\nLondon: 2 nights\n@to , daily",
+            ["11 November", "13 November", "13 November"],
+        ),
+    ],
+)
+def test_a_note_comma_works_like_a_comment(text, expected) -> None:
+    assert calc(text) == expected
+    assert calc(text.replace(",", " //", 1)) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        # a tag after the comma isn't a note, so it can't reach a later total
+        ("5 #a\n7 #b\ntotal of #a, #b daily\ntotal of #b", ["5", "7", "", "7"]),
+        ("5 #food\ntotal of, #food daily\ntotal of #food", ["5", "", "5"]),
+        ("$5 #food\ncoffee $5, daily #food\ntotal of #food", ["$5.00", "", "$5.00"]),
+        ('$5\n$7\nx = "hi"\ntotal', ["$5.00", "$7.00", "", "$12.00"]),
+        ('$5\n$7\nx = "a, b"\ntotal', ["$5.00", "$7.00", "", "$12.00"]),
+        ("5, (daily 2)\ntotal", ["", "0"]),
+    ],
+)
+def test_non_note_commas_preserve_totals(text, expected) -> None:
+    assert calc(text) == expected
+
+
+@pytest.mark.parametrize("style", NUMBER_STYLES)
+@pytest.mark.parametrize(
+    "text",
+    [
+        "10\n20\ntotal of line1, line2",
+        "10\n20\ntotal of 1, prev",
+        "a = 3\nb = 4\ntotal of a, b",
+        "$5 #a\n$7 #b\ntotal of #a, #b",
+        "round(7, )",
+        "round(7, minus 2)",
+        "3 +, daily",
+    ],
+)
+def test_a_comma_inside_maths_is_still_an_error(style, text) -> None:
+    assert one(text, number_style=style) == ""
+
+
+def test_a_comma_cannot_turn_a_line_into_a_subtotal() -> None:
+    text = "$10 #food\n$20 #travel\ntotal, of #food\ntotal"
+    assert calc(text) == ["$10.00", "$20.00", "", "$30.00"]
 
 
 def test_switch_to_dot_comma_with_mixed_sheet() -> None:
