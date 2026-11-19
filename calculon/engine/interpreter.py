@@ -253,6 +253,10 @@ class ParseError(DiagnosticError):
     pass
 
 
+class QuestionOperandError(ParseError):
+    """An operand failed before the whole question was matched."""
+
+
 def classify(toks: list[Tok], ctx: Context, *, remember_units: bool = True) -> list[Item]:
     items: list[Item] = []
     max_var_words = 0
@@ -536,19 +540,33 @@ class Parser:
 
     # entry
     def statement(self) -> Value:
+        operand_error = None
         for pattern in PATTERNS:
             self.rewind(0)
             try:
                 value = pattern(self)
+            except QuestionOperandError as exc:
+                if operand_error is None:
+                    operand_error = exc
+                continue
+            except CalcError:
+                if self.done():
+                    raise  # the whole question was understood but can't be answered
+                continue
             except ParseError, ArithmeticError, ValueError:
                 continue
             if value is not None and self.done():
                 return value
         self.rewind(0)
-        value = self.expr(0, frozenset())
-        if not self.done():
-            raise ParseError("unexpected text")
-        return value
+        try:
+            value = self.expr(0, frozenset())
+            if not self.done():
+                raise ParseError("unexpected text")
+            return value
+        except ParseError as exc:
+            if operand_error is not None:
+                raise operand_error from exc
+            raise
 
     # Pratt core
     def expr(self, min_bp: int, stops: frozenset[str]) -> Value:
@@ -1414,24 +1432,35 @@ def aggregate(kind: str, values: Sequence[Value], rates: RateTable, lines: bool 
     raise CalcError(kind)
 
 
-def _hole(p: Parser, *stop: str) -> Value:
-    return p.expr(0, frozenset(stop))
+type _QuestionOperand = Value | CalcError
 
 
-def _q(v: Value) -> Q:
+def _hole(p: Parser, *stop: str) -> _QuestionOperand:
+    try:
+        return p.expr(0, frozenset(stop))
+    except CalcError as exc:
+        if p.done() or p.at(*stop):
+            return exc  # check the rest of the question before reporting this error
+        # The failed parse stopped inside an operand.
+        raise QuestionOperandError(exc.diagnostic.template, *exc.diagnostic.args) from exc
+
+
+def _q(v: _QuestionOperand) -> Q:
+    if isinstance(v, CalcError):
+        raise v
     if not isinstance(v, Q):
         raise ParseError("number expected")
     return v
 
 
-def _pct_of(v: Value) -> Decimal:
+def _pct_of(v: _QuestionOperand) -> Decimal:
     q = _q(v)
     if q.pct or q.unitless:
         return q.mag
     raise ParseError("percent expected")
 
 
-def _ratio(a: Value, b: Value, rates: RateTable) -> Decimal:
+def _ratio(a: _QuestionOperand, b: _QuestionOperand, rates: RateTable) -> Decimal:
     qa, qb = _q(a), _q(b)
     if qa.units and qb.units and qa.units != qb.units:
         qa = convert(qa, qb.units, rates)
@@ -1449,12 +1478,11 @@ def _pat_change(p: Parser) -> Value | None:
         p.expect("what")
     else:
         p.expect("as")
+    percent = p.take("%", "percent")
+    if not (percent or p.take("x", "multiplier")) or not p.done():
+        return None
     r = _ratio(b, a, p.rates)
-    if p.take("%", "percent"):
-        return Q(r - 1, pct=True)
-    if p.take("x", "multiplier"):
-        return Q(r, fmt="x")
-    return None
+    return Q(r - 1, pct=True) if percent else Q(r, fmt="x")
 
 
 def _pat_what_pct(p: Parser) -> Value | None:
@@ -1551,8 +1579,15 @@ def _pat_proportion(p: Parser) -> Value | None:
     p.expect("what")
     p.expect("is")
     y2 = _hole(p)
+    if not p.done():
+        return None
     qx, qy1, qy2 = _q(x1), _q(y1), _q(y2)
-    r = _ratio(qy2, qy1, p.rates) if not (qy1.pct or qy2.pct) else qy2.mag / qy1.mag
+    if qy1.pct or qy2.pct:
+        if qy1.mag == 0:
+            raise CalcError("division by zero")
+        r = qy2.mag / qy1.mag
+    else:
+        r = _ratio(qy2, qy1, p.rates)
     return Q(qx.mag * r, qx.units, pct=qx.pct)
 
 

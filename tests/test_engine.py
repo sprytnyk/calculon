@@ -52,6 +52,28 @@ def test_square_root_rejects_even_tiny_negative_numbers() -> None:
     assert line.error == "invalid function argument"
 
 
+@pytest.mark.parametrize(
+    ("text", "error"),
+    [
+        ("0 to 5 is what %", "division by zero"),
+        ("0 to 5 is what x", "division by zero"),
+        ("5 is 100% off what", "division by zero"),
+        ("0% is 1 in what", "division by zero"),
+        ("20 is what % of 1 / 0", "division by zero"),
+        ("20 is what % of (1 / 0)", "division by zero"),
+        ("5 m to 10 kg is what %", "incompatible units"),
+        ("20% is 0% what is 60%", "division by zero"),
+        ("20% is 0%, what is 60%", "division by zero"),
+        ("20% is 1 / 0 what is 60%", "division by zero"),
+        ("20% is sqrt(1 m) what is 60%", "can't take that root of these units"),
+    ],
+)
+def test_percent_question_that_cannot_be_worked_out_has_no_answer(text: str, error: str) -> None:
+    line = evaluate_sheet(text, RATES, CONFIG).lines[0]
+    assert line.value is None
+    assert line.error == error
+
+
 @pytest.mark.parametrize("operator", ["*", "/", "^"])
 def test_malformed_formula_does_not_return_its_last_number(operator: str) -> None:
     line = evaluate_sheet(f"2 + {operator} 3", RATES, CONFIG).lines[0]
@@ -476,6 +498,7 @@ $1000,1
         ("180 is what % on 150", "20%"),
         ("20 is what % of 200", "10%"),
         ("20 as a % of 200", "10%"),
+        ("0 to 5 as % of 10", "50%"),
         ("20/200 as %", "10%"),
         ("0.35 as %", "35%"),
         ("2/5 as percent", "40%"),
@@ -551,6 +574,7 @@ $1000,1
         ("0b_1100_0001 to decimal", "193"),
         ("0xff + 1", "0x100"),
         ("255 as hex", "0xFF"),
+        ("0 to 5 as hex", "0x5"),
         ("5 as binary", "0b101"),
         ("3 million + 10%", "3,300,000"),
         ("1.5e3", "1,500"),
@@ -596,11 +620,14 @@ $1000,1
         ("3 days ago", "7 November"),
         ("January 10 - February 5", "3 weeks 5 days"),
         ("3 March to 30 May", "2 months 3 weeks 6 days"),
+        ("March 1 to March 5 to hours", "96 hours"),
         ("days since July 15", "118 days"),
         ("days till December 25", "45 days"),
         ("days between 3 March and 30 May", "88 days"),
         ("April 1 through April 30 in days", "30 days"),
         ("midpoint between March 12 and April 5", "24 March"),
+        ("midpoint between 2 days and March 1 to March 5", "3 days"),
+        ("midpoint between 2 hours and 9am to 5pm", "5 hours"),
         ("Feb 28 + 1 month", "28 March"),
         ("January 31 2020 + 1 month", "29 February 2020"),
         ("7:45am - 4:20pm", "8 hours 35 min"),
