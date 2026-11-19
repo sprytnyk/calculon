@@ -23,13 +23,17 @@ TEXT = "rent = $900\nfood = $300\nrent + food"
 
 
 @pytest.fixture
-def vim(window, app):
-    """The window with vim mode on and a new sheet holding TEXT, cursor at the start."""
-    window.settings.vim_mode = True
-    window.apply_settings()
-    window.new_sheet("")
+def vim(open_window, window_settings, tmp_path, monkeypatch, app):
+    """Open the test sheet with Vim already enabled and the cursor at the start."""
+    sheets = tmp_path / "sheets"
+    sheets.mkdir()
+    (sheets / "Sheet.txt").touch()
+    (sheets / "Untitled.txt").write_text(TEXT, encoding="utf-8")
+    window_settings.setValue("vim_mode", True)
+    window_settings.setValue("last_sheet", "Untitled.txt")
+    window = open_window()
+    monkeypatch.setattr(window, "_ask_text", lambda title, default: (default, True))
     ed = window.editor
-    ed.setPlainText(TEXT)
     ed.moveCursor(ed.textCursor().MoveOperation.Start)
     ed.setFocus()
     pump(app)
