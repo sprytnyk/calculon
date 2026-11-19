@@ -169,11 +169,10 @@ def isolate(home: Path) -> None:
 def open_window(
     directory: Path, lang: str, sheet: str, text: str, theme: Theme, *, focus: bool = False
 ) -> MainWindow:
-    """Fill a new sheets directory in directory, and open the app on sheet, in Glacier."""
+    """Create the sample sheets and open the selected one in Glacier."""
     store = SheetStore(directory)
     sheets = {**OTHER_SHEETS[lang], sheet: text}
     for rel, body in sheets.items():
-        store.path(rel).parent.mkdir(parents=True, exist_ok=True)
         store.write(rel, body)
     store.pin(next(iter(sheets)))
     qs = QSettings()
@@ -211,10 +210,10 @@ def record(directory: Path, theme: Theme) -> list[tuple[Path, float]]:
         window.grab().save(str(path))
         frames.append((path, seconds))
 
-    def type_text(text: str) -> None:
-        """Type a word at a time, with a pause at the end of each line."""
+    try:
+        snap(0.8)
         cursor = window.editor.textCursor()
-        for line in text.splitlines(keepends=True):
+        for line in LVIV["en"].splitlines(keepends=True):
             words = line.rstrip("\n").split(" ")
             for i, word in enumerate(words):
                 cursor.insertText(word if i == len(words) - 1 else word + " ")
@@ -225,9 +224,6 @@ def record(directory: Path, theme: Theme) -> list[tuple[Path, float]]:
                 cursor.insertText("\n")
                 window.editor.setTextCursor(cursor)
 
-    try:
-        snap(0.8)
-        type_text(LVIV["en"])
         window.editor.moveCursor(QTextCursor.MoveOperation.Start)
         snap(3.0)
         window.set_colours("ember")
@@ -255,38 +251,41 @@ def screenshot(directory: Path, shot: Shot, theme: Theme) -> QImage:
 
 
 def backdrop(size: tuple[int, int], theme: Theme) -> QImage:
-    """Soft glows of the theme's colours on its background, like a mesh gradient.
-    It draws with 16 bits a channel and dithers down to 8, so the dark blends show no steps."""
-    w, h = size
-    deep = QImage(w, h, QImage.Format.Format_RGBA64)
-    deep.fill(QColor(theme.bg))
-    painter = QPainter(deep)
+    """Draw soft glows in the theme's colours and dither them to avoid banding."""
+    width, height = size
+    image = QImage(width, height, QImage.Format.Format_RGBA64)
+    image.fill(QColor(theme.bg))
+    painter = QPainter(image)
     glows = [((0, 0), theme.variable), ((1, 0), theme.accent), ((1, 1), theme.result)]
     opacity = 0.45 if theme.is_dark else 0.25
     for (x, y), colour in glows:
-        glow = QRadialGradient(QPointF(x * w, y * h), 0.8 * w)
+        glow = QRadialGradient(QPointF(x * width, y * height), 0.8 * width)
         for i in range(11):
             s = i / 10
             tint = QColor(colour)
             # fades out smoothly, with no ring at the edge
             tint.setAlphaF(opacity * (1 - s * s * (3 - 2 * s)))
             glow.setColorAt(s, tint)
-        painter.fillRect(deep.rect(), glow)
+        painter.fillRect(image.rect(), glow)
     painter.end()
+    return _dither_to_rgb888(image)
 
-    deep_bytes = deep.constBits().tobytes()
-    channels = array("H", deep_bytes[: w * h * 8])  # R, G, B, A for each pixel
-    out = bytearray(w * h * 3)
-    i = 0
-    for y in range(h):
+
+def _dither_to_rgb888(image: QImage) -> QImage:
+    """Convert an RGBA64 image to 8-bit RGB with ordered dithering."""
+    width, height = image.width(), image.height()
+    rgba = array("H", image.constBits().tobytes())
+    rgb = bytearray(width * height * 3)
+    for y in range(height):
         steps = BAYER[y % 4]
-        for x in range(w):
+        for x in range(width):
+            pixel = y * width + x
+            source = pixel * 4
+            target = pixel * 3
             step = steps[x % 4]
-            first = (y * w + x) * 4
             for channel in range(3):
-                out[i] = min(255, int(channels[first + channel] / 257 + step))
-                i += 1
-    return QImage(bytes(out), w, h, w * 3, QImage.Format.Format_RGB888).copy()
+                rgb[target + channel] = min(255, int(rgba[source + channel] / 257 + step))
+    return QImage(bytes(rgb), width, height, width * 3, QImage.Format.Format_RGB888).copy()
 
 
 def framed(window: QImage, size: tuple[int, int], theme: Theme) -> QImage:
