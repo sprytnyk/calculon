@@ -2392,11 +2392,13 @@ def test_total_tooltip_follows_the_ui_language(window) -> None:
 
 def test_a_message_takes_the_place_of_the_total(window, app) -> None:
     window.new_sheet("")
-    window.editor.setPlainText("$10\n$20")
+    window.editor.setPlainText("$10\n$20\ntotal")
     window.editor.recalculate()
+    assert window.total_label.text() == "Total: $60.00"
     window._copy_total()
     message = window.message_label
-    assert message.text() == "Copied $30.00"
+    assert message.text() == "Copied $60.00"
+    assert QGuiApplication.clipboard().text() == "$60.00"
     assert message.isVisible() and not window.total_label.isVisible()
     assert abs(off_centre(message, app)) <= 2
     assert window.rates_label.isVisible()

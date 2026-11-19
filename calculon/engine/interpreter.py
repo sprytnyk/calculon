@@ -8,7 +8,7 @@ treated as plain text and skipped, which lets lines mix prose and maths:
 import math
 import re
 import zoneinfo
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal, DecimalException
@@ -227,28 +227,20 @@ class Context:
     variables: dict[str, Value] = field(default_factory=dict)
     invalid_variables: set[str] = field(default_factory=set)
     var_names: dict[str, str] = field(default_factory=dict)  # key -> name as typed
-    var_lines: dict[str, int] = field(default_factory=dict)  # key -> the line that set it
     line_values: list[Value | None] = field(default_factory=list)
     block: list[int] = field(default_factory=list)  # lines since the last total or heading
     tags: dict[str, list[int]] = field(default_factory=dict)  # the lines with each tag
     custom_units: set[str] = field(default_factory=set)
-    # what evaluate_tokens found the line's answer is worked out from: the earlier lines
-    # it used, and those it only adds to or takes from, as "rent + food" does
-    used: set[int] = field(default_factory=set)
-    adds_up: set[int] = field(default_factory=set)
-    subtotal: Q | None = None  # a sum of earlier answers, before any further arithmetic
 
     def set_var(self, name: str, value: Value) -> None:
         key = var_key(name)
         self.variables[key] = value
         self.invalid_variables.discard(key)
         self.var_names[key] = name.strip()
-        self.var_lines[key] = len(self.line_values)  # the line being worked out
 
     def invalidate_var(self, name: str) -> None:
         key = var_key(name)
         self.variables.pop(key, None)
-        self.var_lines.pop(key, None)
         self.invalid_variables.add(key)
 
 
@@ -498,39 +490,19 @@ class Parser:
         self.ctx = ctx
         self.rates = ctx.rates
         self.plain: list[int] = []  # positions of soft keywords read as plain text
-        self.used: set[int] = set()  # earlier lines read
-        self.subtotal: Q | None = None
-        # id(value) -> (value, the earlier lines it is a sum of); the value is kept so
-        # its id can't go to another one
-        self._sums: dict[int, tuple[Value, frozenset[int]]] = {}
-
-    def adds_up(self, value: Value) -> frozenset[int]:
-        """The earlier lines value is a sum of: rent and food for rent + food, none for
-        rent × 2."""
-        kept = self._sums.get(id(value))
-        return kept[1] if kept is not None and kept[0] is value else frozenset()
-
-    def _sum_of(self, value: Value, lines: frozenset[int]) -> Value:
-        if lines:
-            self._sums[id(value)] = (value, lines)
-        return value
 
     def read_lines(self, lines: list[int]) -> list[Value]:
-        self.used.update(lines)
         return [v for i in lines if (v := self.ctx.line_values[i]) is not None]
 
     def read_line(self, i: int) -> Value:
-        self.used.add(i)
         value = self.ctx.line_values[i]
         assert value is not None
-        return self._sum_of(value, frozenset({i}))
+        return value
 
     def read_var(self, key: str) -> Value:
         if key in self.ctx.invalid_variables:
             raise CalcError("{0} has no value", self.ctx.var_names.get(key, key))
-        line = self.ctx.var_lines[key]
-        self.used.add(line)
-        return self._sum_of(self.ctx.variables[key], frozenset({line}))
+        return self.ctx.variables[key]
 
     def rewind(self, pos: int) -> None:
         self.pos = pos
@@ -624,7 +596,7 @@ class Parser:
                 if min_bp > 5:
                     return None
                 self.pos += 1
-                return self._sum_of(self.conversion(left, key, stops), self.adds_up(left))
+                return self.conversion(left, key, stops)
             if key in ("for", "at", "@"):
                 if min_bp > 8:
                     return None
@@ -636,8 +608,7 @@ class Parser:
                     return None
                 self.pos += 1
                 right = self.expr(11, stops)
-                lines = self.adds_up(left) | self.adds_up(right)
-                return self._sum_of(add(left, right, r, ADD_OPS[key]), lines)
+                return add(left, right, r, ADD_OPS[key])
             if key in MUL_OPS or key in DIV_OPS or key in ("multiplied", "divided", "mod", "per"):
                 if min_bp > 20:
                     return None
@@ -1188,16 +1159,10 @@ class Parser:
                 values = [self.expr(0, frozenset(LIST_SEPARATORS))]
                 while self.take(*LIST_SEPARATORS):
                     values.append(self.expr(0, frozenset(LIST_SEPARATORS)))
-                total = aggregate(kind, values, self.rates, lines=False)
-                if kind != "sum":
-                    return total
-                return self._sum_of(total, frozenset().union(*map(self.adds_up, values)))
+                return aggregate(kind, values, self.rates, lines=False)
         else:
             values = self.read_lines(self.ctx.block)
-        total = aggregate(kind, values, self.rates)
-        if kind == "sum":
-            self.subtotal = total
-        return total
+        return aggregate(kind, values, self.rates)
 
     def rate_apply(self, left: Value, right: Value, key: str) -> Value:
         """'30 hours at $30/hour' multiplies; '$500 at $20/hour' divides."""
@@ -1405,12 +1370,12 @@ def _round(name: str, args: list[Value]) -> Q:
     return Q(out, x.units, pct=x.pct)
 
 
-def aggregate(kind: str, values: list[Value], rates: RateTable, lines: bool = True) -> Q:
+def aggregate(kind: str, values: Sequence[Value], rates: RateTable, lines: bool = True) -> Q:
     """Sum, average... of values.
 
-    lines=True (totals of lines above, tags, the sheet total): only the kind of unit
-    used most is counted (money, usually), and plain numbers are left out when any
-    value has a unit. The result is in the last unit of that kind ("last used wins").
+    With lines=True, use the most common kind of unit and report the result in
+    the last unit of that kind. Use plain numbers when there are no units.
+    A count always includes every value.
     """
     qs = [v for v in values if isinstance(v, Q) and not v.pct]
     if kind == "count":
@@ -1705,9 +1670,6 @@ def evaluate_tokens(
             if skipped is not None:
                 kept = {id(it) for it in cand}
                 skipped.update(id(it) for it in items if id(it) not in kept)
-            ctx.used = parser.used
-            ctx.adds_up = set(parser.adds_up(value))
-            ctx.subtotal = parser.subtotal
             return value
     if len(dates) == 2:
         start, end = dates

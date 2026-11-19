@@ -130,7 +130,7 @@ T = {
     "spell_ignore": "Ignore",
     "spell_none": "No suggestions",
     "total": "Total: {text}",
-    "total_tip": "Click to copy the sheet total. A subtotal counts in place of its lines.",
+    "total_tip": "Adds all results, including subtotals. Click to copy.",
     "external_change": 'Calculon reloaded "{name}" after it changed on disk.',
     "save_conflict": "Couldn't save to the original file. Save a copy to keep your edits.",
     "save_copy": "Save a copy",

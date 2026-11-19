@@ -5,7 +5,6 @@ import re
 from contextlib import suppress
 from dataclasses import dataclass, field, replace
 
-from . import units as U
 from .currency import RateTable
 from .diagnostics import Diagnostic, DiagnosticError
 from .format import FormatOptions, format_value
@@ -123,15 +122,8 @@ def evaluate_sheet(
     config = replace(config or Config(), number_style=opts.number_style)
     ctx = Context(rates=rates, config=config)
     results: list[LineResult] = []
-    # Keep the original amounts available to overlapping subtotals. Arithmetic that
-    # changes a subtotal takes the place of the amounts it covers.
-    live: dict[int, Value] = {}  # the lines the total adds up
-    subtotals: dict[int, set[int]] = {}  # a subtotal -> the lines that make it up
-    taken_by: dict[int, int] = {}  # a line that left the total -> the line in its place
-    out: set[int] = set()  # lines not in the total, nor anything worked out from them
     timeline: Timeline | None = None
-    for i, raw in enumerate(text.split("\n")):
-        ctx.used, ctx.adds_up, ctx.subtotal = set(), set(), None
+    for raw in text.split("\n"):
         try:
             note_at = _note_at(raw, ctx) if "," in raw else None
             directive = (
@@ -148,57 +140,21 @@ def evaluate_sheet(
             res = LineResult(kind="text", diagnostic=Diagnostic("internal calculation error"))
         results.append(res)
         ctx.line_values.append(res.value)
-        if res.value is None:
-            continue
-        if directive or res.aggregate not in ("", "sum") or ctx.used & out:
-            out.add(i)  # @from, average, count, or "* 12" under an average
-            continue
-        replaced = ctx.adds_up
-        if res.aggregate:
-            summands = {j for j in ctx.used if _added_up(ctx.line_values[j], res.value)}
-            if summands and res.value is ctx.subtotal:
-                subtotals[i] = {line for j in summands for line in subtotals.get(j, {j})}
-                continue
-            replaced = {_in_place_of(j, taken_by) for j in summands}
-        covered: set[int] = set()
-        for j in replaced:
-            if j in subtotals and j not in taken_by:
-                covered.update(_in_place_of(line, taken_by) for line in subtotals[j])
-                taken_by[j] = i
-            else:
-                covered.add(j)
-        for j in covered:
-            if live.pop(j, None) is not None:
-                taken_by[j] = i
-        live[i] = res.value
     names = sorted(set(ctx.var_names.values()), key=str.lower)
-    total, diagnostic = _sheet_total(list(live.values()), rates)
+    total, diagnostic = _sheet_total(ctx.line_values, rates)
     return SheetResult(results, total, names, diagnostic)
 
 
-def _in_place_of(line: int, taken_by: dict[int, int]) -> int:
-    """The line that stands for this one in the sheet total now."""
-    while line in taken_by:
-        line = taken_by[line]
-    return line
-
-
-def _added_up(value: Value | None, total: Value) -> bool:
-    """Whether a total added up this answer: it leaves out the kinds of unit it isn't in,
-    as km in a total of money."""
-    if not isinstance(value, Q) or not isinstance(total, Q) or value.pct:
-        return False
-    return U.dims_of(value.units) == U.dims_of(total.units)
-
-
-def _sheet_total(values: list[Value], rates: RateTable) -> tuple[Q | None, Diagnostic | None]:
-    """The status bar's total. Money wins when there's any; otherwise the kind of unit
-    used most, as in a total line."""
-    if not any(isinstance(v, Q) for v in values):
+def _sheet_total(
+    values: list[Value | None], rates: RateTable
+) -> tuple[Q | None, Diagnostic | None]:
+    """Sum the sheet's money amounts, or use the usual unit rules for other quantities."""
+    quantities = [value for value in values if isinstance(value, Q)]
+    if not quantities:
         return None, None
-    money = [v for v in values if isinstance(v, Q) and is_money(v)]
+    money = [quantity for quantity in quantities if is_money(quantity)]
     try:
-        return aggregate("sum", money or values, rates), None
+        return aggregate("sum", money or quantities, rates), None
     except CalcError as exc:
         return None, exc.diagnostic
     except ArithmeticError:  # 9e999999 + 9e999999 overflows
@@ -219,7 +175,7 @@ def _evaluate_directive(
     rest = raw[:at] + " " * (m.end() - at) + raw[m.end() :]
     block = len(ctx.block)
     res = _evaluate_line(rest, ctx, opts, note_at=note_at)
-    del ctx.block[block:]  # @from/@to answers don't count in totals
+    del ctx.block[block:]  # keep @from/@to out of inline totals
     res.spans.insert(0, (at, m.end(), "keyword"))
     if res.kind == "unfinished":
         return res, timeline
@@ -365,7 +321,6 @@ def _evaluate_line(
         ctx.variables = {}
         ctx.invalid_variables.clear()
         ctx.var_names = {}
-        ctx.var_lines = {}
         ctx.custom_units = set()
         return res
     offset = 0
@@ -508,13 +463,6 @@ def _evaluate_items(
     except ArithmeticError, ValueError:  # 1e999999 as % overflows while formatting
         _no_answer(res, Diagnostic("number too large"))
         return
-    # "- 5k" and "rent += $100" change the answer they start from, whatever the maths
-    if continued:
-        ctx.adds_up.add(len(ctx.line_values) - 1)
-    elif var_name and op in ("+=", "-="):
-        line = ctx.var_lines[var_key(var_name)]
-        ctx.used.add(line)
-        ctx.adds_up.add(line)
     if var_name:
         ctx.set_var(var_name, value)
     res.kind = "value"

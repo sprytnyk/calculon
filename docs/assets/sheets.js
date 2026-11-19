@@ -278,10 +278,10 @@ window.CALCULON = {
       ],
       "answer": "€131.99",
       "total": true,
-      "status": "Total: €131.99"
+      "status": "Total: €263.98"
      }
     ],
-    "total": "Total: €131.99"
+    "total": "Total: €263.98"
    },
    "basics": {
     "name": "Moving budget",
@@ -432,10 +432,10 @@ window.CALCULON = {
       ],
       "answer": "$5,795.00",
       "total": true,
-      "status": "Total: $5,795.00"
+      "status": "Total: $11,590.00"
      }
     ],
-    "total": "Total: $5,795.00"
+    "total": "Total: $11,590.00"
    },
    "money": {
     "name": "Shopping in London",
@@ -783,7 +783,7 @@ window.CALCULON = {
       ],
       "answer": "1 day over",
       "total": false,
-      "status": ""
+      "status": "Total: -1 day"
      },
      {
       "text": "2026-11-14 + 3 weeks",
@@ -811,7 +811,7 @@ window.CALCULON = {
       ],
       "answer": "5 December",
       "total": false,
-      "status": ""
+      "status": "Total: -1 day"
      },
      {
       "text": "days between 2026-11-14 and 2026-12-25",
@@ -844,10 +844,10 @@ window.CALCULON = {
       ],
       "answer": "41 days",
       "total": false,
-      "status": "Total: 41 days"
+      "status": "Total: 40 days"
      }
     ],
-    "total": "Total: 41 days"
+    "total": "Total: 40 days"
    },
    "spelling": {
     "name": "Ремонт кухні",
@@ -993,10 +993,10 @@ window.CALCULON = {
       ],
       "answer": "₴67,520.00",
       "total": true,
-      "status": "Total: ₴67,520.00"
+      "status": "Total: ₴135,040.00"
      }
     ],
-    "total": "Total: ₴67,520.00",
+    "total": "Total: ₴135,040.00",
     "misspelled": {
      "line": 2,
      "start": 0,
@@ -1285,10 +1285,10 @@ window.CALCULON = {
       ],
       "answer": "131.99 €",
       "total": true,
-      "status": "Разом: 131.99 €"
+      "status": "Разом: 263.98 €"
      }
     ],
-    "total": "Разом: 131.99 €"
+    "total": "Разом: 263.98 €"
    },
    "basics": {
     "name": "Переїзд",
@@ -1439,10 +1439,10 @@ window.CALCULON = {
       ],
       "answer": "5,795.00 $",
       "total": true,
-      "status": "Разом: 5,795.00 $"
+      "status": "Разом: 11,590.00 $"
      }
     ],
-    "total": "Разом: 5,795.00 $"
+    "total": "Разом: 11,590.00 $"
    },
    "money": {
     "name": "Покупки в Лондоні",
@@ -1790,7 +1790,7 @@ window.CALCULON = {
       ],
       "answer": "перевищено: 1 день",
       "total": false,
-      "status": ""
+      "status": "Разом: -1 день"
      },
      {
       "text": "2026-11-14 + 3 тижні",
@@ -1818,7 +1818,7 @@ window.CALCULON = {
       ],
       "answer": "5 грудня",
       "total": false,
-      "status": ""
+      "status": "Разом: -1 день"
      },
      {
       "text": "днів між 2026-11-14 і 2026-12-25",
@@ -1851,10 +1851,10 @@ window.CALCULON = {
       ],
       "answer": "41 день",
       "total": false,
-      "status": "Разом: 41 день"
+      "status": "Разом: 40 днів"
      }
     ],
-    "total": "Разом: 41 день"
+    "total": "Разом: 40 днів"
    },
    "spelling": {
     "name": "Ремонт кухні",
@@ -2000,10 +2000,10 @@ window.CALCULON = {
       ],
       "answer": "67,520.00 ₴",
       "total": true,
-      "status": "Разом: 67,520.00 ₴"
+      "status": "Разом: 135,040.00 ₴"
      }
     ],
-    "total": "Разом: 67,520.00 ₴",
+    "total": "Разом: 135,040.00 ₴",
     "misspelled": {
      "line": 2,
      "start": 0,

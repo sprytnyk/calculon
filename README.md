@@ -10,9 +10,10 @@ Most sheets that use [Soulver's syntax](https://documentation.soulver.app/) work
 
 - Mix words and maths in a line. Try `20% off $80`, `10 km in miles` or `today + 3 weeks`.
 - Reuse earlier answers and name subtotals. Write `housing =` on its own to give the
-  subtotal above it a name. If `housing = rent + food` adds two earlier answers, the
-  sheet total counts `housing` in their place. When tagged subtotals overlap, the
-  sheet total counts each amount once.
+  subtotal above it a name.
+- The bottom bar adds results from the whole sheet, including subtotals. It adds
+  money if there is any. Otherwise, it adds results with the most common kind of
+  unit, or plain numbers if there are no units.
 - Start a list item with `1.`, `1)` or `•`. Calculon skips the list marker. It also reads
   line references from Soulver exports, such as `[$1 000,00](line2)`.
 - The results pane shortens large answers, for example to `$386.8M`. Click the answer

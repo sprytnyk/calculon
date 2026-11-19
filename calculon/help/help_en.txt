@@ -113,7 +113,7 @@ pi × 2
 # Totals
 // "total" or "sum" adds the lines above it, up to the previous total or heading.
 // "average", "median" and "count" work the same way.
-// A line can have several tags. The sheet total counts its amount once.
+// The bottom bar adds all compatible results, including subtotals.
 // You can name a subtotal and continue calculating from it.
 $20 lunch #food
 $35 dinner #food
