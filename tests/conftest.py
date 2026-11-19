@@ -38,7 +38,6 @@ def window_settings(app, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> QSe
     qs = QSettings()
     qs.clear()
     qs.setValue("sheets_dir", str(tmp_path / "sheets"))
-    qs.setValue("number_date_notice_seen", True)
     return qs
 
 

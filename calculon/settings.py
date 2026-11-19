@@ -41,7 +41,6 @@ class Settings:
     language: str = "en"  # en, uk
     number_style: str = DEFAULT_NUMBER_STYLE
     time_format: str = "24h"
-    number_date_notice_seen: bool = False
     dollar: str = "USD"
     max_decimals: int = 3
     money_decimals: int = 2

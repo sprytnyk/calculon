@@ -1267,7 +1267,6 @@ def test_format_preferences_on_startup(window_settings, open_window, saved, expe
     assert (restored.settings.number_style, restored.settings.time_format) == expected
     assert restored.editor.config.number_style == expected[0]
     assert restored.editor.opts.time_24h == (expected[1] == "24h")
-    assert restored.startup_notice.isHidden()
 
 
 def test_legacy_date_order_uses_24_hour_default(window_settings, open_window, monkeypatch) -> None:
@@ -1286,24 +1285,6 @@ def test_legacy_date_order_uses_24_hour_default(window_settings, open_window, mo
     assert restored.editor.result_text(0) == "3:45pm"
     assert Settings.load().time_format == "12h"
     assert open_window().editor.result_text(0) == "3:45pm"
-
-
-def test_startup_number_and_date_notice_is_shown_once(window_settings, open_window, app) -> None:
-    window_settings.remove("number_date_notice_seen")
-    restored = open_window()
-    pump(app)
-    assert restored.startup_notice.isVisible()
-    notice = restored.notice_text.text()
-    assert "2026-11-18" in notice
-    assert "Rewrite numeric dates in other formats" in notice
-    assert notice == restored.t("number_date_notice")
-    restored.open_sheet(restored.store.create_sheet("", "Numbers", "1,234.56"))
-    assert restored.editor.result_text(0) == "1,234.56"
-    QTest.mouseClick(restored.dismiss_notice, Qt.MouseButton.LeftButton)
-    assert restored.startup_notice.isHidden()
-    assert Settings.load().number_date_notice_seen
-
-    assert open_window().startup_notice.isHidden()
 
 
 @pytest.mark.parametrize(

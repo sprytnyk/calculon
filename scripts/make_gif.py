@@ -187,7 +187,6 @@ def open_window(
         "language": lang,
         "number_style": "space_comma" if lang == "uk" else "comma_dot",
         "colours": "glacier",
-        "number_date_notice_seen": True,
         "last_sheet": sheet,
         "sidebar/expanded": [str(Path(sheet).parent)],
         "window/focus": focus,

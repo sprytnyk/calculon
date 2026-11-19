@@ -221,13 +221,6 @@ T = {
     "convert to what": "Enter a unit or currency to convert to.",
     "plain number expected": "Enter a number without units.",
     "places must be between -20 and 20": "Enter a number of decimal places from -20 to 20.",
-    "number_date_notice": (
-        "Calculon uses the number format in Settings. Use semicolons between list items and "
-        "function arguments. Write dates as 2026-11-18 or 18 November 2026. "
-        "Rewrite numeric dates in other formats. Add spaces around / for division, as in "
-        "18 / 11 / 2026. Edit existing sheets by hand if they use the old formats."
-    ),
-    "dismiss_notice": "Dismiss",
     "time_format": "Time display:",
     "time_12h": "12-hour (3:45pm)",
     "time_24h": "24-hour (15:45)",

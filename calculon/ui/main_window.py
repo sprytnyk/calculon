@@ -142,15 +142,6 @@ class MainWindow(QMainWindow):
         self.banner = QLabel()
         self.banner.setObjectName("banner")
         self.banner.hide()
-        self.startup_notice = QWidget()
-        self.startup_notice.setObjectName("startupNotice")
-        notice = QHBoxLayout(self.startup_notice)
-        self.notice_text = QLabel()
-        self.notice_text.setWordWrap(True)
-        notice.addWidget(self.notice_text, 1)
-        self.dismiss_notice = QPushButton()
-        self.dismiss_notice.clicked.connect(self._dismiss_startup_notice)
-        notice.addWidget(self.dismiss_notice)
         self.conflict_notice = QWidget()
         self.conflict_notice.setObjectName("conflictNotice")
         self.conflict_notice.hide()
@@ -165,7 +156,6 @@ class MainWindow(QMainWindow):
         box = QVBoxLayout(right)
         box.setContentsMargins(0, 0, 0, 0)
         box.setSpacing(0)
-        box.addWidget(self.startup_notice)
         box.addWidget(self.banner)
         box.addWidget(self.conflict_notice)
         box.addWidget(self.editor, 1)
@@ -554,7 +544,6 @@ class MainWindow(QMainWindow):
         self.editor.spell_texts = {k: self.t(f"spell_{k}") for k in ("add", "ignore", "none")}
         self._apply_spelling()
         self.total_label.setToolTip(self.t("total_tip"))
-        self._update_startup_notice()
         self._update_rates_label()
         self.setWindowTitle(self._title())
         self.build_menus()
@@ -585,16 +574,6 @@ class MainWindow(QMainWindow):
     def _engine_changed(self) -> None:
         s = self.settings
         self.editor.set_engine(self.rates.table, s.engine_config(), s.format_options())
-
-    def _update_startup_notice(self) -> None:
-        self.notice_text.setText(self.t("number_date_notice"))
-        self.dismiss_notice.setText(self.t("dismiss_notice"))
-        self.startup_notice.setVisible(not self.settings.number_date_notice_seen)
-
-    def _dismiss_startup_notice(self) -> None:
-        self.settings.number_date_notice_seen = True
-        self.settings.save()
-        self.startup_notice.hide()
 
     def open_settings(self) -> None:
         dlg = SettingsDialog(self.settings, self.t, self)
