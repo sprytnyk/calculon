@@ -259,11 +259,9 @@ def _note_at(line: str, ctx: Context) -> int | None:
         return None
     suffix_start = len(line)
     while (comma := line.rfind(",", 0, suffix_start)) >= 0:
-        clause = line[comma + 1 : suffix_start].strip()
-        if not clause.isalpha():
-            words = clause.replace("’", "'").split()
-            if not words or any(not part.isalpha() for word in words for part in word.split("'")):
-                break
+        words = line[comma + 1 : suffix_start].replace("’", "'").split()
+        if not words or any(not part.isalpha() for word in words for part in word.split("'")):
+            break
         suffix_start = comma
     if suffix_start == len(line) or any(
         match.start() < suffix_start < match.end() for match in QUOTED_TEXT_RE.finditer(line)
