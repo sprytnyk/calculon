@@ -216,8 +216,7 @@ curl -LO $base/uk_UA/uk_UA.aff -LO $base/uk_UA/uk_UA.dic
 
 **Windows.** Calculon uses the spell checker built into Windows. Windows has a dictionary
 for each language added in Settings > Time & language > Language & region. Most systems
-have English already. Add Ukrainian there if you write in it. Words you add in Calculon
-go to its own `words.txt`.
+have English already. Add Ukrainian there if you write in it.
 
 > [!TIP]
 > The Spell Check page in Settings and `calculon --self-test` show which dictionaries
