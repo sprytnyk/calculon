@@ -61,6 +61,22 @@ Trash, select Trash itself and press `d`.
 > [!CAUTION]
 > Deleting an item from Trash or emptying Trash can't be undone.
 
+## Calculon, Soulver and Numi
+
+|            | Calculon               | Soulver 4                              | Numi                                    |
+| ---------- | ---------------------- | -------------------------------------- | --------------------------------------- |
+| Platforms  | Linux, Windows, macOS  | macOS, iPhone, iPad                    | macOS, Windows, Linux, command line     |
+| Price      | Free                   | $59 once, 60-day free trial            | Free with limits, paid licence once     |
+| Setapp     | No                     | Yes                                    | Yes                                     |
+| Licence    | MIT, open source       | Proprietary                            | Proprietary                             |
+| Languages  | English, Ukrainian     | 9                                      | 8, no Ukrainian                         |
+| Currencies | About 160, daily rates | 190, stocks with a paid data plan      | Yes                                     |
+| Sync       | Plain files, any tool  | iCloud                                 | iCloud with a paid licence              |
+| CLI        | No                     | Yes                                    | Yes, without dates or variables         |
+
+Prices and features are from [soulver.app](https://soulver.app) and
+[numi.app](https://numi.app) in November 2026.
+
 ## Numbers, dates and times
 
 The default number format is `1,234.56`. The format you choose in Settings applies
