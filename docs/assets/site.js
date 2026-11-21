@@ -435,7 +435,7 @@
         a.href = links[key];
         buttons.append(a);
       }
-      const all = el("a", "button", TEXT.all);
+      const all = el("a", "button quiet", TEXT.all);
       all.href = release.url;
       buttons.append(all);
       const note = box.querySelector(".download-note");

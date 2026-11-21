@@ -1,4 +1,6 @@
-/* Calculon's website. Colours come from theme.css (the app's Glacier theme). */
+/* Calculon's website. The app window's colours come from theme.css (the app's Glacier
+   theme). The page around it has the same look as Loka's page: a soft glow and a dot grid
+   at the top, a see-through header and see-through cards. */
 
 @font-face {
   font-family: "Fira Code";
@@ -15,14 +17,57 @@
 
 :root {
   --mono: "Fira Code", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --radius: 12px;
-  --shadow: 0 24px 48px -16px rgb(15 23 42 / 0.25);
+  /* Inter only when the visitor has it installed */
+  --sans: "Inter var", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+  --radius: 14px;
   --page: 1120px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* the page around the app window, in Glacier's slate and blue */
+  --page-bg: #f8fafc;
+  --strong: #020617;
+  --glow: #2563eb1f;
+  --dots: #0f172a14;
+  --line: #0f172a14;
+  --line-strong: #0f172a24;
+  --card: #ffffffcc;
+  --solid: #ffffff;
+  --highlight: inset 0 1px 0 #ffffffe6;
+  --shadow: 0 1px 2px #0f172a0a, 0 12px 32px -16px #0f172a29;
+  --window-shadow: 0 2px 4px #0f172a0a, 0 32px 64px -24px #0f172a40;
+  --header: #f8fafcb3;
+  --segment: #0f172a0d;
+  --segment-on: #ffffff;
+  --soft: #2563eb14;
+  --soft-line: #2563eb2e;
+  --ring: #2563eb40;
+  --fill-glow: #2563eb73;
+  --link: #2563eb;
+  --title: linear-gradient(100deg, #020617 35%, #2563eb);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --shadow: 0 24px 48px -12px rgb(0 0 0 / 0.5);
+    --page-bg: #020617;
+    --strong: #f8fafc;
+    --glow: #3b82f62e;
+    --dots: #94a3b81a;
+    --line: #94a3b81f;
+    --line-strong: #94a3b838;
+    --card: #0f172a99;
+    --solid: #0f172a;
+    --highlight: inset 0 1px 0 #ffffff0a;
+    --shadow: 0 12px 40px -16px #000c;
+    --window-shadow: 0 40px 80px -24px #000, 0 0 0 1px #94a3b80f;
+    --header: #020617a6;
+    --segment: #1e293b99;
+    --segment-on: #334155;
+    --soft: #3b82f61f;
+    --soft-line: #60a5fa40;
+    --ring: #60a5fa59;
+    --fill-glow: #3b82f666;
+    --link: #93c5fd;
+    --title: linear-gradient(100deg, #f8fafc 35%, #93c5fd);
   }
 }
 
@@ -31,34 +76,81 @@
 }
 html {
   scroll-behavior: smooth;
+  /* links to a section stop below the sticky header */
+  scroll-padding-top: 72px;
+  scrollbar-color: var(--line-strong) transparent;
+}
+::selection {
+  background: var(--soft-line);
 }
 body {
   margin: 0;
-  background: var(--bg);
+  /* a soft blue glow at the top of the page */
+  background:
+    radial-gradient(70rem 32rem at 50% -12rem, var(--glow), transparent 70%) no-repeat,
+    var(--page-bg);
   color: var(--text);
   font: 17px/1.6 var(--sans);
+  font-feature-settings: "cv11", "ss01"; /* only changes Inter */
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+/* a faint dot grid that fades out down the page */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(var(--dots) 1px, transparent 1px) 0 0 / 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 50% at 50% 0, #000, transparent);
+  mask-image: radial-gradient(ellipse 80% 50% at 50% 0, #000, transparent);
 }
 a {
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.15s;
+}
+a:hover {
+  text-decoration-color: currentColor;
+}
+/* links inside sentences keep a soft underline: their colour alone is close to the text's */
+p a,
+.tab a {
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+p a:hover,
+.tab a:hover {
+  text-decoration-color: currentColor;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 h1,
 h2,
 h3 {
-  color: var(--heading);
+  color: var(--strong);
   line-height: 1.2;
   margin: 0 0 0.5em;
 }
 h1 {
   font-size: clamp(2.2rem, 6vw, 3.6rem);
-  letter-spacing: -0.02em;
+  font-weight: 750;
+  line-height: 1.06;
+  letter-spacing: -0.045em;
 }
 h2 {
   font-size: clamp(1.6rem, 4vw, 2.3rem);
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: -0.035em;
 }
 h3 {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
 }
 p {
   margin: 0 0 1em;
@@ -82,29 +174,46 @@ p {
   -webkit-mask: center / contain no-repeat;
   mask: center / contain no-repeat;
 }
+/* an icon on a tile of its own colour */
+.tile {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 26%, transparent);
+}
+.tile .icon {
+  width: 22px;
+  height: 22px;
+  background: var(--tint);
+}
 
-/* Top bar */
+/* Top bar: see-through, it stays at the top */
 .top {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: color-mix(in srgb, var(--bg) 85%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
+  background: var(--header);
+  border-bottom: 1px solid var(--line);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: saturate(180%) blur(14px);
 }
 .top .wrap {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 20px;
   height: 60px;
 }
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--heading);
+  color: var(--strong);
   font-size: 19px;
   font-weight: 700;
+  letter-spacing: -0.03em;
   text-decoration: none;
   margin-right: auto;
 }
@@ -114,28 +223,87 @@ p {
 }
 .top nav {
   display: flex;
-  gap: 24px;
-  font-size: 17px;
+  gap: 4px;
+  font-size: 15px;
+  font-weight: 500;
 }
 .top nav a {
+  padding: 5px 10px;
+  border-radius: 8px;
+  color: var(--muted);
+  text-decoration: none;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.top nav a:hover {
+  background: var(--segment);
+  color: var(--strong);
+}
+/* EN | УК, as a pill switch */
+.langs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 3px;
+  background: var(--segment);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.langs > * {
+  padding: 2px 10px;
+  border-radius: 8px;
   color: var(--muted);
   text-decoration: none;
 }
-.top nav a:hover {
-  color: var(--text);
+.langs a:hover {
+  color: var(--strong);
+}
+.langs [aria-current] {
+  background: var(--segment-on);
+  color: var(--strong);
+  box-shadow: 0 1px 2px #0f172a1f, var(--highlight);
 }
 @media (max-width: 640px) {
+  .top .wrap {
+    gap: 10px;
+  }
   .top nav .optional {
     display: none;
+  }
+}
+/* the smallest phones: brand, GitHub and EN | УК still fit on one row */
+@media (max-width: 400px) {
+  .top .wrap {
+    gap: 6px;
+  }
+  .brand {
+    gap: 8px;
+  }
+  .top nav a {
+    padding: 5px 6px;
   }
 }
 
 /* Hero */
 /* Top and bottom only. The sides keep .wrap's gutter, so the window doesn't touch the screen edges. */
 .hero {
-  padding-top: 72px;
+  padding-top: 80px;
   padding-bottom: 40px;
   text-align: center;
+}
+/* the title fades from the heading colour into the accent */
+.hero h1 {
+  display: inline-block;
+  max-width: 860px;
+  padding-bottom: 0.08em; /* room for descenders */
+  background: var(--title);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .hero .lead {
   max-width: 640px;
@@ -144,8 +312,26 @@ p {
   color: var(--label);
 }
 .hero .window {
-  margin-top: 48px;
+  margin-top: 56px;
   text-align: left;
+}
+.hero > * {
+  animation: rise 0.6s var(--ease) both;
+}
+.hero > :nth-child(2) {
+  animation-delay: 0.05s;
+}
+.hero > :nth-child(3) {
+  animation-delay: 0.1s;
+}
+.hero > :nth-child(4) {
+  animation-delay: 0.18s;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 
 /* Download buttons */
@@ -153,30 +339,74 @@ p {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
 }
 .button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 22px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
+  padding: 11px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  color: var(--strong);
   font-weight: 600;
+  letter-spacing: -0.01em;
   text-decoration: none;
-}
-.button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  box-shadow: 0 1px 2px #0f172a0d, var(--highlight);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s,
+    filter 0.15s,
+    transform 0.05s;
 }
 .button:hover {
-  filter: brightness(1.08);
+  border-color: var(--muted);
+}
+.button:active {
+  transform: translateY(1px);
+}
+/* filled blue, with a light top edge and a glow */
+.button.primary {
+  /* the fallbacks cover a browser that still has an older theme.css */
+  background: linear-gradient(180deg, var(--fill-top, #2b6cf0), var(--fill, #1d4ed8));
+  border-color: transparent;
+  color: var(--on-fill, #fff);
+  box-shadow:
+    0 1px 2px #0f172a26,
+    0 6px 16px -4px var(--fill-glow),
+    inset 0 1px 0 #ffffff33;
+}
+/* lighter at the bottom only, so the white text stays readable at the top */
+.button.primary:hover {
+  background: linear-gradient(
+    180deg,
+    var(--fill-top, #2b6cf0),
+    color-mix(in srgb, var(--fill, #1d4ed8) 90%, #fff)
+  );
+}
+/* "All downloads": a plain link with an arrow, so the buttons for your system stand out */
+.button.quiet {
+  padding-inline: 12px;
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-weight: 500;
+}
+.button.quiet::after {
+  content: "→";
+  transition: transform 0.15s var(--ease);
+}
+.button.quiet:hover {
+  color: var(--strong);
+}
+.button.quiet:hover::after {
+  transform: translateX(3px);
 }
 .download-note {
-  margin-top: 12px;
+  margin-top: 14px;
   font-size: 14px;
   color: var(--muted);
 }
@@ -186,7 +416,7 @@ p {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
-  box-shadow: var(--shadow);
+  box-shadow: var(--highlight), var(--window-shadow);
   overflow: hidden;
 }
 .titlebar {
@@ -525,16 +755,14 @@ p {
 
 /* Sections */
 section {
-  padding: 72px 0;
-}
-section.alt {
-  background: var(--sidebar);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  padding: 80px 0;
 }
 .section-head {
   max-width: 680px;
   margin-bottom: 36px;
+}
+.section-head p {
+  font-size: 1.05rem;
 }
 
 /* Examples: tabs on the left, the sheet on the right */
@@ -554,18 +782,24 @@ section.alt {
   width: 100%;
   padding: 14px 16px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: none;
   color: var(--text);
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .tab strong {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--heading);
+  color: var(--strong);
+  font-weight: 650;
+  letter-spacing: -0.015em;
 }
 .tab span.text {
   display: block;
@@ -574,15 +808,12 @@ section.alt {
   color: var(--muted);
 }
 .tab:hover {
-  background: var(--surface);
+  background: var(--segment);
 }
 .tab[aria-selected="true"] {
-  background: var(--surface);
-  border-color: var(--border);
-}
-.tab:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  background: var(--card);
+  border-color: var(--line-strong);
+  box-shadow: var(--highlight), var(--shadow);
 }
 .example .window-body {
   grid-template-columns: 1fr;
@@ -592,7 +823,7 @@ section.alt {
   min-height: 300px;
 }
 .rates-note {
-  margin-top: 12px;
+  margin-top: 14px;
   font-size: 14px;
   color: var(--muted);
 }
@@ -607,22 +838,45 @@ section.alt {
   }
 }
 
-/* Feature cards */
+/* Feature cards: see-through, they come in one after another */
 .features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 20px;
+  /* three across, so the nine cards fill three full rows; one column on phones */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 760px) {
+  .features {
+    grid-template-columns: 1fr;
+  }
 }
 .card {
   padding: 22px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: var(--highlight), var(--shadow);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition:
+    border-color 0.2s,
+    transform 0.2s var(--ease);
+  animation: rise 0.5s var(--ease) both;
 }
-.card .icon {
-  width: 28px;
-  height: 28px;
-  margin-bottom: 12px;
+.card:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-2px);
+}
+.card:nth-child(2) { animation-delay: 0.04s; }
+.card:nth-child(3) { animation-delay: 0.08s; }
+.card:nth-child(4) { animation-delay: 0.12s; }
+.card:nth-child(5) { animation-delay: 0.16s; }
+.card:nth-child(6) { animation-delay: 0.2s; }
+.card:nth-child(7) { animation-delay: 0.24s; }
+.card:nth-child(8) { animation-delay: 0.28s; }
+.card:nth-child(9) { animation-delay: 0.32s; }
+.card .tile {
+  margin-bottom: 14px;
 }
 .card p {
   margin: 0;
@@ -630,22 +884,59 @@ section.alt {
   font-size: 15.5px;
 }
 
-/* FAQ */
+/* Questions: each one a row that opens */
 .faq {
   max-width: 760px;
 }
+.faq h2 {
+  margin-bottom: 28px;
+}
 .faq details {
-  border-bottom: 1px solid var(--border);
-  padding: 16px 0;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--highlight);
+  transition: border-color 0.15s;
+}
+.faq details:hover,
+.faq details[open] {
+  border-color: var(--line-strong);
 }
 .faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 16px;
   cursor: pointer;
+  list-style: none;
   font-weight: 600;
-  color: var(--heading);
-  font-size: 1.1rem;
+  color: var(--strong);
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+/* a plus that turns into a cross when the answer is open */
+.faq summary::after {
+  content: "";
+  flex: none;
+  width: 12px;
+  height: 12px;
+  background:
+    linear-gradient(currentColor, currentColor) center / 12px 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) center / 1.5px 12px no-repeat;
+  color: var(--muted);
+  transition: transform 0.2s var(--ease);
+}
+.faq details[open] summary::after {
+  transform: rotate(45deg);
 }
 .faq details > div {
-  margin-top: 12px;
+  padding: 0 18px 4px;
   color: var(--label);
 }
 code,
@@ -653,28 +944,54 @@ pre {
   font-family: var(--mono);
   font-size: 0.88em;
 }
+p code,
+.tab code {
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--segment);
+  color: var(--strong);
+}
 pre {
   overflow-x: auto;
   padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--page-bg);
   color: var(--text);
 }
 
-/* Footer */
+/* Try Calculon: a card with the glow inside */
 .cta {
+  padding-top: 40px;
   text-align: center;
+}
+.cta .wrap {
+  max-width: calc(var(--page) - 32px);
+  padding: 56px 24px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background:
+    radial-gradient(40rem 18rem at 50% 0, var(--glow), transparent 70%) no-repeat,
+    var(--card);
+  box-shadow: var(--highlight), var(--shadow);
+}
+@media (max-width: 1152px) {
+  .cta .wrap {
+    margin: 0 16px;
+  }
 }
 .cta img {
   width: 72px;
   height: 72px;
   margin-bottom: 12px;
+  filter: drop-shadow(0 10px 20px var(--fill-glow));
 }
+
+/* Footer */
 footer {
   padding: 32px 0 48px;
-  border-top: 1px solid var(--border);
-  font-size: 16px;
+  font-size: 15px;
   color: var(--muted);
 }
 footer .links {
@@ -682,17 +999,27 @@ footer .links {
   flex-wrap: wrap;
   gap: 18px;
   margin-bottom: 10px;
+  font-weight: 500;
+}
+footer a {
+  color: var(--muted);
+  text-decoration-color: transparent;
+}
+footer a:hover {
+  color: var(--strong);
+}
+footer p a {
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  .line .ans,
-  .ctxmenu {
-    transition: none;
-  }
-  .caret {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }

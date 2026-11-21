@@ -58,8 +58,11 @@
           <a class="optional" href="#features">Можливості</a>
           <a class="optional" href="#faq">Питання</a>
           <a href="https://github.com/sprytnyk/calculon">GitHub</a>
-          <a href="../" data-lang="en" hreflang="en" lang="en">🇬🇧 English</a>
         </nav>
+        <div class="langs" aria-label="Мова">
+          <a href="../" data-lang="en" hreflang="en" lang="en" title="English">EN</a>
+          <span aria-current="page">УК</span>
+        </div>
       </div>
     </header>
 
@@ -139,14 +142,14 @@
         </div>
       </section>
 
-      <section id="features" class="alt">
+      <section id="features">
         <div class="wrap">
           <div class="section-head">
             <h2>Можливості</h2>
           </div>
           <div class="features">
             <div class="card">
-              <span class="icon" style="mask-image: url(../assets/icons/colours.svg); -webkit-mask-image: url(../assets/icons/colours.svg); background: var(--icon-violet)"></span>
+              <span class="tile" style="--tint: var(--icon-violet)"><span class="icon" style="mask-image: url(../assets/icons/colours.svg); -webkit-mask-image: url(../assets/icons/colours.svg)"></span></span>
               <h3>Дві теми</h3>
               <p>
                 Виберіть синьо-сіру Glacier або помаранчеву Ember. Кожна тема має світлий і темний
@@ -154,7 +157,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(../assets/icons/open_directory.svg); -webkit-mask-image: url(../assets/icons/open_directory.svg); background: var(--icon-amber)"></span>
+              <span class="tile" style="--tint: var(--icon-amber)"><span class="icon" style="mask-image: url(../assets/icons/open_directory.svg); -webkit-mask-image: url(../assets/icons/open_directory.svg)"></span></span>
               <h3>Аркуші як звичайні файли</h3>
               <p>
                 Calculon зберігає кожен аркуш як файл <code>.txt</code> у вибраній теці.
@@ -162,7 +165,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(../assets/icons/directory.svg); -webkit-mask-image: url(../assets/icons/directory.svg); background: var(--icon-violet)"></span>
+              <span class="tile" style="--tint: var(--icon-violet)"><span class="icon" style="mask-image: url(../assets/icons/directory.svg); -webkit-mask-image: url(../assets/icons/directory.svg)"></span></span>
               <h3>Теки, закріплення й кошик</h3>
               <p>
                 Розкладайте аркуші по теках і закріплюйте ті, якими часто користуєтеся.
@@ -170,14 +173,14 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(../assets/icons/rates.svg); -webkit-mask-image: url(../assets/icons/rates.svg); background: var(--icon-green)"></span>
+              <span class="tile" style="--tint: var(--icon-green)"><span class="icon" style="mask-image: url(../assets/icons/rates.svg); -webkit-mask-image: url(../assets/icons/rates.svg)"></span></span>
               <h3>Курси валют без інтернету</h3>
               <p>
                 Calculon завантажує курси валют раз на день і зберігає їх для роботи без мережі.
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(../assets/icons/language.svg); -webkit-mask-image: url(../assets/icons/language.svg); background: var(--icon-green)"></span>
+              <span class="tile" style="--tint: var(--icon-green)"><span class="icon" style="mask-image: url(../assets/icons/language.svg); -webkit-mask-image: url(../assets/icons/language.svg)"></span></span>
               <h3>Українська й англійська</h3>
               <p>
                 Виберіть мову меню й пишіть обома мовами в одному аркуші. Типовий формат
@@ -185,7 +188,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(../assets/icons/spell_add.svg); -webkit-mask-image: url(../assets/icons/spell_add.svg); background: var(--icon-green)"></span>
+              <span class="tile" style="--tint: var(--icon-green)"><span class="icon" style="mask-image: url(../assets/icons/spell_add.svg); -webkit-mask-image: url(../assets/icons/spell_add.svg)"></span></span>
               <h3>Перевірка правопису</h3>
               <p>
                 Перевіряйте правопис українською й англійською зі словниками вашої системи.
@@ -193,7 +196,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(../assets/icons/help.svg); -webkit-mask-image: url(../assets/icons/help.svg); background: var(--icon-blue)"></span>
+              <span class="tile" style="--tint: var(--icon-blue)"><span class="icon" style="mask-image: url(../assets/icons/help.svg); -webkit-mask-image: url(../assets/icons/help.svg)"></span></span>
               <h3>Довідка й підказки</h3>
               <p>
                 Спробуйте приклади з аркуша довідки у своєму аркуші.
@@ -203,7 +206,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(../assets/icons/vim.svg); -webkit-mask-image: url(../assets/icons/vim.svg); background: var(--icon-teal)"></span>
+              <span class="tile" style="--tint: var(--icon-teal)"><span class="icon" style="mask-image: url(../assets/icons/vim.svg); -webkit-mask-image: url(../assets/icons/vim.svg)"></span></span>
               <h3>Режим Vim</h3>
               <p>
                 Увімкніть режим Vim у налаштуваннях. Він має режими Normal, Insert і Visual.
@@ -213,7 +216,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(../assets/icons/pin.svg); -webkit-mask-image: url(../assets/icons/pin.svg); background: var(--icon-amber)"></span>
+              <span class="tile" style="--tint: var(--icon-amber)"><span class="icon" style="mask-image: url(../assets/icons/pin.svg); -webkit-mask-image: url(../assets/icons/pin.svg)"></span></span>
               <h3>Режим фокусування й "Завжди поверх"</h3>
               <p>
                 Режим фокусування ховає бічну панель і дату оновлення курсів, а у Windows і Linux
@@ -295,7 +298,7 @@
         </div>
       </section>
 
-      <section class="cta alt">
+      <section class="cta">
         <div class="wrap">
           <img src="../assets/icon.png" alt="" />
           <h2>Спробуйте Calculon</h2>

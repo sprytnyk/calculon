@@ -67,8 +67,11 @@
           <a class="optional" href="#features">Features</a>
           <a class="optional" href="#faq">Questions</a>
           <a href="https://github.com/sprytnyk/calculon">GitHub</a>
-          <a href="uk/" data-lang="uk" hreflang="uk" lang="uk">🇺🇦 Українською</a>
         </nav>
+        <div class="langs" aria-label="Language">
+          <span aria-current="page">EN</span>
+          <a href="uk/" data-lang="uk" hreflang="uk" lang="uk" title="Українською">УК</a>
+        </div>
       </div>
     </header>
 
@@ -145,14 +148,14 @@
         </div>
       </section>
 
-      <section id="features" class="alt">
+      <section id="features">
         <div class="wrap">
           <div class="section-head">
             <h2>Features</h2>
           </div>
           <div class="features">
             <div class="card">
-              <span class="icon" style="mask-image: url(assets/icons/colours.svg); -webkit-mask-image: url(assets/icons/colours.svg); background: var(--icon-violet)"></span>
+              <span class="tile" style="--tint: var(--icon-violet)"><span class="icon" style="mask-image: url(assets/icons/colours.svg); -webkit-mask-image: url(assets/icons/colours.svg)"></span></span>
               <h3>Two themes</h3>
               <p>
                 Choose the slate blue Glacier theme or the orange Ember theme. Both have light
@@ -160,7 +163,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(assets/icons/open_directory.svg); -webkit-mask-image: url(assets/icons/open_directory.svg); background: var(--icon-amber)"></span>
+              <span class="tile" style="--tint: var(--icon-amber)"><span class="icon" style="mask-image: url(assets/icons/open_directory.svg); -webkit-mask-image: url(assets/icons/open_directory.svg)"></span></span>
               <h3>Sheets are plain files</h3>
               <p>
                 Calculon saves each sheet as a <code>.txt</code> file in a directory you choose.
@@ -168,7 +171,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(assets/icons/directory.svg); -webkit-mask-image: url(assets/icons/directory.svg); background: var(--icon-violet)"></span>
+              <span class="tile" style="--tint: var(--icon-violet)"><span class="icon" style="mask-image: url(assets/icons/directory.svg); -webkit-mask-image: url(assets/icons/directory.svg)"></span></span>
               <h3>Directories, pins and trash</h3>
               <p>
                 Group sheets in directories and pin the ones you use often. Search by name or
@@ -176,14 +179,14 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(assets/icons/rates.svg); -webkit-mask-image: url(assets/icons/rates.svg); background: var(--icon-green)"></span>
+              <span class="tile" style="--tint: var(--icon-green)"><span class="icon" style="mask-image: url(assets/icons/rates.svg); -webkit-mask-image: url(assets/icons/rates.svg)"></span></span>
               <h3>Exchange rates offline</h3>
               <p>
                 Calculon downloads exchange rates once a day and saves them for offline use.
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(assets/icons/language.svg); -webkit-mask-image: url(assets/icons/language.svg); background: var(--icon-green)"></span>
+              <span class="tile" style="--tint: var(--icon-green)"><span class="icon" style="mask-image: url(assets/icons/language.svg); -webkit-mask-image: url(assets/icons/language.svg)"></span></span>
               <h3>English and Ukrainian</h3>
               <p>
                 Use either language for the menus and write in both on the same sheet.
@@ -191,7 +194,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(assets/icons/spell_add.svg); -webkit-mask-image: url(assets/icons/spell_add.svg); background: var(--icon-green)"></span>
+              <span class="tile" style="--tint: var(--icon-green)"><span class="icon" style="mask-image: url(assets/icons/spell_add.svg); -webkit-mask-image: url(assets/icons/spell_add.svg)"></span></span>
               <h3>Spell check</h3>
               <p>
                 Check English and Ukrainian spelling with your system's dictionaries.
@@ -199,7 +202,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(assets/icons/help.svg); -webkit-mask-image: url(assets/icons/help.svg); background: var(--icon-blue)"></span>
+              <span class="tile" style="--tint: var(--icon-blue)"><span class="icon" style="mask-image: url(assets/icons/help.svg); -webkit-mask-image: url(assets/icons/help.svg)"></span></span>
               <h3>Help and hints</h3>
               <p>
                 The Help sheet has examples you can try in your own sheet.
@@ -208,7 +211,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(assets/icons/vim.svg); -webkit-mask-image: url(assets/icons/vim.svg); background: var(--icon-teal)"></span>
+              <span class="tile" style="--tint: var(--icon-teal)"><span class="icon" style="mask-image: url(assets/icons/vim.svg); -webkit-mask-image: url(assets/icons/vim.svg)"></span></span>
               <h3>Vim mode</h3>
               <p>
                 Turn on Vim mode in Settings to use Normal, Insert and Visual modes. Press
@@ -217,7 +220,7 @@
               </p>
             </div>
             <div class="card">
-              <span class="icon" style="mask-image: url(assets/icons/pin.svg); -webkit-mask-image: url(assets/icons/pin.svg); background: var(--icon-amber)"></span>
+              <span class="tile" style="--tint: var(--icon-amber)"><span class="icon" style="mask-image: url(assets/icons/pin.svg); -webkit-mask-image: url(assets/icons/pin.svg)"></span></span>
               <h3>Focus mode and always on top</h3>
               <p>
                 Focus Mode hides the sidebar and the rates date. It also hides the menu bar on
@@ -297,7 +300,7 @@
         </div>
       </section>
 
-      <section class="cta alt">
+      <section class="cta">
         <div class="wrap">
           <img src="assets/icon.png" alt="" />
           <h2>Try Calculon</h2>
