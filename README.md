@@ -236,6 +236,7 @@ make check              # ruff and pytest
 make build              # dist/calculon, or dist/Calculon.app on macOS (test version)
 make icons              # remake assets/icon.png, .ico and .icns from icon-source.png
 make site               # remake the website's example sheets and colours in docs/
+make docs               # serve the website from docs/ at http://127.0.0.1:8000
 make gif                # remake the dark and light demos and screenshots (needs ffmpeg)
 ```
 
