@@ -127,7 +127,8 @@ class Sidebar(QWidget):
         super().__init__(parent)
         self.store = store
         self.tr_ = tr
-        saved = open_settings().value("sidebar/expanded", [])
+        # An empty list reads back from the file as None, and a one-item list as the item.
+        saved = open_settings().value("sidebar/expanded", []) or []
         self.expanded: set[str] = {str(k) for k in (saved if isinstance(saved, list) else [saved])}
         self.expanded.discard("")
         self.current: tuple[str, str] | None = None  # (kind, key) of the open sheet

@@ -1241,6 +1241,27 @@ def test_switching_sheets_between_directories_keeps_the_sidebar_still(
     assert "A" in w.sidebar.expanded
 
 
+@pytest.mark.parametrize(
+    ("saved", "expanded"),
+    [(None, set()), ("B", {"B"}), (["B", "None"], {"B", "None"})],
+)
+def test_saved_expanded_directories_read_back(
+    open_window, window_settings, tmp_path, saved, expanded
+) -> None:
+    """QSettings reads an empty list back from its file as None and a one-item list as the
+    item itself. None used to expand a directory called "None"."""
+    sheets = tmp_path / "sheets"
+    store = SheetStore(sheets)
+    for directory in ("B", "None"):
+        store.create_sheet(directory, "x", "1")
+    store.create_sheet("", "top", "1")
+    window_settings.setValue("sheets_dir", str(sheets))
+    window_settings.setValue("last_sheet", "top.txt")  # opening a sheet expands its directory
+    window_settings.setValue("sidebar/expanded", saved)
+    w = open_window(show=False)
+    assert w.sidebar.expanded == expanded
+
+
 def test_unknown_settings_fall_back_to_defaults(app) -> None:
     """A hand-edited or newer config must not leave the app in a state it can't show."""
     qs = open_settings()
