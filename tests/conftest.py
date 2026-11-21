@@ -7,8 +7,8 @@ import pytest
 from PySide6.QtCore import QCoreApplication, QEvent, QSettings
 from PySide6.QtWidgets import QApplication
 
-from calculon import rates
-from calculon.settings import Settings
+from calculon import paths, rates
+from calculon.settings import Settings, open_settings
 from calculon.ui.main_window import MainWindow
 
 
@@ -17,6 +17,7 @@ def home(tmp_path_factory: pytest.TempPathFactory) -> Path:
     h = tmp_path_factory.mktemp("home")
     os.environ.update(
         HOME=str(h),
+        APPDATA=str(h / "AppData" / "Roaming"),
         XDG_CONFIG_HOME=str(h / ".config"),
         XDG_DATA_HOME=str(h / ".local" / "share"),
         XDG_CACHE_HOME=str(h / ".cache"),
@@ -29,13 +30,14 @@ def home(tmp_path_factory: pytest.TempPathFactory) -> Path:
 def app(home: Path):
     QCoreApplication.setOrganizationName("calculon-tests")
     QCoreApplication.setApplicationName("Calculon")
+    paths.old_settings().clear()  # Windows keeps these in the registry, outside home
     return QApplication.instance() or QApplication([])
 
 
 @pytest.fixture
 def window_settings(app, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> QSettings:
     monkeypatch.setattr(rates.RatesService, "refresh", lambda self: None)
-    qs = QSettings()
+    qs = open_settings()
     qs.clear()
     qs.setValue("sheets_dir", str(tmp_path / "sheets"))
     return qs

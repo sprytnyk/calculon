@@ -1,4 +1,4 @@
-"""User settings, stored with QSettings in the usual place for each OS."""
+"""User settings, stored with QSettings in the place open_settings() picks."""
 
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -8,6 +8,7 @@ from PySide6.QtCore import QSettings, QStandardPaths
 from .engine import Config, FormatOptions
 from .engine.currency import KNOWN_CODES
 from .engine.numbers import DEFAULT_NUMBER_STYLE, NUMBER_STYLES
+from .paths import config_dir, data_dir, old_settings, uses_old_paths
 from .translations import LANGUAGES
 from .ui.theme import PALETTES
 
@@ -22,10 +23,17 @@ def default_sheets_dir() -> str:
     return str(Path(docs or Path.home()) / "Calculon")
 
 
+def open_settings() -> QSettings:
+    """settings.ini in config_dir(), or the old place for users who already have settings
+    there."""
+    if uses_old_paths():
+        return old_settings()
+    return QSettings(str(config_dir() / "settings.ini"), QSettings.Format.IniFormat)
+
+
 def own_words_file() -> Path:
     """The words added with "Add to Dictionary", one per line."""
-    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppDataLocation)
-    return Path(base) / "words.txt"
+    return data_dir() / "words.txt"
 
 
 def read_bool(value: object) -> bool:
@@ -56,7 +64,7 @@ class Settings:
 
     @classmethod
     def load(cls) -> Settings:
-        qs = QSettings()
+        qs = open_settings()
         s = cls()
         for f in fields(cls):
             default = getattr(s, f.name)
@@ -89,7 +97,7 @@ class Settings:
         return s
 
     def save(self) -> None:
-        qs = QSettings()
+        qs = open_settings()
         for f in fields(self):
             qs.setValue(f.name, getattr(self, f.name))
         qs.sync()

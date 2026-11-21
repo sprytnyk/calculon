@@ -17,7 +17,6 @@ from PySide6.QtCore import (
     QEvent,
     QPoint,
     QRect,
-    QSettings,
     QSize,
     Qt,
     QTimer,
@@ -56,7 +55,7 @@ from PySide6.QtWidgets import (
 
 from calculon import settings, spelling
 from calculon.engine import RateTable
-from calculon.settings import Settings
+from calculon.settings import Settings, open_settings
 from calculon.spelling import SpellChecker, Status, probe
 from calculon.storage import SheetStore
 from calculon.translations import tr
@@ -134,7 +133,7 @@ def drive_directory_dialog(
 
 
 def test_first_start_asks_for_sheets_directory(app, home, tmp_path, monkeypatch) -> None:
-    qs = QSettings()
+    qs = open_settings()
     qs.clear()
     blocker = tmp_path / "not-a-directory"
     blocker.write_text("")
@@ -151,7 +150,7 @@ def test_first_start_asks_for_sheets_directory(app, home, tmp_path, monkeypatch)
 
 
 def test_first_start_suggests_documents(app, home, monkeypatch) -> None:
-    QSettings().clear()
+    open_settings().clear()
     opened = drive_directory_dialog(monkeypatch)
     assert directory_dialog.choose_sheets_directory() is None
     assert opened[0].directory.text() == settings.default_sheets_dir()
@@ -164,7 +163,7 @@ def test_directory_dialog_uses_dark_theme_with_saved_light_settings(
 ) -> None:
     blocker = tmp_path / "not-a-directory"
     blocker.write_text("")
-    qs = QSettings()
+    qs = open_settings()
     qs.clear()
     qs.setValue("sheets_dir", str(blocker / "Calculon"))
     qs.setValue("theme", "light")
@@ -190,7 +189,7 @@ def test_chosen_directory_reaches_the_window_when_settings_cannot_be_saved(
 ) -> None:
     """In a home directory Calculon can't write to, QSettings drops the save without an
     error. So the window must get the directory from the dialog, not from the settings file."""
-    QSettings().clear()
+    open_settings().clear()
     monkeypatch.setattr(Settings, "save", lambda self: None)
     chosen = tmp_path / "My sheets"
     drive_directory_dialog(monkeypatch, str(chosen))
@@ -199,7 +198,7 @@ def test_chosen_directory_reaches_the_window_when_settings_cannot_be_saved(
 
 
 def test_saved_sheets_directory_opens_without_asking(app, tmp_path, monkeypatch) -> None:
-    qs = QSettings()
+    qs = open_settings()
     qs.clear()
     qs.setValue("sheets_dir", str(tmp_path / "sheets"))
     opened = drive_directory_dialog(monkeypatch)
@@ -216,7 +215,7 @@ def test_blocked_saved_directory_asks_again_and_explains(app, tmp_path, monkeypa
     blocker = tmp_path / "not-a-directory"
     blocker.write_text("")
     blocked = blocker / "Calculon"
-    qs = QSettings()
+    qs = open_settings()
     qs.clear()
     qs.setValue("sheets_dir", str(blocked))
     monkeypatch.setattr(directory_dialog, "sys", SimpleNamespace(platform="win32"))
@@ -1244,7 +1243,7 @@ def test_switching_sheets_between_directories_keeps_the_sidebar_still(
 
 def test_unknown_settings_fall_back_to_defaults(app) -> None:
     """A hand-edited or newer config must not leave the app in a state it can't show."""
-    qs = QSettings()
+    qs = open_settings()
     qs.clear()
     for key, value in {
         "language": "xx",

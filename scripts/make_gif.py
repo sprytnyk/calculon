@@ -24,7 +24,7 @@ from array import array
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QCoreApplication, QPointF, QRectF, QSettings, Qt
+from PySide6.QtCore import QCoreApplication, QPointF, QRectF, Qt
 from PySide6.QtGui import (
     QColor,
     QImage,
@@ -41,6 +41,7 @@ from PySide6.QtWidgets import (
 )
 
 from calculon import rates
+from calculon.settings import open_settings
 from calculon.storage import SheetStore
 from calculon.ui.main_window import WELCOME, MainWindow
 from calculon.ui.theme import GLACIER_DARK, GLACIER_LIGHT, Theme
@@ -156,9 +157,10 @@ SHOTS = [
 
 
 def isolate(home: Path) -> None:
-    """Point HOME and the XDG directories at home, before Qt looks them up."""
+    """Point HOME, APPDATA and the XDG directories at home, before Qt looks them up."""
     os.environ.update(
         HOME=str(home),
+        APPDATA=str(home / "AppData" / "Roaming"),
         XDG_CONFIG_HOME=str(home / ".config"),
         XDG_DATA_HOME=str(home / ".local" / "share"),
         XDG_CACHE_HOME=str(home / ".cache"),
@@ -175,7 +177,7 @@ def open_window(
     for rel, body in sheets.items():
         store.write(rel, body)
     store.pin(next(iter(sheets)))
-    qs = QSettings()
+    qs = open_settings()
     for key, value in {
         "sheets_dir": str(directory),
         "language": lang,

@@ -4,7 +4,6 @@ from PySide6.QtCore import (
     QFileSystemWatcher,
     QPoint,
     QRectF,
-    QSettings,
     QSize,
     Qt,
     QTimer,
@@ -35,6 +34,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..settings import open_settings
 from ..storage import TRASH_DIR, SheetStore
 from . import icons
 
@@ -127,7 +127,7 @@ class Sidebar(QWidget):
         super().__init__(parent)
         self.store = store
         self.tr_ = tr
-        saved = QSettings().value("sidebar/expanded", [])
+        saved = open_settings().value("sidebar/expanded", [])
         self.expanded: set[str] = {str(k) for k in (saved if isinstance(saved, list) else [saved])}
         self.expanded.discard("")
         self.current: tuple[str, str] | None = None  # (kind, key) of the open sheet
@@ -197,7 +197,7 @@ class Sidebar(QWidget):
     def set_store(self, store: SheetStore) -> None:
         self.store = store
         self.expanded.clear()
-        QSettings().setValue("sidebar/expanded", [])
+        open_settings().setValue("sidebar/expanded", [])
         self.rebuild()
 
     def _snapshot(self) -> tuple:
@@ -418,7 +418,7 @@ class Sidebar(QWidget):
         key = TRASH_DIR if kind == TRASH else key
         if kind in (DIRECTORY, TRASH):
             (self.expanded.add if expanded else self.expanded.discard)(key)
-            QSettings().setValue("sidebar/expanded", sorted(self.expanded))
+            open_settings().setValue("sidebar/expanded", sorted(self.expanded))
 
     def select(self, kind: str, key: str) -> None:
         """Highlight the open sheet. Only moves the selection; the list stays as it is."""

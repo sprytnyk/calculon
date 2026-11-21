@@ -187,8 +187,11 @@ You can use the URL of your own Frankfurter server.
 Choose Check Spelling in the View menu or turn it on in Settings. Calculon draws a wavy line
 under misspelled words. Right-click one for suggestions, Add to Dictionary or Ignore.
 It skips numbers, units, currencies and variable names, and checks only the words
-around them. Words you add go to `words.txt` in Calculon's app data directory, one per
-line. On Linux that's `~/.local/share/sprytnyk.dev/Calculon`.
+around them. Words you add go to `words.txt` in Calculon's settings directory, one per
+line: `~/.config/sprytnyk.dev/Calculon` on Linux,
+`~/Library/Application Support/sprytnyk.dev/Calculon` on macOS and
+`%AppData%\sprytnyk.dev\Calculon` on Windows. If you used an older Calculon, it keeps
+using your old files. On Linux, `words.txt` stays in `~/.local/share/sprytnyk.dev/Calculon`.
 
 Calculon uses Hunspell on Linux and macOS and the built-in spell checker on Windows.
 It uses your system's dictionaries for English and Ukrainian.

@@ -7,12 +7,12 @@ from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QStandardPaths, QTimer, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
 from . import net
 from .engine import RatesError, RateTable
-from .paths import FALLBACK_RATES
+from .paths import FALLBACK_RATES, data_dir
 
 log = logging.getLogger(__name__)
 
@@ -72,8 +72,7 @@ def fetch_rates(
 
 
 def cache_file() -> Path:
-    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppDataLocation)
-    return Path(base) / "rates-cache.json"
+    return data_dir() / "rates-cache.json"
 
 
 class RatesService(QObject):

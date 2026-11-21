@@ -11,7 +11,6 @@ from PySide6.QtCore import (
     QFileSystemWatcher,
     QLibraryInfo,
     QObject,
-    QSettings,
     Qt,
     QTimer,
     QTranslator,
@@ -54,7 +53,7 @@ from ..engine.format import MONTHS_EN, MONTHS_UK, format_time
 from ..help_sheet import read_help
 from ..paths import FONTS
 from ..rates import RatesService
-from ..settings import Settings, own_words_file, read_bool
+from ..settings import Settings, open_settings, own_words_file, read_bool
 from ..spelling import SpellChecker, probe
 from ..storage import EXT, SheetStore, StorageError
 from ..translations import LANGUAGES, tr
@@ -289,7 +288,7 @@ class MainWindow(QMainWindow):
         return store
 
     def _restore_window(self) -> None:
-        qs = QSettings()
+        qs = open_settings()
         geo = qs.value("window/geometry")
         if geo is not None:
             self.restoreGeometry(geo)
@@ -1193,7 +1192,7 @@ class MainWindow(QMainWindow):
         if not self.save_current():
             event.ignore()
             return
-        qs = QSettings()
+        qs = open_settings()
         qs.setValue("window/geometry", self.saveGeometry())
         qs.setValue("window/splitter", self.splitter.saveState())
         sidebar = self._sidebar_before_focus if self._focus else not self.sidebar.isHidden()
