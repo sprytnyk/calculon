@@ -240,8 +240,9 @@ make docs               # serve the website from docs/ at http://127.0.0.1:8000
 make gif                # remake the dark and light demos and screenshots (needs ffmpeg)
 ```
 
-Run `dist/calculon --self-test` to check the bundled unit data, time zones, help sheets,
-fonts and exchange rates. It also tests spell check if one is installed. On macOS, run
+Run `dist/calculon --self-test` to check a build. It works out every help sheet example,
+which covers unit data, time zones and exchange rates, then checks the fonts, icons and Qt
+translations. It also tests spell check if one is installed. On macOS, run
 `dist/Calculon.app/Contents/MacOS/calculon --self-test`.
 
 The calculator engine is in `calculon/engine/` and runs without Qt.
