@@ -245,13 +245,70 @@
             </div>
           </details>
           <details>
+            <summary>How do I install it?</summary>
+            <div>
+              <p>
+                Download the archive for your system from
+                <a href="https://github.com/sprytnyk/calculon/releases/latest">Releases</a> and unpack it. On Linux, run
+                <code>./calculon</code>. On Windows, run <code>calculon.exe</code>.
+              </p>
+              <p>
+                The Windows build isn't code-signed, so SmartScreen may ask you to confirm the
+                first start. Click More info, then Run anyway. On macOS, drag
+                <code>Calculon.app</code> into Applications. The app isn't notarized, so macOS
+                blocks it the first time. Try to open it, then go to System Settings &gt; Privacy
+                &amp; Security and click Open Anyway.
+              </p>
+            </div>
+          </details>
+          <details>
+            <summary>How do I update it?</summary>
+            <div>
+              <p>
+                Open About Calculon in the Help menu, or in the Calculon menu on macOS. It checks
+                GitHub and shows a link when a new version is out. Download it and replace the
+                old copy. Your sheets and settings stay where they are.
+              </p>
+            </div>
+          </details>
+          <details>
             <summary>Does it work with Soulver sheets?</summary>
             <div>
               <p>
                 Most sheets that use <a href="https://soulver.app">Soulver's</a> syntax work in
-                Calculon. Calculon uses its own <code>@from</code> and <code>@to</code> lines for
-                trip timelines. In Soulver, set the trip's start and end in the app's interface.
-                Calculon is an independent project.
+                Calculon, including line references from Soulver exports. Calculon uses its own
+                <code>@from</code> and <code>@to</code> lines for trip timelines. In Soulver, set
+                the trip's start and end in the app's interface. Calculon is an independent
+                project.
+              </p>
+            </div>
+          </details>
+          <details>
+            <summary>What does the total on the bottom bar add up?</summary>
+            <div>
+              <p>
+                It adds the results of the whole sheet, subtotals included. If the sheet has
+                money, it adds the money. Otherwise, it adds the results with the most common
+                kind of unit, or plain numbers if there are no units. If Calculon has no exchange
+                rate for a currency in the sheet, the bar shows which currency it is instead of
+                a total.
+              </p>
+            </div>
+          </details>
+          <details>
+            <summary>Can I write numbers as 1 234,56?</summary>
+            <div>
+              <p>
+                Yes. Choose <code>1,234.56</code>, <code>1.234,56</code>,
+                <code>1 234,56</code> or <code>1 234.56</code> on the Numbers page in Settings.
+                The format is used for what you type and for the answers, whatever the menu
+                language. The default is <code>1,234.56</code>, so <code>1,250</code> is one
+                thousand two hundred and fifty.
+              </p>
+              <p>
+                Put semicolons between list items and function arguments, as in
+                <code>round(1234; 2)</code>. The same page sets which currency a bare
+                <code>$</code> stands for. The default is US dollars.
               </p>
             </div>
           </details>
@@ -267,12 +324,30 @@
             </div>
           </details>
           <details>
+            <summary>Can I use my own exchange rates?</summary>
+            <div>
+              <p>
+                Yes. Enter the URL of your source on the Exchange Rates page in Settings, for
+                example your own Frankfurter server. It should return JSON like this.
+              </p>
+              <pre>{"base": "USD", "rates": {"EUR": 0.92, "UAH": 41.3}}</pre>
+              <p>
+                The <a href="https://github.com/sprytnyk/calculon#exchange-rates">README</a> lists what the reply needs.
+              </p>
+            </div>
+          </details>
+          <details>
             <summary>Where are my sheets?</summary>
             <div>
               <p>
                 Calculon suggests <code>~/Documents/Calculon</code> on first launch. You can
-                choose another directory in Settings. If a file changes on disk while you edit
-                it, choose Save a copy to save your edits in a new sheet in the same directory.
+                choose another directory in Settings. Each sheet is a plain <code>.txt</code>
+                file, and directories in the sidebar are directories on disk. Deleted sheets go
+                to <code>.trash</code> in the same place until you empty Trash.
+              </p>
+              <p>
+                If a file changes on disk while you edit it, choose Save a copy to save your edits
+                in a new sheet in the same directory.
               </p>
             </div>
           </details>
@@ -294,6 +369,7 @@
               <p>
                 Turn on Check Spelling in the View menu.
                 The shortcut is Cmd+Option+S on macOS or F7 on Windows and Linux.
+                The Spell Check page in Settings shows which dictionaries Calculon found.
               </p>
             </div>
           </details>
