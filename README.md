@@ -45,16 +45,21 @@ Most sheets that use [Soulver's syntax](https://documentation.soulver.app/) work
   <kbd>Ctrl</kbd>+<kbd>O</kbd> and <kbd>Ctrl</kbd>+<kbd>I</kbd> to go back and forward
   through the sheets you opened.
 
-Open the Help sheet in the sidebar for worked examples. Choose Keyboard Shortcuts in the
-Help menu to see the keys, including Vim shortcuts when the mode is on. In Vim mode, press
-`d` in the sidebar to move a sheet or directory to Trash. Select an item you moved to Trash
-and press `r` to restore it or `d` to delete it permanently. To empty Trash, select Trash
-itself and press `d`.
+> [!TIP]
+> Open the Help sheet in the sidebar for worked examples. Choose Keyboard Shortcuts in the
+> Help menu to see the keys, including Vim shortcuts when the mode is on.
 
 | Action | Windows / Linux | macOS |
 | --- | --- | --- |
 | Open the help sheet | <kbd>F1</kbd> | <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> |
 | Open keyboard shortcuts | <kbd>Shift</kbd>+<kbd>F1</kbd> | <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> |
+
+In Vim mode, press `d` in the sidebar to move a sheet or directory to Trash. Select an item
+you moved to Trash and press `r` to restore it or `d` to delete it permanently. To empty
+Trash, select Trash itself and press `d`.
+
+> [!CAUTION]
+> Deleting an item from Trash or emptying Trash can't be undone.
 
 ## Numbers, dates and times
 
@@ -76,9 +81,10 @@ Calculon shows times in 24-hour format by default. Choose 12-hour display in Set
 Hover over a red underline or a red `!` in the results pane to see the warning.
 In Vim Normal mode, press `K` to show or hide the warning at the cursor.
 
-Changing the number format recalculates the open sheet and keeps its text intact.
-In older sheets, you may need to update numbers, replace commas between arguments
-or list items with semicolons, and rewrite dates in formats such as `18/11/2026`.
+> [!IMPORTANT]
+> Changing the number format recalculates the open sheet and keeps its text intact.
+> In older sheets, you may need to update numbers, replace commas between arguments
+> or list items with semicolons, and rewrite dates in formats such as `18/11/2026`.
 
 ## Install
 
@@ -86,18 +92,24 @@ Download the archive for your system from [Releases](https://github.com/sprytnyk
 and unpack it. Calculon runs on Linux and Windows x64 and on Intel and Apple Silicon Macs.
 
 - **Linux.** Run `./calculon`.
-- **Windows.** Run `calculon.exe`. The build isn't code-signed, so SmartScreen may ask
-  you to confirm the first start. Click More info, then Run anyway.
+- **Windows.** Run `calculon.exe`.
 - **macOS.** Pick `macos_arm64` for Apple Silicon or `macos_x64` for Intel, and drag
-  `Calculon.app` into Applications. The app isn't notarized, so macOS blocks it the first
-  time. Try to open it, then go to System Settings, open Privacy & Security and click Open
-  Anyway. Or run `xattr -dr com.apple.quarantine /Applications/Calculon.app`.
+  `Calculon.app` into Applications.
 
-Use the signed checksums to verify the download.
+> [!WARNING]
+> The builds aren't code-signed or notarized, so the first start takes an extra step.
+>
+> - **Windows.** SmartScreen may ask you to confirm. Click More info, then Run anyway.
+> - **macOS.** macOS blocks the app. Try to open it, then go to System Settings, open
+>   Privacy & Security and click Open Anyway. Or run
+>   `xattr -dr com.apple.quarantine /Applications/Calculon.app`.
 
-```bash
-gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum --ignore-missing -c SHA256SUMS
-```
+> [!TIP]
+> Use the signed checksums to verify the download.
+>
+> ```bash
+> gpg --verify SHA256SUMS.asc SHA256SUMS && sha256sum --ignore-missing -c SHA256SUMS
+> ```
 
 ## Sheets
 
@@ -114,9 +126,10 @@ Calculon creates the directory if needed and writes a test file. If that fails, 
 you to choose another directory. On Windows, Controlled folder access can block the
 test. Allow Calculon in Windows Security or choose a directory outside Documents.
 
-If Calculon can't save, it keeps your edits open. Save them before closing the window,
-switching sheets or changing the sheets directory. On Windows, Calculon retries brief
-file-access errors before reporting them.
+> [!WARNING]
+> If Calculon can't save, it keeps your edits open. Save them before closing the window,
+> switching sheets or changing the sheets directory. On Windows, Calculon retries brief
+> file-access errors before reporting them.
 
 If the file changed on disk while you were editing, choose Save a copy. Calculon saves
 your edits to a new sheet in the same directory and opens it.
@@ -147,8 +160,11 @@ must return JSON in this format.
   redirect from `http://` to `https://` fails, so enter the final URL.
 - The reply must be 2 MB or less and arrive within 15 seconds.
 
-You can use the URL of your own Frankfurter server. Calculon goes online to get rates.
-When you open About, it checks GitHub for a new version.
+You can use the URL of your own Frankfurter server.
+
+> [!NOTE]
+> Calculon goes online to get rates. When you open About, it checks GitHub for a new
+> version.
 
 ## Spell check
 
@@ -187,8 +203,9 @@ for each language added in Settings > Time & language > Language & region. Most 
 have English already. Add Ukrainian there if you write in it. Words you add in Calculon
 go to its own `words.txt`.
 
-The Spell Check page in Settings and `calculon --self-test` show which dictionaries
-Calculon found and how to install any that are missing.
+> [!TIP]
+> The Spell Check page in Settings and `calculon --self-test` show which dictionaries
+> Calculon found and how to install any that are missing.
 
 ## Develop
 
@@ -235,6 +252,8 @@ Calculon's code uses the MIT license. Fira Code uses the SIL Open Font License i
 `assets/fonts/OFL.txt`. The menu and sidebar use [Phosphor Icons](https://phosphoricons.com)
 under the MIT license in `assets/icons/LICENSE.txt`.
 
-The app icon uses the *Futurama Calculon* vector logo from seeklogo.com. It comes with
-no license grant. See `assets/ICON-LICENSE.txt` for the credit to Matt Groening and Comedy
-Central. For anything beyond personal use, use the MIT-licensed robot in `assets/robot-icon.svg`.
+> [!IMPORTANT]
+> The app icon uses the *Futurama Calculon* vector logo from seeklogo.com. It comes with
+> no license grant. See `assets/ICON-LICENSE.txt` for the credit to Matt Groening and Comedy
+> Central. For anything beyond personal use, use the MIT-licensed robot in
+> `assets/robot-icon.svg`.
