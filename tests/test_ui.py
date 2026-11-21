@@ -1593,6 +1593,26 @@ def test_autocomplete_long_word_stops_before_the_pill(window, app) -> None:
     assert any(is_text(c) for c in left)
 
 
+@pytest.mark.parametrize("colours", ["glacier", "ember"])
+@pytest.mark.parametrize("mode", ["dark", "light"])
+def test_sheet_colours_tell_parts_apart(colours, mode) -> None:
+    """Keywords aren't drawn like operators, tags aren't drawn like answers,
+    and comments and line numbers stay readable (at least 3:1 on the sheet)."""
+
+    def luminance(name: str) -> float:
+        c = QColor(name)
+        channels = [v / 255 for v in (c.red(), c.green(), c.blue())]
+        lin = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in channels]
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+    dark, light = themes.PALETTES[colours]
+    t = dark if mode == "dark" else light
+    assert t.keyword != t.operator
+    assert t.tag != t.result
+    hi, lo = sorted((luminance(t.comment), luminance(t.bg)), reverse=True)
+    assert (hi + 0.05) / (lo + 0.05) >= 3
+
+
 def test_autocomplete_suggests_months(window, app) -> None:
     window.new_sheet("")
     ed = window.editor

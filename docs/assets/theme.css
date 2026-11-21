@@ -17,10 +17,10 @@
   --variable: #7c3aed;
   --keyword: #475569;
   --operator: #64748b;
-  --comment: #94a3b8;
+  --comment: #7b8ca3;
   --heading: #0f172a;
   --label: #334155;
-  --tag: #047857;
+  --tag: #0e7490;
   --misspelled: #856000;
   --invalid-number: #e11d48;
   --error: #e11d48;
@@ -55,12 +55,12 @@
     --number: #fbbf24;
     --unit: #93c5fd;
     --variable: #a78bfa;
-    --keyword: #94a3b8;
-    --operator: #94a3b8;
+    --keyword: #a5b4cf;
+    --operator: #7d8ba3;
     --comment: #64748b;
     --heading: #ffffff;
     --label: #cbd5e1;
-    --tag: #34d399;
+    --tag: #22d3ee;
     --misspelled: #f5d76e;
     --invalid-number: #fb7185;
     --error: #fb7185;
