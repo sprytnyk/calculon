@@ -30,6 +30,7 @@ from PySide6.QtGui import (
     QKeySequence,
     QMouseEvent,
     QPainter,
+    QPen,
     QStandardItem,
     QStandardItemModel,
     QSyntaxHighlighter,
@@ -556,57 +557,94 @@ class SheetScrollBar(QScrollBar):
 
 
 class CompletionDelegate(QStyledItemDelegate):
-    """A completion row: the word, with the typed part in the accent colour, and its kind."""
+    """A completion row: the word, with the typed part in bold accent, and its kind as a pill."""
+
+    BADGE_PAD = 7  # space between a kind's name and the edge of its pill
 
     def __init__(self, editor: SheetEdit):
         super().__init__(editor)
         self.editor = editor
 
-    def _fonts(self) -> tuple[QFont, QFont]:
+    def _fonts(self) -> tuple[QFont, QFont, QFont]:
         font = QFont(self.editor.font())
+        typed = QFont(font)
+        typed.setWeight(QFont.Weight.DemiBold)
         small = QFont(font)
-        small.setPointSizeF(font.pointSizeF() * 0.8)
-        return font, small
+        small.setPointSizeF(font.pointSizeF() * 0.78)
+        return font, typed, small
 
-    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:  # noqa: N802
-        font, small = self._fonts()
-        word = QFontMetrics(font).horizontalAdvance(index.data() or "")
-        label = QFontMetrics(small).horizontalAdvance(self.editor.kind_label(index.data(KIND_ROLE)))
-        return QSize(word + label + 44, QFontMetrics(font).height() + 8)
-
-    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+    def kind_colour(self, kind: str | None) -> str:
+        """The colour the word has in a sheet, so the list and the text agree."""
         theme = self.editor.theme
-        font, small = self._fonts()
-        rect = option.rect.adjusted(4, 1, -4, -1)
-        painter.save()
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if option.state & QStyle.StateFlag.State_Selected:
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(QColor(theme.selection))
-            painter.drawRoundedRect(QRectF(rect), 5, 5)
-        text_rect = rect.adjusted(8, 0, -8, 0)
-        word = index.data() or ""
-        typed = len(self.editor.completion_prefix())
-        fm = QFontMetrics(font)
-        align = Qt.AlignmentFlag.AlignVCenter
-        painter.setFont(font)
-        painter.setPen(QColor(theme.accent))
-        painter.drawText(text_rect, align | Qt.AlignmentFlag.AlignLeft, word[:typed])
-        painter.setPen(QColor(theme.text))
-        rest = text_rect.adjusted(fm.horizontalAdvance(word[:typed]), 0, 0, 0)
-        painter.drawText(rest, align | Qt.AlignmentFlag.AlignLeft, word[typed:])
-        kind = index.data(KIND_ROLE)
-        painter.setFont(small)
-        colors = {
+        colours = {
             "variable": theme.variable,
             "function": theme.keyword,
             "currency": theme.unit,
             "unit": theme.unit,
+            "keyword": theme.keyword,
         }
-        painter.setPen(QColor(colors.get(kind or "", theme.muted)))
-        painter.drawText(
-            text_rect, align | Qt.AlignmentFlag.AlignRight, self.editor.kind_label(kind)
+        return colours.get(kind or "", theme.muted)
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:  # noqa: N802
+        font, typed, small = self._fonts()
+        word = QFontMetrics(typed).horizontalAdvance(index.data() or "")
+        label = QFontMetrics(small).horizontalAdvance(self.editor.kind_label(index.data(KIND_ROLE)))
+        return QSize(word + label + 2 * self.BADGE_PAD + 48, QFontMetrics(font).height() + 10)
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+        theme = self.editor.theme
+        font, bold, small = self._fonts()
+        rect = option.rect.adjusted(4, 1, -4, -1)
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if option.state & QStyle.StateFlag.State_Selected:
+            # as in the sidebar: the selection colour with a thin accent outline
+            ring = QColor(theme.accent)
+            ring.setAlpha(70)
+            painter.setPen(QPen(ring, 1))
+            painter.setBrush(QColor(theme.selection))
+            painter.drawRoundedRect(QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5), 6, 6)
+        text_rect = rect.adjusted(9, 0, -6, 0)
+        kind = index.data(KIND_ROLE)
+        label = self.editor.kind_label(kind)
+        small_fm = QFontMetrics(small)
+        badge_width = small_fm.horizontalAdvance(label) + 2 * self.BADGE_PAD if label else 0
+
+        # the word gets what the pill leaves, and is cut short with … if that isn't enough
+        word_rect = text_rect.adjusted(0, 0, -(badge_width + 10 if label else 0), 0)
+        word = index.data() or ""
+        typed = len(self.editor.completion_prefix())
+        align = Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+        head = QFontMetrics(bold).elidedText(
+            word[:typed], Qt.TextElideMode.ElideRight, max(0, word_rect.width())
         )
+        painter.setFont(bold)
+        painter.setPen(QColor(theme.accent))
+        painter.drawText(word_rect, align, head)
+        rest = word_rect.adjusted(QFontMetrics(bold).horizontalAdvance(head), 0, 0, 0)
+        if head == word[:typed] and rest.width() > 0:
+            tail = QFontMetrics(font).elidedText(
+                word[typed:], Qt.TextElideMode.ElideRight, rest.width()
+            )
+            painter.setFont(font)
+            painter.setPen(QColor(theme.text))
+            painter.drawText(rest, align, tail)
+
+        if label:
+            colour = QColor(self.kind_colour(kind))
+            width = badge_width
+            height = small_fm.height() + 2
+            badge = QRectF(
+                text_rect.right() - width, text_rect.center().y() - height / 2 + 0.5, width, height
+            )
+            fill = QColor(colour)
+            fill.setAlpha(36)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(fill)
+            painter.drawRoundedRect(badge, height / 2, height / 2)
+            painter.setFont(small)
+            painter.setPen(colour)
+            painter.drawText(badge, Qt.AlignmentFlag.AlignCenter, label)
         painter.restore()
 
 

@@ -26,6 +26,7 @@ from PySide6.QtGui import (
     QColor,
     QContextMenuEvent,
     QFont,
+    QFontMetrics,
     QGuiApplication,
     QHelpEvent,
     QImage,
@@ -33,6 +34,8 @@ from PySide6.QtGui import (
     QKeyEvent,
     QKeySequence,
     QPainter,
+    QStandardItem,
+    QStandardItemModel,
     QTextCharFormat,
     QTextCursor,
 )
@@ -46,6 +49,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QStyle,
     QStyleOptionFocusRect,
+    QStyleOptionViewItem,
     QToolTip,
     QWidget,
 )
@@ -1507,6 +1511,86 @@ def test_autocomplete_lists_variables_first_with_their_kind(window, app) -> None
     assert all(kind for _, kind in rows)
     assert ed.kind_label("unit") == "unit"
     ed._completer.popup().hide()
+
+
+def test_autocomplete_shows_the_kind_as_a_pill_in_its_sheet_colour(window, app) -> None:
+    ed = window.editor
+    delegate = ed._completer.popup().itemDelegate()
+    theme = ed.theme
+    assert delegate.kind_colour("variable") == theme.variable
+    assert delegate.kind_colour("unit") == theme.unit
+    assert delegate.kind_colour("function") == theme.keyword
+    assert delegate.kind_colour("keyword") == theme.keyword
+
+    model = QStandardItemModel()
+    item = QStandardItem("metres_walked")
+    item.setData("variable", KIND_ROLE)
+    model.appendRow(item)
+    index = model.index(0, 0)
+    option = QStyleOptionViewItem()
+    option.rect = QRect(QPoint(0, 0), delegate.sizeHint(option, index))
+    image = QImage(option.rect.size(), QImage.Format.Format_RGB32)
+    surface = QColor(theme.surface)
+    image.fill(surface)
+    painter = QPainter(image)
+    delegate.paint(painter, option, index)
+    painter.end()
+
+    # the pill: the variable colour, mostly see-through, over the list's background
+    def rgb(c: QColor) -> tuple[int, int, int]:
+        return c.red(), c.green(), c.blue()
+
+    alpha = 36 / 255
+    expected = [
+        round(a * (1 - alpha) + b * alpha)
+        for a, b in zip(rgb(surface), rgb(QColor(theme.variable)), strict=True)
+    ]
+    y = option.rect.height() // 2 + 4  # below the label's middle, inside the pill
+    right = [rgb(image.pixelColor(x, y)) for x in range(image.width() // 2, image.width())]
+    assert any(all(abs(c - e) <= 3 for c, e in zip(px, expected, strict=True)) for px in right)
+
+
+def test_autocomplete_long_word_stops_before_the_pill(window, app) -> None:
+    """In a row narrower than the word, the word is cut short instead of running under the pill."""
+    ed = window.editor
+    delegate = ed._completer.popup().itemDelegate()
+    theme = ed.theme
+    model = QStandardItemModel()
+    item = QStandardItem("w" * 80)
+    item.setData("variable", KIND_ROLE)
+    model.appendRow(item)
+    index = model.index(0, 0)
+    option = QStyleOptionViewItem()
+    option.rect = QRect(0, 0, 220, delegate.sizeHint(option, index).height())
+    image = QImage(option.rect.size(), QImage.Format.Format_RGB32)
+    image.fill(QColor(theme.surface))
+    painter = QPainter(image)
+    delegate.paint(painter, option, index)
+    painter.end()
+
+    _font, _bold, small = delegate._fonts()
+    pill = QFontMetrics(small).horizontalAdvance(ed.kind_label("variable"))
+    pill += 2 * delegate.BADGE_PAD
+    right = option.rect.right() - 4 - 6  # the row's inner edge, as paint() works it out
+    text = QColor(theme.text)
+
+    def is_text(c: QColor) -> bool:
+        return (
+            max(
+                abs(c.red() - text.red()),
+                abs(c.green() - text.green()),
+                abs(c.blue() - text.blue()),
+            )
+            < 40
+        )
+
+    under_pill = [
+        image.pixelColor(x, y) for x in range(right - pill, right) for y in range(image.height())
+    ]
+    assert not any(is_text(c) for c in under_pill)
+    # the word itself is drawn, up to just before the pill
+    left = [image.pixelColor(x, y) for x in range(20, 120) for y in range(image.height())]
+    assert any(is_text(c) for c in left)
 
 
 def test_autocomplete_suggests_months(window, app) -> None:
