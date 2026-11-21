@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 ![Made in Ukraine](https://img.shields.io/badge/made_in-Ukraine-ffd700.svg?labelColor=0057b7)
 [![Linux test coverage](https://codecov.io/gh/sprytnyk/calculon/branch/main/graph/badge.svg)](https://codecov.io/gh/sprytnyk/calculon)
+![AI Generated](https://img.shields.io/badge/AI-generated-orange)
 
 A notepad that calculates as you type. Write lines with money, units and dates, and see
 the answers beside each line. Try `$19 for breakfast + $22 for the Uber` to get `$41.00`.
