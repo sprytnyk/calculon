@@ -10,7 +10,17 @@ from PySide6.QtCore import (
     QTimer,
     Signal,
 )
-from PySide6.QtGui import QAction, QDropEvent, QFont, QIcon, QKeySequence, QPainter, QPalette
+from PySide6.QtGui import (
+    QAction,
+    QColor,
+    QDropEvent,
+    QFont,
+    QIcon,
+    QKeySequence,
+    QPainter,
+    QPalette,
+    QPen,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -68,11 +78,18 @@ class SheetTree(QTreeWidget):
             role = QPalette.ColorRole.Highlight if selected else QPalette.ColorRole.AlternateBase
             painter.save()
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(self.palette().color(role))
             rect = QRectF(option.rect).adjusted(2, 1, -2, -1)
             rect.setLeft(2)
-            painter.drawRoundedRect(rect, 6, 6)
+            if selected:
+                # a thin outline in the accent, as on the website's selected tab
+                ring = QColor(self.palette().color(QPalette.ColorRole.Link))
+                ring.setAlpha(70)
+                painter.setPen(QPen(ring, 1))
+                rect.adjust(0.5, 0.5, -0.5, -0.5)  # keep the 1px line on whole pixels
+            else:
+                painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(rect, 7, 7)
             painter.restore()
         super().drawRow(painter, option, index)
 

@@ -759,18 +759,18 @@ def test_colours_switch(window, app) -> None:
 
 
 @pytest.mark.parametrize(
-    ("colours", "mode", "accent", "selection", "on_accent"),
+    ("colours", "mode", "accent", "selection", "fill", "on_fill"),
     [
-        ("ember", "dark", "#f0a35e", "#45382e", "#1a1b20"),
-        ("ember", "light", "#c2410c", "#f6dcc3", "#ffffff"),
-        ("glacier", "dark", "#60a5fa", "#1c3767", "#0f172a"),
-        ("glacier", "light", "#2563eb", "#dbeafe", "#ffffff"),
+        ("ember", "dark", "#f0a35e", "#45382e", "#ec9550", "#1a1b20"),
+        ("ember", "light", "#c2410c", "#f6dcc3", "#9a3412", "#ffffff"),
+        ("glacier", "dark", "#60a5fa", "#1c3767", "#1d4ed8", "#ffffff"),
+        ("glacier", "light", "#2563eb", "#dbeafe", "#1d4ed8", "#ffffff"),
     ],
 )
 def test_each_theme_uses_its_accent(
-    window, app, colours, mode, accent, selection, on_accent
+    window, app, colours, mode, accent, selection, fill, on_fill
 ) -> None:
-    # links, selection, focus borders and primary buttons follow each theme's accent
+    # links, selection and focus borders follow each theme's accent; main buttons its fill
     window.set_colours(colours)
     window.set_theme(mode)
     palette = QApplication.palette()
@@ -779,8 +779,29 @@ def test_each_theme_uses_its_accent(
     sheet = app.styleSheet()
     assert f"QLineEdit#search:focus {{ border-color: {accent}; }}" in sheet
     assert f"QPushButton:focus {{ border-color: {accent}; }}" in sheet
-    assert f"QPushButton#primary {{ background: {accent}; border-color: {accent};" in sheet
-    assert f"color: {on_accent}; font-weight: 600;" in sheet
+    assert f"stop: 1 {fill});" in sheet
+    assert f"color: {on_fill}; font-weight: 600;" in sheet
+
+
+@pytest.mark.parametrize("colours", ["glacier", "ember"])
+def test_main_button_text_is_readable(window, app, colours) -> None:
+    """The main button's text reads at 4.5:1 or more on all of its gradient, at rest and on
+    hover, in both modes."""
+
+    def luminance(name: str) -> float:
+        c = QColor(name)
+        channels = [v / 255 for v in (c.red(), c.green(), c.blue())]
+        lin = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in channels]
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+    for mode in ("dark", "light"):
+        window.set_colours(colours)
+        window.set_theme(mode)
+        t = window.theme
+        for fill in (t.fill_top, t.fill, themes.lighter(t.fill)):
+            hi, lo = sorted((luminance(fill), luminance(t.on_fill)), reverse=True)
+            assert (hi + 0.05) / (lo + 0.05) >= 4.5, (colours, mode, fill)
+        assert f"stop: 0 {t.fill_top}, stop: 1 {themes.lighter(t.fill)});" in app.styleSheet()
 
 
 def test_dialog_button_has_no_extra_inner_focus_rectangle(window) -> None:

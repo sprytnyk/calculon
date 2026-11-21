@@ -108,7 +108,7 @@ class ShortcutsDialog(QDialog):
         # breathing room: a framed list with padded rows and header
         self.tree.setStyleSheet(
             """
-            QTreeWidget#shortcuts { border: 1px solid palette(mid); border-radius: 8px;
+            QTreeWidget#shortcuts { border: 1px solid palette(mid); border-radius: 12px;
                                     padding: 6px 4px; }
             QTreeWidget#shortcuts::item { padding: 4px 12px; }
             QTreeWidget#shortcuts QHeaderView::section {

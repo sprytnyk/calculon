@@ -48,9 +48,10 @@ def stylesheet(t: Theme) -> str:
     return f"""
     QDialog#settings {{ background: {t.sidebar}; }}
     QListWidget#nav {{ background: transparent; border: none; outline: 0; }}
-    QListWidget#nav::item {{ padding: 8px 10px; margin: 1px 0; border-radius: 7px;
-                             color: {t.text}; }}
-    QListWidget#nav::item:selected {{ background: {t.selection}; }}
+    QListWidget#nav::item {{ padding: 7px 9px; margin: 1px 0; border-radius: 8px;
+                             border: 1px solid transparent; color: {t.text}; }}
+    QListWidget#nav::item:selected {{ background: {t.selection};
+                                      border-color: {t.accent_alpha(70)}; }}
     QListWidget#nav::item:hover:!selected {{ background: {t.surface}; }}
     QWidget#page {{ background: {t.bg}; }}
     QScrollArea#pageScroll {{ background: {t.bg}; border: none;
@@ -58,7 +59,7 @@ def stylesheet(t: Theme) -> str:
     QLabel#pageTitle {{ color: {t.heading}; }}
     QLabel#cardTitle {{ color: {t.muted}; font-weight: 600; }}
     QFrame#card {{ background: {t.sidebar}; border: 1px solid {t.border};
-                   border-radius: 12px; }}
+                   border-top-color: {t.edge}; border-radius: 14px; }}
     QFrame#card QLabel {{ background: transparent; }}
     QFrame#card QLineEdit, QFrame#card QComboBox, QFrame#card QAbstractSpinBox {{
         border-color: {field_border}; border-radius: 8px; }}
@@ -69,10 +70,10 @@ def stylesheet(t: Theme) -> str:
     QFrame#card QComboBox QLineEdit, QFrame#card QAbstractSpinBox QLineEdit {{ border: none; }}
     QLabel#hint {{ color: {t.muted}; }}
     QLabel#code {{ background: {t.surface}; color: {t.text}; border: 1px solid {t.border};
-                   border-radius: 6px; padding: 8px 10px; }}
+                   border-radius: 8px; padding: 8px 10px; }}
     QLabel#testResult {{ color: {t.muted}; }}
     QLabel#ligatureSample {{ color: {t.operator}; background: {t.bg};
-        border: 1px solid {t.border}; border-radius: 6px; padding: 3px 10px; }}
+        border: 1px solid {t.border}; border-radius: 8px; padding: 3px 10px; }}
     QFrame#footer {{ background: {t.sidebar}; border-top: 1px solid {t.border}; }}
     """
 

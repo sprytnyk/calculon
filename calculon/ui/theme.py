@@ -45,6 +45,10 @@ class Theme:
     misspelled: str  # the wavy line under a misspelled word
     invalid_number: str  # the wavy line under invalid numeric input
     error: str  # text of error messages
+    fill_top: str  # main buttons: a gradient from fill_top down to fill; text on_fill
+    # must read at 4.5:1 on both ends, and on a hovered button's lighter fill
+    fill: str
+    on_fill: str  # text on main buttons
     icons: dict[str, str] = field(default_factory=dict, compare=False)  # menu and sidebar
 
     @property
@@ -52,9 +56,16 @@ class Theme:
         return self.name == "dark"
 
     @property
-    def on_accent(self) -> str:
-        """Text on the accent, as on primary buttons: page colour on dark, white on light."""
-        return self.bg if self.is_dark else "#ffffff"
+    def edge(self) -> str:
+        """Top border of buttons and cards: a little lighter in dark mode, as if lit from above."""
+        if not self.is_dark:
+            return self.border
+        return QColor(self.border).lighter(135).name()
+
+    def accent_alpha(self, alpha: int) -> str:
+        """The accent, see-through, for stylesheets: soft fills and outlines."""
+        c = QColor(self.accent)
+        return f"rgba({c.red()}, {c.green()}, {c.blue()}, {alpha})"
 
 
 # Ember: warm greys with orange highlights
@@ -96,6 +107,9 @@ DARK = Theme(
     misspelled="#f6d365",
     invalid_number="#ff6b6b",
     error="#ff6b6b",
+    fill_top="#f5b67d",
+    fill="#ec9550",
+    on_fill="#1a1b20",
     icons=ICONS_DARK,
 )
 
@@ -124,6 +138,9 @@ LIGHT = Theme(
     misspelled="#926600",
     invalid_number="#dc2626",
     error="#dc2626",
+    fill_top="#c74510",
+    fill="#9a3412",
+    on_fill="#ffffff",
     icons=ICONS_LIGHT,
 )
 
@@ -145,7 +162,7 @@ GLACIER_DARK = Theme(
     bg="#0f172a",
     sidebar="#1e293b",
     surface="#283548",
-    border="#334155",
+    border="#2a3548",
     text="#e2e8f0",
     muted="#94a3b8",
     accent="#60a5fa",
@@ -165,6 +182,9 @@ GLACIER_DARK = Theme(
     misspelled="#f5d76e",
     invalid_number="#fb7185",
     error="#fb7185",
+    fill_top="#2b6cf0",
+    fill="#1d4ed8",
+    on_fill="#ffffff",
     icons=GLACIER_ICONS_DARK,
 )
 
@@ -193,6 +213,9 @@ GLACIER_LIGHT = Theme(
     misspelled="#856000",
     invalid_number="#e11d48",
     error="#e11d48",
+    fill_top="#2b6cf0",
+    fill="#1d4ed8",
+    on_fill="#ffffff",
     icons=GLACIER_ICONS_LIGHT,
 )
 
@@ -290,10 +313,10 @@ def apply(app: QApplication, theme: Theme) -> None:
             background: transparent; color: {theme.text}; }}
         QTreeWidget:!focus::item:selected {{ color: {theme.text}; }}
         QLineEdit#search {{ background: {theme.bg}; border: 1px solid {theme.border};
-                            border-radius: 6px; padding: 4px 8px; }}
+                            border-radius: 8px; padding: 4px 8px; }}
         QLineEdit#search:focus {{ border-color: {theme.accent}; }}
         QPlainTextEdit {{ border: none; selection-background-color: {theme.selection}; }}
-        QToolButton#sidebarButton {{ border: none; padding: 4px 6px; border-radius: 4px;
+        QToolButton#sidebarButton {{ border: none; padding: 4px 6px; border-radius: 6px;
                                      color: {theme.muted}; }}
         QToolButton#sidebarButton:hover {{ background: {theme.surface}; color: {theme.text}; }}
         QWidget#conflictNotice {{ background: {theme.surface}; }}
@@ -301,12 +324,13 @@ def apply(app: QApplication, theme: Theme) -> None:
                          border-bottom: 1px solid {theme.border}; }}
         QWidget#findBar {{ background: {theme.sidebar}; border-top: 1px solid {theme.border}; }}
         QLabel#findCount {{ color: {theme.muted}; padding: 0 6px; }}
-        QToolButton#findButton {{ border: none; padding: 4px; border-radius: 5px; }}
+        QToolButton#findButton {{ border: none; padding: 4px; border-radius: 6px; }}
         QToolButton#findButton:hover {{ background: {theme.surface}; }}
         QListView#completer {{ background: {theme.surface}; border: 1px solid {theme.border};
-                               padding: 3px 0; outline: 0; }}
-        QMenu {{ background: {theme.surface}; border: 1px solid {theme.border}; padding: 4px; }}
-        QMenu::item {{ padding: 6px 28px 6px 8px; border-radius: 5px; }}
+                               border-top-color: {theme.edge}; padding: 4px 0; outline: 0; }}
+        QMenu {{ background: {theme.surface}; border: 1px solid {theme.border};
+                 border-top-color: {theme.edge}; padding: 5px; }}
+        QMenu::item {{ padding: 6px 28px 6px 8px; border-radius: 6px; }}
         QMenu::item:selected {{ background: {theme.selection}; }}
         QMenu::icon {{ padding-left: 6px; }}
         QMenu::indicator {{ width: 8px; height: 8px; margin-left: 8px; }}
@@ -314,17 +338,18 @@ def apply(app: QApplication, theme: Theme) -> None:
         QMenu::separator {{ height: 1px; background: {theme.border}; margin: 4px 8px; }}
         QMenuBar {{ background: {theme.sidebar}; border: none; padding: 2px 4px; }}
         QMenuBar::item {{ background: transparent; color: {theme.text}; padding: 4px 10px;
-                          margin: 1px 1px; border: none; border-radius: 6px; }}
+                          margin: 1px 1px; border: none; border-radius: 7px; }}
         QMenuBar::item:selected {{ background: {theme.surface}; }}
         QMenuBar::item:pressed {{ background: {theme.selection}; }}
         QToolTip {{ background: {theme.surface}; color: {theme.text};
                     border: 1px solid {theme.border}; padding: 3px 8px; }}
         QStatusBar QLabel#statusMessage {{
             background: {theme.surface}; color: {theme.text};
-            border: 1px solid {theme.border}; border-radius: 6px; padding: 3px 8px; }}
+            border: 1px solid {theme.border}; border-top-color: {theme.edge};
+            border-radius: 8px; padding: 3px 8px; }}
         QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px 1px; }}
         QScrollBar:horizontal {{ background: transparent; height: 10px; margin: 1px 2px; }}
-        QScrollBar::handle {{ background: {theme.border}; border-radius: 4px; }}
+        QScrollBar::handle {{ background: {theme.edge}; border-radius: 4px; }}
         QScrollBar::handle:hover, QScrollBar::handle:pressed {{ background: {theme.muted}; }}
         QScrollBar::handle:vertical {{ min-height: 28px; }}
         QScrollBar::handle:horizontal {{ min-width: 28px; }}
@@ -346,7 +371,7 @@ def controls_stylesheet(t: Theme) -> str:
     return f"""
     QLineEdit, QComboBox, QAbstractSpinBox {{
         background: {t.bg}; color: {t.text}; border: 1px solid {t.border};
-        border-radius: 6px; padding: 5px 10px; min-height: 22px;
+        border-radius: 8px; padding: 5px 10px; min-height: 22px;
         selection-background-color: {t.selection}; selection-color: {t.text}; }}
     QLineEdit:hover, QComboBox:hover, QAbstractSpinBox:hover {{ border-color: {t.muted}; }}
     QLineEdit:focus, QComboBox:focus, QComboBox:on, QAbstractSpinBox:focus {{
@@ -361,7 +386,7 @@ def controls_stylesheet(t: Theme) -> str:
     QComboBox::down-arrow:on {{ image: url("{up}"); }}
     QComboBox QAbstractItemView {{
         background: {t.surface}; color: {t.text}; border: 1px solid {t.border};
-        padding: 4px; outline: 0; }}
+        border-top-color: {t.edge}; padding: 4px; outline: 0; }}
     QComboBox QAbstractItemView::item {{ padding: 6px 10px; min-height: 22px;
         border-radius: 6px; }}
     QComboBox QAbstractItemView::item:selected,
@@ -369,22 +394,36 @@ def controls_stylesheet(t: Theme) -> str:
     QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {{
         subcontrol-origin: border; width: 24px; border: none; background: transparent; }}
     QAbstractSpinBox::up-button {{ subcontrol-position: top right;
-        border-top-right-radius: 6px; }}
+        border-top-right-radius: 8px; }}
     QAbstractSpinBox::down-button {{ subcontrol-position: bottom right;
-        border-bottom-right-radius: 6px; }}
+        border-bottom-right-radius: 8px; }}
     QAbstractSpinBox::up-button:hover, QAbstractSpinBox::down-button:hover {{
         background: {t.surface}; }}
     QAbstractSpinBox::up-arrow {{ image: url("{up}"); width: 10px; height: 10px; }}
     QAbstractSpinBox::down-arrow {{ image: url("{down}"); width: 10px; height: 10px; }}
     QPushButton {{ background: {t.surface}; color: {t.text}; border: 1px solid {t.border};
-        border-radius: 7px; padding: 7px 18px; min-width: 64px; }}
+        border-top-color: {t.edge}; border-radius: 9px; padding: 7px 18px; min-width: 64px; }}
     QPushButton:hover {{ border-color: {t.muted}; }}
     QPushButton:pressed {{ background: {t.selection}; }}
     QPushButton:focus {{ border-color: {t.accent}; }}
-    QPushButton#primary {{ background: {t.accent}; border-color: {t.accent};
-        color: {t.on_accent}; font-weight: 600; }}
-    QPushButton#primary:hover {{ border-color: {t.text}; }}
+    QPushButton#primary {{
+        background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                    stop: 0 {t.fill_top}, stop: 1 {t.fill});
+        border: 1px solid {t.fill}; border-top-color: {t.fill_top};
+        color: {t.on_fill}; font-weight: 600; }}
+    QPushButton#primary:hover {{
+        background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                    stop: 0 {t.fill_top}, stop: 1 {lighter(t.fill)});
+        border-color: {lighter(t.fill)}; border-top-color: {t.fill_top}; }}
+    QPushButton#primary:pressed {{ background: {t.fill}; border-color: {t.fill}; }}
     """
+
+
+def lighter(colour: str, amount: float = 0.1) -> str:
+    """The colour mixed with a little white, for hover. QColor.lighter() makes blue harsher."""
+    c = QColor(colour)
+    mix = [round(v + (255 - v) * amount) for v in (c.red(), c.green(), c.blue())]
+    return QColor(*mix).name()
 
 
 class _InputMargins(QObject):

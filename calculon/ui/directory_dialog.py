@@ -118,7 +118,7 @@ class DirectoryDialog(QDialog):
             stylesheet(GLACIER_DARK)
             + f"""
             QLabel#error {{ color: {GLACIER_DARK.error}; background: {GLACIER_DARK.surface};
-                border: 1px solid {GLACIER_DARK.error}; border-radius: 6px; padding: 8px 10px; }}
+                border: 1px solid {GLACIER_DARK.error}; border-radius: 8px; padding: 8px 10px; }}
             """
         )
 
