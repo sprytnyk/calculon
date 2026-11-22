@@ -64,19 +64,21 @@ Trash, select Trash itself and press `d`.
 
 ## Calculon, Soulver and Numi
 
-|            | Calculon               | Soulver 4                              | Numi                                    |
-| ---------- | ---------------------- | -------------------------------------- | --------------------------------------- |
-| Platforms  | Linux, Windows, macOS  | macOS, iPhone, iPad                    | macOS, Windows, Linux, command line     |
-| Price      | Free                   | $59 once, 60-day free trial            | Free with limits, paid licence once     |
-| Setapp     | No                     | Yes                                    | Yes                                     |
-| Licence    | MIT, open source       | Proprietary                            | Proprietary                             |
-| Languages  | English, Ukrainian     | 9                                      | 8, no Ukrainian                         |
-| Currencies | About 160, daily rates | 190, stocks with a paid data plan      | Yes                                     |
-| Sync       | Plain files, any tool  | iCloud                                 | iCloud with a paid licence              |
-| CLI        | No                     | Yes                                    | Yes, without dates or variables         |
+|            | Calculon                                | Soulver 4                             | Numi                                              |
+| ---------- | --------------------------------------- | ------------------------------------- | ------------------------------------------------- |
+| Platforms  | Linux, Windows, macOS                   | macOS, iPhone, iPad                   | macOS, Windows, Linux, command line               |
+| Price      | Free                                    | $59 once, 60-day free trial           | Free with limits, paid licence once               |
+| Setapp     | No                                      | Yes                                   | Yes                                               |
+| Licence    | MIT, open source                        | Proprietary                           | Proprietary                                       |
+| Languages  | English, Ukrainian, in sheets and menus | 9, in sheets too, mixed with English  | 8, docs show sheets in English only, no Ukrainian |
+| Variables  | Any letters, as in `оренда = 2400`      | Words and phrases, letters not stated | No spaces or special characters                   |
+| Currencies | About 160, daily rates                  | 190, stocks with a paid data plan     | Yes                                               |
+| Sync       | Plain files, any tool                   | iCloud                                | iCloud with a paid licence                        |
+| CLI        | No                                      | Yes                                   | Yes, without dates or variables                   |
 
-Prices and features are from [soulver.app](https://soulver.app) and
-[numi.app](https://numi.app) in November 2026.
+Prices and features are from [soulver.app](https://soulver.app), the
+[SoulverCore README](https://github.com/soulverteam/SoulverCore) and Numi's own site
+and docs in November 2026.
 
 ## Numbers, dates and times
 
