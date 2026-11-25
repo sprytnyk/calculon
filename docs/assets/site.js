@@ -18,6 +18,8 @@
       linux_short: "Linux",
       windows_short: "Windows",
       all: "All downloads",
+      toLight: "Switch to the light theme",
+      toDark: "Switch to the dark theme",
       version: (v, d) => `Version ${v} was released on ${d}. Calculon is free and open source under the MIT licence.`,
       date: { year: "numeric", month: "long", day: "numeric" },
     },
@@ -29,6 +31,8 @@
       linux_short: "Linux",
       windows_short: "Windows",
       all: "Усі завантаження",
+      toLight: "Увімкнути світлу тему",
+      toDark: "Увімкнути темну тему",
       version: (v, d) => `Версія ${v} вийшла ${d}. Calculon безкоштовний і має відкритий код за ліцензією MIT.`,
       date: { year: "numeric", month: "long", day: "numeric" },
     },
@@ -67,6 +71,36 @@
       // private mode: the choice just isn't kept
     }
   };
+
+  function themes() {
+    const site = document.documentElement;
+    const toggle = document.querySelector('[data-theme-toggle="site"]');
+    if (!toggle) return;
+    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+
+    function render() {
+      const theme = site.dataset.theme || (systemTheme.matches ? "dark" : "light");
+      const dark = theme === "dark";
+      const label = dark ? TEXT.toLight : TEXT.toDark;
+      toggle.dataset.nextTheme = dark ? "light" : "dark";
+      toggle.setAttribute("aria-label", label);
+      toggle.title = label;
+      toggle.hidden = false;
+    }
+
+    toggle.addEventListener("click", () => {
+      const theme = toggle.dataset.nextTheme;
+      site.dataset.theme = theme;
+      remember("calculon-site-theme", theme);
+      render();
+    });
+    if (systemTheme.addEventListener) {
+      systemTheme.addEventListener("change", render);
+    } else {
+      systemTheme.addListener?.(render);
+    }
+    render();
+  }
 
   // pieces of a line, each with its colour class, cut at the misspelled word
   function pieces(line, miss) {
@@ -450,4 +484,5 @@
   heroWindow();
   examples();
   downloads();
+  themes();
 })();

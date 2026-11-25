@@ -1,82 +1,58 @@
 /* Made by scripts/build_site.py from Calculon's Glacier theme. Don't edit by hand. */
 :root {
   color-scheme: light dark;
-  --bg: #f8fafc;
-  --sidebar: #f1f5f9;
-  --surface: #ffffff;
-  --border: #e2e8f0;
-  --text: #1e293b;
-  --muted: #64748b;
-  --accent: #2563eb;
-  --selection: #dbeafe;
-  --current-line: #f1f5f9;
-  --result: #047857;
-  --result-hover: #064e3b;
-  --number: #b45309;
-  --unit: #1d4ed8;
-  --variable: #7c3aed;
-  --keyword: #475569;
-  --operator: #64748b;
-  --comment: #7b8ca3;
-  --heading: #0f172a;
-  --label: #334155;
-  --tag: #0e7490;
-  --misspelled: #856000;
-  --invalid-number: #e11d48;
-  --error: #e11d48;
+  /* The active palette uses var() fallbacks. The other palette adds whitespace. */
+  --light-palette: initial;
+  --dark-palette: ;
+  --bg: var(--light-palette, #f8fafc) var(--dark-palette, #0f172a);
+  --sidebar: var(--light-palette, #f1f5f9) var(--dark-palette, #1e293b);
+  --surface: var(--light-palette, #ffffff) var(--dark-palette, #283548);
+  --border: var(--light-palette, #e2e8f0) var(--dark-palette, #2a3548);
+  --text: var(--light-palette, #1e293b) var(--dark-palette, #e2e8f0);
+  --muted: var(--light-palette, #64748b) var(--dark-palette, #94a3b8);
+  --accent: var(--light-palette, #2563eb) var(--dark-palette, #60a5fa);
+  --selection: var(--light-palette, #dbeafe) var(--dark-palette, #1c3767);
+  --current-line: var(--light-palette, #f1f5f9) var(--dark-palette, #162032);
+  --result: var(--light-palette, #047857) var(--dark-palette, #7dd3ae);
+  --result-hover: var(--light-palette, #064e3b) var(--dark-palette, #bbf0d6);
+  --number: var(--light-palette, #b45309) var(--dark-palette, #fbbf24);
+  --unit: var(--light-palette, #1d4ed8) var(--dark-palette, #93c5fd);
+  --variable: var(--light-palette, #7c3aed) var(--dark-palette, #a78bfa);
+  --keyword: var(--light-palette, #475569) var(--dark-palette, #a5b4cf);
+  --operator: var(--light-palette, #64748b) var(--dark-palette, #7d8ba3);
+  --comment: var(--light-palette, #7b8ca3) var(--dark-palette, #64748b);
+  --heading: var(--light-palette, #0f172a) var(--dark-palette, #ffffff);
+  --label: var(--light-palette, #334155) var(--dark-palette, #cbd5e1);
+  --tag: var(--light-palette, #0e7490) var(--dark-palette, #22d3ee);
+  --misspelled: var(--light-palette, #856000) var(--dark-palette, #f5d76e);
+  --invalid-number: var(--light-palette, #e11d48) var(--dark-palette, #fb7185);
+  --error: var(--light-palette, #e11d48) var(--dark-palette, #fb7185);
   --fill-top: #2b6cf0;
   --fill: #1d4ed8;
   --on-fill: #ffffff;
-  --icon-neutral: #64748b;
-  --icon-blue: #2563eb;
-  --icon-amber: #d97706;
-  --icon-violet: #7c3aed;
-  --icon-green: #059669;
-  --icon-teal: #0d9488;
-  --icon-cyan: #0891b2;
-  --icon-rose: #e11d48;
-  --icon-red: #dc2626;
-  --icon-yellow: #ca8a04;
-  --icon-indigo: #4f46e5;
+  --icon-neutral: var(--light-palette, #64748b) var(--dark-palette, #94a3b8);
+  --icon-blue: var(--light-palette, #2563eb) var(--dark-palette, #60a5fa);
+  --icon-amber: var(--light-palette, #d97706) var(--dark-palette, #fbbf24);
+  --icon-violet: var(--light-palette, #7c3aed) var(--dark-palette, #a78bfa);
+  --icon-green: var(--light-palette, #059669) var(--dark-palette, #34d399);
+  --icon-teal: var(--light-palette, #0d9488) var(--dark-palette, #2dd4bf);
+  --icon-cyan: var(--light-palette, #0891b2) var(--dark-palette, #22d3ee);
+  --icon-rose: var(--light-palette, #e11d48) var(--dark-palette, #fb7185);
+  --icon-red: var(--light-palette, #dc2626) var(--dark-palette, #f87171);
+  --icon-yellow: var(--light-palette, #ca8a04) var(--dark-palette, #facc15);
+  --icon-indigo: var(--light-palette, #4f46e5) var(--dark-palette, #818cf8);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --light-palette: ;
+  --dark-palette: initial;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f172a;
-    --sidebar: #1e293b;
-    --surface: #283548;
-    --border: #2a3548;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --accent: #60a5fa;
-    --selection: #1c3767;
-    --current-line: #162032;
-    --result: #7dd3ae;
-    --result-hover: #bbf0d6;
-    --number: #fbbf24;
-    --unit: #93c5fd;
-    --variable: #a78bfa;
-    --keyword: #a5b4cf;
-    --operator: #7d8ba3;
-    --comment: #64748b;
-    --heading: #ffffff;
-    --label: #cbd5e1;
-    --tag: #22d3ee;
-    --misspelled: #f5d76e;
-    --invalid-number: #fb7185;
-    --error: #fb7185;
-    --fill-top: #2b6cf0;
-    --fill: #1d4ed8;
-    --on-fill: #ffffff;
-    --icon-neutral: #94a3b8;
-    --icon-blue: #60a5fa;
-    --icon-amber: #fbbf24;
-    --icon-violet: #a78bfa;
-    --icon-green: #34d399;
-    --icon-teal: #2dd4bf;
-    --icon-cyan: #22d3ee;
-    --icon-rose: #fb7185;
-    --icon-red: #f87171;
-    --icon-yellow: #facc15;
-    --icon-indigo: #818cf8;
+  :root:not([data-theme]) {
+    --light-palette: ;
+    --dark-palette: initial;
   }
 }

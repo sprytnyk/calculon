@@ -12,7 +12,6 @@ tests/test_site.py fails when these files are out of date.
 
 import json
 import shutil
-import textwrap
 from dataclasses import fields
 from datetime import UTC, datetime
 from pathlib import Path
@@ -209,21 +208,50 @@ def icon_names() -> list[str]:
 
 
 def theme_css() -> str:
-    def block(theme: Theme) -> str:
-        names = [f.name for f in fields(theme) if f.name not in ("name", "icons")]
-        lines = [f"  --{n.replace('_', '-')}: {getattr(theme, n)};" for n in names]
-        lines += [f"  --icon-{k}: {v};" for k, v in theme.icons.items()]
-        return "\n".join(lines)
+    def colours(theme: Theme) -> dict[str, str]:
+        return {
+            **{
+                f.name.replace("_", "-"): getattr(theme, f.name)
+                for f in fields(theme)
+                if f.name not in ("name", "icons")
+            },
+            **{f"icon-{name}": value for name, value in theme.icons.items()},
+        }
 
-    dark = textwrap.indent(block(GLACIER_DARK), "  ")
-
-    return (
-        "/* Made by scripts/build_site.py from Calculon's Glacier theme. Don't edit by hand. */\n"
-        f":root {{\n  color-scheme: light dark;\n{block(GLACIER_LIGHT)}\n}}\n"
-        "@media (prefers-color-scheme: dark) {\n"
-        f"  :root {{\n{dark}\n  }}\n"
-        "}\n"
-    )
+    dark = colours(GLACIER_DARK)
+    lines = [
+        "/* Made by scripts/build_site.py from Calculon's Glacier theme. Don't edit by hand. */",
+        ":root {",
+        "  color-scheme: light dark;",
+        "  /* The active palette uses var() fallbacks. The other palette adds whitespace. */",
+        "  --light-palette: initial;",
+        "  --dark-palette: ;",
+    ]
+    for name, light_colour in colours(GLACIER_LIGHT).items():
+        dark_colour = dark[name]
+        value = light_colour
+        if light_colour != dark_colour:
+            value = f"var(--light-palette, {light_colour}) var(--dark-palette, {dark_colour})"
+        lines.append(f"  --{name}: {value};")
+    lines += [
+        "}",
+        ':root[data-theme="light"] {',
+        "  color-scheme: light;",
+        "}",
+        ':root[data-theme="dark"] {',
+        "  color-scheme: dark;",
+        "  --light-palette: ;",
+        "  --dark-palette: initial;",
+        "}",
+        "@media (prefers-color-scheme: dark) {",
+        "  :root:not([data-theme]) {",
+        "    --light-palette: ;",
+        "    --dark-palette: initial;",
+        "  }",
+        "}",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def build() -> dict[Path, str]:

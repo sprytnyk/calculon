@@ -24,50 +24,48 @@
   --page: 1120px;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 
-  /* the page around the app window, in Glacier's slate and blue */
-  --page-bg: #f8fafc;
-  --strong: #020617;
-  --glow: #2563eb1f;
-  --dots: #0f172a14;
-  --line: #0f172a14;
-  --line-strong: #0f172a24;
-  --card: #ffffffcc;
-  --solid: #ffffff;
-  --highlight: inset 0 1px 0 #ffffffe6;
-  --shadow: 0 1px 2px #0f172a0a, 0 12px 32px -16px #0f172a29;
-  --window-shadow: 0 2px 4px #0f172a0a, 0 32px 64px -24px #0f172a40;
-  --header: #f8fafcb3;
-  --segment: #0f172a0d;
-  --segment-on: #ffffff;
-  --soft: #2563eb14;
-  --soft-line: #2563eb2e;
-  --ring: #2563eb40;
-  --fill-glow: #2563eb73;
-  --link: #2563eb;
-  --title: linear-gradient(100deg, #020617 35%, #2563eb);
+  /* Keep the page palette available if the browser has an older theme.css. */
+  --light-palette: initial;
+  --dark-palette: ;
+
+  /* The page around the app window, in Glacier's slate and blue. */
+  --page-bg: var(--light-palette, #f8fafc) var(--dark-palette, #020617);
+  --strong: var(--light-palette, #020617) var(--dark-palette, #f8fafc);
+  --glow: var(--light-palette, #2563eb1f) var(--dark-palette, #3b82f62e);
+  --dots: var(--light-palette, #0f172a14) var(--dark-palette, #94a3b81a);
+  --line: var(--light-palette, #0f172a14) var(--dark-palette, #94a3b81f);
+  --line-strong: var(--light-palette, #0f172a24) var(--dark-palette, #94a3b838);
+  --card: var(--light-palette, #ffffffcc) var(--dark-palette, #0f172a99);
+  --solid: var(--light-palette, #ffffff) var(--dark-palette, #0f172a);
+  --highlight: inset 0 1px 0 var(--light-palette, #ffffffe6) var(--dark-palette, #ffffff0a);
+  --shadow:
+    var(--light-palette, 0 1px 2px #0f172a0a, 0 12px 32px -16px #0f172a29)
+    var(--dark-palette, 0 12px 40px -16px #000c);
+  --window-shadow:
+    var(--light-palette, 0 2px 4px #0f172a0a, 0 32px 64px -24px #0f172a40)
+    var(--dark-palette, 0 40px 80px -24px #000, 0 0 0 1px #94a3b80f);
+  --header: var(--light-palette, #f8fafcb3) var(--dark-palette, #020617a6);
+  --segment: var(--light-palette, #0f172a0d) var(--dark-palette, #1e293b99);
+  --segment-on: var(--light-palette, #ffffff) var(--dark-palette, #334155);
+  --soft: var(--light-palette, #2563eb14) var(--dark-palette, #3b82f61f);
+  --soft-line: var(--light-palette, #2563eb2e) var(--dark-palette, #60a5fa40);
+  --ring: var(--light-palette, #2563eb40) var(--dark-palette, #60a5fa59);
+  --fill-glow: var(--light-palette, #2563eb73) var(--dark-palette, #3b82f666);
+  --link: var(--light-palette, #2563eb) var(--dark-palette, #93c5fd);
+  --title: linear-gradient(100deg, var(--strong) 35%, var(--link));
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --light-palette: ;
+  --dark-palette: initial;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --page-bg: #020617;
-    --strong: #f8fafc;
-    --glow: #3b82f62e;
-    --dots: #94a3b81a;
-    --line: #94a3b81f;
-    --line-strong: #94a3b838;
-    --card: #0f172a99;
-    --solid: #0f172a;
-    --highlight: inset 0 1px 0 #ffffff0a;
-    --shadow: 0 12px 40px -16px #000c;
-    --window-shadow: 0 40px 80px -24px #000, 0 0 0 1px #94a3b80f;
-    --header: #020617a6;
-    --segment: #1e293b99;
-    --segment-on: #334155;
-    --soft: #3b82f61f;
-    --soft-line: #60a5fa40;
-    --ring: #60a5fa59;
-    --fill-glow: #3b82f666;
-    --link: #93c5fd;
-    --title: linear-gradient(100deg, #f8fafc 35%, #93c5fd);
+  :root:not([data-theme]) {
+    --light-palette: ;
+    --dark-palette: initial;
   }
 }
 
@@ -267,7 +265,38 @@ p {
   color: var(--strong);
   box-shadow: 0 1px 2px #0f172a1f, var(--highlight);
 }
-@media (max-width: 640px) {
+.theme-toggle:not([hidden]) {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--card);
+  box-shadow: var(--highlight);
+  color: var(--label);
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  background: var(--segment);
+  color: var(--strong);
+}
+.theme-toggle svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.theme-toggle[data-next-theme="dark"] .sun,
+.theme-toggle[data-next-theme="light"] .moon {
+  display: none;
+}
+@media (max-width: 720px) {
   .top .wrap {
     gap: 10px;
   }
@@ -275,16 +304,23 @@ p {
     display: none;
   }
 }
-/* the smallest phones: brand, GitHub and EN | УК still fit on one row */
+/* Allow a second row when the header controls run out of room. */
 @media (max-width: 400px) {
   .top .wrap {
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 60px;
+    height: auto;
+    padding: 6px;
   }
   .brand {
-    gap: 8px;
+    gap: 6px;
   }
   .top nav a {
-    padding: 5px 6px;
+    padding: 5px;
+  }
+  .langs > * {
+    padding-inline: 6px;
   }
 }
 
