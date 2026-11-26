@@ -7,20 +7,20 @@ Magnitudes stay Decimal; pint only provides conversion factors.
 
 from decimal import Decimal
 from functools import cache
+from typing import TYPE_CHECKING
 
-import pint
+if TYPE_CHECKING:
+    from pint import UnitRegistry
 
-UREG = pint.UnitRegistry(autoconvert_offset_to_baseunit=True)
-for _prefix in ("", "kilo", "mega", "giga", "tera"):
-    UREG.define(f"{_prefix}bit_per_second = {_prefix}bit / second")
-    UREG.define(f"{_prefix}byte_per_second = {_prefix}byte / second")
-UREG.define("night = day")
-# the average Gregorian year, as Soulver uses; pint's own is 365.25 days. Months follow it.
-UREG.define("year = 365.2425 * day = a = yr = julian_year")
-# pint's "decade" is a ratio (as in "decades of frequency") and can't be redefined,
-# so Calculon's "decade" goes to pint under another name
-UREG.define("decade_of_years = 10 * year")
 PINT_NAMES = {"decade": "decade_of_years"}
+
+
+@cache
+def _registry() -> UnitRegistry:
+    """Load the shared Pint registry on first use."""
+    from ._unit_registry import registry
+
+    return registry
 
 
 def _pint(atom: str) -> str:
@@ -432,7 +432,7 @@ def dimensionality(atom: str) -> str:
         return "[currency]"
     if is_custom(atom):
         return f"[{atom}]"
-    return str(UREG.Unit(_pint(atom)).dimensionality)
+    return str(_registry().Unit(_pint(atom)).dimensionality)
 
 
 def dims_of(units: Units) -> dict[str, int]:
@@ -445,7 +445,7 @@ def dims_of(units: Units) -> dict[str, int]:
         if is_custom(atom):
             out[f"[{atom}]"] = out.get(f"[{atom}]", 0) + power
             continue
-        for dim, p in UREG.Unit(_pint(atom)).dimensionality.items():
+        for dim, p in _registry().Unit(_pint(atom)).dimensionality.items():
             out[dim] = out.get(dim, 0) + int(p * power)
     return {k: v for k, v in out.items() if v}
 
@@ -457,7 +457,7 @@ def round_factor(f: float) -> Decimal:
 @cache
 def factor(src: str, dst: str) -> Decimal:
     """How many dst are in one src (both physical, same dimensionality)."""
-    return round_factor(UREG.Quantity(1, _pint(src)).to(_pint(dst)).magnitude)
+    return round_factor(_registry().Quantity(1, _pint(src)).to(_pint(dst)).magnitude)
 
 
 def physical_factor(src: Units, dst: Units) -> Decimal:
@@ -471,7 +471,7 @@ def physical_factor(src: Units, dst: Units) -> Decimal:
 
 @cache
 def _expr_factor(a: str, b: str) -> Decimal:
-    q = UREG.Quantity(1, a or "dimensionless")
+    q = _registry().Quantity(1, a or "dimensionless")
     return round_factor(q.to(b or "dimensionless").magnitude)
 
 
@@ -486,7 +486,7 @@ def _pint_expr(units: Units) -> str:
 
 
 def convert_temperature(value: Decimal, src: str, dst: str) -> Decimal:
-    q = UREG.Quantity(float(value), src).to(dst).magnitude
+    q = _registry().Quantity(float(value), src).to(dst).magnitude
     return round_factor(q)
 
 

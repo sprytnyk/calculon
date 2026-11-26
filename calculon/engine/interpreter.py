@@ -266,7 +266,6 @@ def classify(toks: list[Tok], ctx: Context, *, remember_units: bool = True) -> l
             max_var_words = 1 + max(
                 key.count(" ") for key in chain(ctx.variables, ctx.invalid_variables)
             )
-    tz = tz_table()
     i = 0
     while i < len(toks):
         t = toks[i]
@@ -293,6 +292,7 @@ def classify(toks: list[Tok], ctx: Context, *, remember_units: bool = True) -> l
         # cities after "in"/"to"/a time/"time"/"now"
         prev = items[-1] if items else None
         if prev and (prev.kind == "time" or prev.key in ("in", "to", "time", "now", "into")):
+            tz = tz_table()
             found = False
             for size in (3, 2, 1):
                 ws = toks[i : i + size]

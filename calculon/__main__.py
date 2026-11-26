@@ -1,27 +1,14 @@
 """Start Calculon."""
 
 import sys
-from datetime import datetime
-from pathlib import Path
 
 if __package__ in (None, ""):
+    from pathlib import Path
+
     # run as a plain script (PyInstaller does this): make the package importable
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from PySide6.QtCore import QByteArray, QCoreApplication, QLibraryInfo, QTranslator
-from PySide6.QtGui import QIcon
-from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QApplication
-
 from calculon import __version__
-from calculon.engine import Config, FormatOptions, RateTable, evaluate_sheet
-from calculon.engine.numbers import NUMBER_STYLES
-from calculon.help_sheet import read_help
-from calculon.paths import APP_ICON, FALLBACK_RATES, FONTS
-from calculon.spelling import SpellChecker, probe
-from calculon.ui.directory_dialog import choose_sheets_directory
-from calculon.ui.icons import NAMES, svg
-from calculon.ui.main_window import MainWindow
 
 
 def say(text: str) -> None:
@@ -32,6 +19,19 @@ def say(text: str) -> None:
 
 def self_test() -> int:
     """Check a build has everything it needs: unit data, time zones, help, rates."""
+    from datetime import datetime
+    from pathlib import Path
+
+    from PySide6.QtCore import QByteArray, QLibraryInfo, QTranslator
+    from PySide6.QtSvg import QSvgRenderer
+
+    from calculon.engine import Config, FormatOptions, RateTable, evaluate_sheet
+    from calculon.engine.numbers import NUMBER_STYLES
+    from calculon.help_sheet import read_help
+    from calculon.paths import FALLBACK_RATES, FONTS
+    from calculon.spelling import SpellChecker, probe
+    from calculon.ui.icons import NAMES, svg
+
     rates = RateTable.parse(FALLBACK_RATES.read_bytes())
     failed = []
     now = datetime.now().astimezone()
@@ -84,12 +84,14 @@ def self_test() -> int:
     return 1 if failed else 0
 
 
-def main() -> int:
-    if "--version" in sys.argv[1:]:
-        say(f"calculon {__version__}")
-        return 0
-    if "--self-test" in sys.argv[1:]:
-        return self_test()
+def _run_gui() -> int:
+    from PySide6.QtCore import QCoreApplication
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QApplication
+
+    from calculon.paths import APP_ICON
+    from calculon.ui.directory_dialog import choose_sheets_directory
+
     QCoreApplication.setOrganizationName("sprytnyk.dev")
     QCoreApplication.setOrganizationDomain("sprytnyk.dev")
     QCoreApplication.setApplicationName("Calculon")
@@ -101,10 +103,23 @@ def main() -> int:
     settings = choose_sheets_directory()
     if settings is None:
         return 0
+
+    from calculon.ui.main_window import MainWindow
+
     window = MainWindow(settings)
     window.setWindowIcon(icon)
     window.show()
     return app.exec()
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    if "--version" in args:
+        say(f"calculon {__version__}")
+        return 0
+    if "--self-test" in args:
+        return self_test()
+    return _run_gui()
 
 
 if __name__ == "__main__":
