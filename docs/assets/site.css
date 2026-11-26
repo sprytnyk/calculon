@@ -238,7 +238,7 @@ p {
   background: var(--segment);
   color: var(--strong);
 }
-/* EN | УК, as a pill switch */
+/* Language switch */
 .langs {
   display: flex;
   flex: none;
