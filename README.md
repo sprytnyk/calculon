@@ -62,23 +62,32 @@ Trash, select Trash itself and press `d`.
 > [!CAUTION]
 > Deleting an item from Trash or emptying Trash can't be undone.
 
-## Calculon, Soulver and Numi
+## Calculon, Soulver and Numara
 
-|            | Calculon                                | Soulver 4                             | Numi                                              |
-| ---------- | --------------------------------------- | ------------------------------------- | ------------------------------------------------- |
-| Platforms  | Linux, Windows, macOS                   | macOS, iPhone, iPad                   | macOS, Windows, Linux, command line               |
-| Price      | Free                                    | $59 once, 60-day free trial           | Free with limits, paid licence once               |
-| Setapp     | No                                      | Yes                                   | Yes                                               |
-| Licence    | MIT, open source                        | Proprietary                           | Proprietary                                       |
-| Languages  | English, Ukrainian, in sheets and menus | 9, in sheets too, mixed with English  | 8, docs show sheets in English only, no Ukrainian |
-| Variables  | Any letters, as in `оренда = 2400`      | Words and phrases, letters not stated | No spaces or special characters                   |
-| Currencies | About 160, daily rates                  | 190, stocks with a paid data plan     | Yes                                               |
-| Sync       | Plain files, any tool                   | iCloud                                | iCloud with a paid licence                        |
-| CLI        | No                                      | Yes                                   | Yes, without dates or variables                   |
+Numara uses Math.js with a smaller set of plain-English phrases. Some lines in a
+Calculon sheet need rewriting when pasted into Numara.
+
+|                       | Calculon                                     | Soulver 4                             | Numara                                             |
+| --------------------- | -------------------------------------------- | ------------------------------------- | -------------------------------------------------- |
+| Words in calculations | `$19 for breakfast + $22 for the Uber`       | Same syntax                           | Use a label, as in `Breakfast and Uber: $19 + $22` |
+| Named subtotals       | Type `housing =` on its own line             | Type `housing =` on a subtotal line   | Type `housing = subtotal`                          |
+| Trip planning         | Type `@from` and `@to` around your itinerary | Set trip dates in the app             | Date arithmetic                                    |
+| Function plots        | No                                           | No                                    | Interactive plots with SVG export                  |
+| Platforms             | Linux, Windows, macOS                        | macOS, iPhone, iPad                   | Linux, Windows, macOS, web                         |
+| Price                 | Free                                         | $59 once, 60-day free trial           | Free                                               |
+| Setapp                | No                                           | Yes                                   | No                                                 |
+| Licence               | MIT, open source                             | Proprietary                           | MIT, open source                                   |
+| Languages             | English, Ukrainian, in sheets and menus      | 9, in sheets too, mixed with English  | English in menus and calculation keywords          |
+| Variables             | Any letters, as in `оренда = 2400`           | Words and phrases, letters not stated | Unicode letters, as in `ücret = 2400`              |
+| Currencies            | About 160, daily rates                       | 190, stocks with a paid data plan     | Frankfurter rates, adjustable update interval      |
+| Sync                  | Plain files, any tool                        | iCloud                                | Local folder with `.num` files on desktop          |
+| CLI                   | No                                           | Yes                                   | No                                                 |
 
 Prices and features are from [soulver.app](https://soulver.app), the
-[SoulverCore README](https://github.com/soulverteam/SoulverCore) and Numi's own site
-and docs in November 2026.
+[Soulver docs](https://documentation.soulver.app/documentation/getting-started), the
+[SoulverCore README](https://github.com/soulverteam/SoulverCore), the
+[Numara repository](https://github.com/bornova/numara-calculator) and the
+[Numara feature guide](https://github.com/bornova/numara-calculator/wiki/Features) in November 2026.
 
 ## Numbers, dates and times
 
