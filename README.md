@@ -124,6 +124,8 @@ and unpack it. Calculon runs on Linux and Windows x64 and on Intel and Apple Sil
 - **macOS.** Pick `macos_arm64` for Apple Silicon or `macos_x64` for Intel, and drag
   `Calculon.app` into Applications.
 
+If the archive has an `_internal` directory, keep it beside the executable.
+
 > [!WARNING]
 > The builds aren't code-signed or notarized, so the first start takes an extra step.
 >
@@ -267,17 +269,18 @@ uv sync                 # install dependencies
 uvx pre-commit install  # ruff and file checks before each commit
 make run                # start the app
 make check              # ruff and pytest
-make build              # dist/calculon, or dist/Calculon.app on macOS (test version)
+make build              # build a test package in dist/
 make icons              # remake assets/icon.png, .ico and .icns from icon-source.png
 make site               # remake the website's example sheets and colours in docs/
 make docs               # serve the website from docs/ at http://127.0.0.1:8000
 make gif                # remake the dark and light demos and screenshots (needs ffmpeg)
 ```
 
-Run `dist/calculon --self-test` to check a build. It works out every help sheet example,
-which covers unit data, time zones and exchange rates, then checks the fonts, icons and Qt
-translations. It also tests spell check if one is installed. On macOS, run
-`dist/Calculon.app/Contents/MacOS/calculon --self-test`.
+To check a Linux build, run `dist/calculon/calculon --self-test`. On Windows, run
+`dist/calculon/calculon.exe --self-test`. On macOS, run
+`dist/Calculon.app/Contents/MacOS/calculon --self-test`. The self-test runs the help sheet
+examples to check unit data, time zones and exchange rates. It also checks the fonts,
+icons, Qt translations and any installed spell checker.
 
 The calculator engine is in `calculon/engine/` and runs without Qt.
 

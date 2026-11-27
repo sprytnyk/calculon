@@ -1,8 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 # Build with: uv run pyinstaller calculon.spec --clean --noconfirm
-# Linux and Windows get one file. macOS gets dist/Calculon.app, which shows its icon in
-# Finder and the Dock and opens without a Terminal window. CALCULON_TARGET_ARCH picks
-# x86_64 or arm64 there (default: the interpreter's).
+# Linux and Windows get dist/calculon/ with its dependencies already unpacked.
+# macOS gets dist/Calculon.app. CALCULON_TARGET_ARCH picks x86_64 or arm64 there
+# (default: the interpreter's).
 import os
 import re
 import sys
@@ -55,11 +55,10 @@ exe_options = dict(
     icon=icon_file,
 )
 
+exe = EXE(pyz, a.scripts, [], exclude_binaries=True, **exe_options)
+coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=not MACOS, name="calculon")
+
 if MACOS:
-    # PyInstaller warns against packing an .app into one file. It starts slower, and an
-    # .app is a directory anyway. Finder shows one Calculon.app either way.
-    exe = EXE(pyz, a.scripts, [], exclude_binaries=True, **exe_options)
-    coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="calculon")
     # macOS wants plain numbers here, so a test build's 0.0.0.dev0+... becomes 0.0.0
     version_file = Path("calculon/_version.py").read_text()
     version = re.search(r'"(\d+(?:\.\d+)*)', version_file).group(1)
@@ -74,5 +73,3 @@ if MACOS:
             "LSApplicationCategoryType": "public.app-category.productivity",
         },
     )
-else:
-    exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], runtime_tmpdir=None, **exe_options)
