@@ -29,11 +29,12 @@ from . import windows_spelling
 
 log = logging.getLogger(__name__)
 
-LANGUAGES = ("en", "uk")
-# dictionary file names to look for, best first; Windows calls them en-US and so on
-DICTIONARY_NAMES = {
-    "en": ("en_US", "en_GB", "en_CA", "en_AU", "en"),
-    "uk": ("uk_UA", "uk"),
+# Windows uses these tags directly. Hunspell filenames use underscores.
+ENGLISH_SPELLINGS = ("en-US", "en-GB", "en-CA", "en-AU", "en")
+AUTOMATIC_SPELLING = "auto"
+DICTIONARY_LOCALES = {
+    "en": ENGLISH_SPELLINGS,
+    "uk": ("uk-UA", "uk"),
 }
 LIBRARIES = {
     "linux": ("libhunspell-1.7.so.0", "libhunspell-1.7.so", "libhunspell.so"),
@@ -83,19 +84,18 @@ def dictionary_dirs() -> list[Path]:
     return dirs
 
 
-def find_dictionary(lang: str, dirs: Iterable[Path] | None = None) -> Path | None:
-    """The Hunspell .aff/.dic pair for `lang`, as a path without the extension."""
-    for directory in dictionary_dirs() if dirs is None else dirs:
-        for name in DICTIONARY_NAMES[lang]:
+def hunspell_dictionaries(locales: Iterable[str], dirs: Iterable[Path]) -> dict[str, str]:
+    """Find complete dictionary pairs, keeping the first location for each locale."""
+    names = {locale: locale.replace("-", "_") for locale in locales}
+    found: dict[str, str] = {}
+    for directory in dirs:
+        for locale, name in names.items():
+            if locale in found:
+                continue
             base = directory / name
             if base.with_suffix(".aff").is_file() and base.with_suffix(".dic").is_file():
-                return base
-    return None
-
-
-def windows_tags(lang: str) -> list[str]:
-    """The language tags Windows may know `lang` by, best first: en-US, en-GB, ..."""
-    return [name.replace("_", "-") for name in DICTIONARY_NAMES[lang]]
+                found[locale] = str(base)
+    return found
 
 
 _lib: ctypes.CDLL | None = None
@@ -146,8 +146,8 @@ class Status:
     """What this system has, found without loading any dictionary."""
 
     library: bool  # Hunspell, or Windows' spell checker on Windows
-    # what to load for each language found, either a Hunspell .aff/.dic pair as a path
-    # without the extension or a Windows language tag such as en-US
+    # Each locale maps to a Windows tag or a Hunspell path without the file extension.
+    # Keys are in discovery order.
     dictionaries: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -156,7 +156,24 @@ class Status:
 
     @property
     def missing(self) -> list[str]:
-        return [lang for lang in LANGUAGES if lang not in self.dictionaries]
+        selected = self.selected()
+        return [lang for lang in DICTIONARY_LOCALES if lang not in selected]
+
+    @property
+    def english(self) -> tuple[str, ...]:
+        return tuple(locale for locale in self.dictionaries if locale in ENGLISH_SPELLINGS)
+
+    def english_for(self, preferred: str) -> str | None:
+        english = self.english
+        return preferred if preferred in english else next(iter(english), None)
+
+    def selected(self, english: str = AUTOMATIC_SPELLING) -> dict[str, str]:
+        """Choose one source per language for checking and suggesting words."""
+        ukrainian = next(
+            (locale for locale in self.dictionaries if locale in DICTIONARY_LOCALES["uk"]), None
+        )
+        choices = {"en": self.english_for(english), "uk": ukrainian}
+        return {lang: self.dictionaries[locale] for lang, locale in choices.items() if locale}
 
     def install_command(self) -> str:
         """The apt command that adds what's missing; empty off Linux."""
@@ -168,18 +185,16 @@ class Status:
 
 
 def probe() -> Status:
+    locales = [locale for group in DICTIONARY_LOCALES.values() for locale in group]
     if platform_key() == "win32":
-        found: dict[str, str] = {}
         try:
-            for lang in LANGUAGES:
-                if tag := windows_spelling.first_supported(windows_tags(lang)):
-                    found[lang] = tag
+            tags = windows_spelling.supported_tags(locales)
         except OSError as exc:
             log.info("spell check: %s", exc)
             return Status(library=False)
-        return Status(library=True, dictionaries=found)
-    dicts = {lang: str(path) for lang in LANGUAGES if (path := find_dictionary(lang))}
-    return Status(library=load_library() is not None, dictionaries=dicts)
+        return Status(library=True, dictionaries={tag: tag for tag in tags})
+    dictionaries = hunspell_dictionaries(locales, dictionary_dirs())
+    return Status(library=load_library() is not None, dictionaries=dictionaries)
 
 
 class Dictionary(Protocol):
@@ -256,6 +271,7 @@ class SpellChecker:
     MAX_CACHE = 50_000
 
     def __init__(self, own_words: Path | None = None, extra: Iterable[str] = ()):
+        self.sources: dict[str, str] = {}
         self.dictionaries: dict[str, Dictionary] = {}
         self.own_words_file = own_words
         self.own: set[str] = set(EXTRA_WORDS)
@@ -271,11 +287,12 @@ class SpellChecker:
 
     @classmethod
     def load(
-        cls, status: Status, own_words: Path | None = None, extra: Iterable[str] = ()
+        cls, sources: dict[str, str], own_words: Path | None = None, extra: Iterable[str] = ()
     ) -> SpellChecker:
-        """Load every dictionary `status` found. Safe to run off the main thread."""
+        """Load the selected dictionaries. Safe to run off the main thread."""
         checker = cls(own_words, extra)
-        for lang, source in status.dictionaries.items():
+        checker.sources = sources
+        for lang, source in sources.items():
             try:
                 checker.dictionaries[lang] = open_dictionary(source)
             except OSError as exc:
@@ -284,7 +301,7 @@ class SpellChecker:
 
     @property
     def languages(self) -> list[str]:
-        return [lang for lang in LANGUAGES if lang in self.dictionaries]
+        return [lang for lang in DICTIONARY_LOCALES if lang in self.dictionaries]
 
     def check(self, word: str) -> bool:
         """True if the word is fine, or there's no dictionary for its language."""

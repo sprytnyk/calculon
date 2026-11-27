@@ -54,7 +54,7 @@ from ..help_sheet import read_help
 from ..paths import FONTS
 from ..rates import RatesService
 from ..settings import Settings, open_settings, own_words_file, read_bool
-from ..spelling import SpellChecker, probe
+from ..spelling import AUTOMATIC_SPELLING, SpellChecker, probe
 from ..storage import EXT, SheetStore, StorageError
 from ..translations import LANGUAGES, tr
 from . import icons
@@ -265,12 +265,14 @@ class MainWindow(QMainWindow):
         self.spell_status = probe()
         self._spell: SpellChecker | None = None
         self._spell_loading = False
+        self._missing_english_notice: tuple[str, str | None] | None = None
         self.spelling_loaded.connect(self._spelling_loaded)
 
         QGuiApplication.styleHints().colorSchemeChanged.connect(self._system_theme_changed)
         self.apply_settings()  # sets the theme first, then builds the menus with its icons
         self._restore_window()
         self._open_initial()
+        QTimer.singleShot(0, self, self._warn_missing_english_dictionary)
         QTimer.singleShot(0, self.rates, self.rates.refresh_if_stale)
 
     def t(self, key: str, **kw) -> str:
@@ -576,6 +578,13 @@ class MainWindow(QMainWindow):
         self.editor.set_engine(self.rates.table, s.engine_config(), s.format_options())
 
     def open_settings(self) -> None:
+        status = probe()
+        availability_changed = self.spell_status.available != status.available
+        self.spell_status = status
+        self._apply_spelling()
+        if availability_changed:
+            self.build_menus()
+        self._warn_missing_english_dictionary()
         dlg = SettingsDialog(self.settings, self.t, self)
         if dlg.exec() != SettingsDialog.DialogCode.Accepted:
             return
@@ -613,6 +622,7 @@ class MainWindow(QMainWindow):
             self._open_initial()
         elif help_changed and self.current[0] == HELP:
             self.open_help()
+        self._warn_missing_english_dictionary()
 
     def set_theme(self, key: str) -> None:
         self.settings.theme = key
@@ -701,24 +711,71 @@ class MainWindow(QMainWindow):
         self.settings.spell_check = not self.settings.spell_check
         self.settings.save()
         self._apply_spelling()
+        self._warn_missing_english_dictionary()
+
+    def _warn_missing_english_dictionary(self) -> None:
+        preferred = self.settings.spell_english
+        status = self.spell_status
+        active = status.english_for(preferred) if status.library else None
+        if preferred in (AUTOMATIC_SPELLING, active):
+            self._missing_english_notice = None
+            return
+        notice = (preferred, active)
+        if not self.settings.spell_check or notice == self._missing_english_notice:
+            return
+
+        self._missing_english_notice = notice
+        dictionary = self.t(f"spell_dict_{preferred}")
+        if active is None:
+            message = self.t("spell_english_notice_none", dictionary=dictionary)
+        else:
+            message = self.t(
+                "spell_english_notice_fallback",
+                dictionary=dictionary,
+                fallback=self.t(f"spell_dict_{active}"),
+            )
+        self._show_spelling_warning(message)
+
+    def _show_spelling_warning(self, message: str) -> None:
+        warning = QMessageBox(self)
+        warning.setOption(QMessageBox.Option.DontUseNativeDialog)
+        warning.setIcon(QMessageBox.Icon.Warning)
+        warning.setWindowTitle(self.t("tab_spelling"))
+        warning.setText(message)
+        warning.setStandardButtons(QMessageBox.StandardButton.Ok)
+
+        def center() -> None:
+            frame = warning.frameGeometry()
+            frame.moveCenter(self.frameGeometry().center())
+            bounds = self.screen().availableGeometry()
+            warning.move(
+                max(bounds.left(), min(frame.left(), bounds.right() - frame.width() + 1)),
+                max(bounds.top(), min(frame.top(), bounds.bottom() - frame.height() + 1)),
+            )
+
+        # Qt sizes the dialog when it opens.
+        QTimer.singleShot(0, warning, center)
+        warning.exec()
+        warning.deleteLater()
 
     def _apply_spelling(self) -> None:
         if not (self.settings.spell_check and self.spell_status.available):
             self.editor.set_spell_checker(None)
             return
-        if self._spell is not None:
+        sources = self.spell_status.selected(self.settings.spell_english)
+        if self._spell is not None and self._spell.sources == sources:
             self.editor.set_spell_checker(self._spell)
             return
+        self.editor.set_spell_checker(None)
         if self._spell_loading:
             return
-        # Hunspell takes ~0.2 s to load Ukrainian, so it loads off the main thread and the
-        # window opens straight away. Hunspell runs in C, so the UI keeps going meanwhile.
-        # Windows' spell checker opens later, on this thread, when it checks the first word.
+        # Load Hunspell in the background. Windows opens its checker on the UI thread
+        # when it checks the first word.
         self._spell_loading = True
-        status, own, vocabulary = self.spell_status, own_words_file(), self.editor.vocabulary
+        own, vocabulary = own_words_file(), self.editor.vocabulary
 
         def load() -> None:
-            checker = SpellChecker.load(status, own, vocabulary)
+            checker = SpellChecker.load(sources, own, vocabulary)
             try:
                 self.spelling_loaded.emit(checker)
             except RuntimeError:  # the window closed meanwhile
@@ -728,7 +785,16 @@ class MainWindow(QMainWindow):
 
     def _spelling_loaded(self, checker: SpellChecker) -> None:
         self._spell_loading = False
-        self._spell = checker
+        sources = self.spell_status.selected(self.settings.spell_english)
+        if checker.sources != sources:
+            checker.close()
+        else:
+            previous = self._spell
+            if previous is not None:
+                checker.ignored.update(previous.ignored)
+                checker.own.update(previous.own)
+                previous.close()
+            self._spell = checker
         self._apply_spelling()
 
     def _title(self) -> str:

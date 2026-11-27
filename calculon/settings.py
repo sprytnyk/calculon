@@ -9,6 +9,7 @@ from .engine import Config, FormatOptions
 from .engine.currency import KNOWN_CODES
 from .engine.numbers import DEFAULT_NUMBER_STYLE, NUMBER_STYLES
 from .paths import config_dir, data_dir, old_settings, uses_old_paths
+from .spelling import AUTOMATIC_SPELLING, ENGLISH_SPELLINGS
 from .translations import LANGUAGES
 from .ui.theme import PALETTES
 
@@ -58,6 +59,7 @@ class Settings:
     line_numbers: bool = True
     always_on_top: bool = False
     spell_check: bool = False  # needs the system's spell checker, see calculon/spelling.py
+    spell_english: str = AUTOMATIC_SPELLING
     vim_mode: bool = False
     results_width: int = 260
     last_sheet: str = ""
@@ -84,6 +86,7 @@ class Settings:
             "theme": ("dark", "light", "system"),
             "colours": tuple(PALETTES),
             "language": tuple(LANGUAGES),
+            "spell_english": (AUTOMATIC_SPELLING, *ENGLISH_SPELLINGS),
             "number_style": tuple(NUMBER_STYLES),
             "time_format": TIME_FORMATS,
             "dollar": tuple(KNOWN_CODES),

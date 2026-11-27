@@ -98,19 +98,20 @@ def _factory() -> Com:
     return Com(out.value)
 
 
-def first_supported(tags: Iterable[str]) -> str | None:
-    """The first language tag in `tags` that Windows can spell check, like en-US.
+def supported_tags(tags: Iterable[str]) -> list[str]:
+    """The language tags Windows can spell check, in the order requested.
 
     Raises OSError if this Windows has no spell checker at all.
     """
     factory = _factory()
     try:
+        supported = []
         for tag in tags:
             yes = c_int()
             hr = factory.call(FACTORY_IS_SUPPORTED, (c_wchar_p, POINTER(c_int)), tag, byref(yes))
             if hr == S_OK and yes.value:
-                return tag
-        return None
+                supported.append(tag)
+        return supported
     finally:
         factory.release()
 

@@ -931,8 +931,9 @@ def test_platform_help_shortcuts_and_spelling(
     window, app, monkeypatch: pytest.MonkeyPatch, platform, help_key, shortcuts_key, spelling_key
 ) -> None:
     monkeypatch.setattr(main_window, "sys", SimpleNamespace(platform=platform))
-    window.spell_status = Status(library=True, dictionaries={"en": "/x/en_US"})
+    window.spell_status = Status(library=True, dictionaries={"en-US": "/x/en_US"})
     window._spell = FakeSpell()
+    window._spell.sources = window.spell_status.selected()
     window.build_menus()
     keys = {
         "help_sheet": help_key,
@@ -2031,9 +2032,10 @@ def pretend_os(monkeypatch: pytest.MonkeyPatch, key: str) -> None:
 
 def test_spelling_toggle_and_settings(window, app, monkeypatch: pytest.MonkeyPatch) -> None:
     pretend_os(monkeypatch, "linux")
-    status = Status(library=True, dictionaries={"en": "/x/en_US"})
+    status = Status(library=True, dictionaries={"en-US": "/x/en_US"})
     window.spell_status = status
     window._spell = FakeSpell()
+    window._spell.sources = status.selected()
     window.build_menus()
     view = window.menuBar().actions()[2].menu()
     act = next(a for a in view.actions() if a.text() == "Check Spelling")
@@ -2052,6 +2054,123 @@ def test_spelling_toggle_and_settings(window, app, monkeypatch: pytest.MonkeyPat
     assert not dlg.result_settings().spell_check
     window._toggle_spelling()
     assert window.editor.spell is None
+
+
+@pytest.mark.parametrize(
+    ("status", "choices"),
+    [
+        pytest.param(
+            Status(library=True, dictionaries={"en-US": "/x/en_US"}),
+            ["Automatic (US English)", "US English", "UK English (unavailable)"],
+            id="fallback",
+        ),
+        pytest.param(
+            Status(library=False, dictionaries={"en-GB": "/x/en_GB", "en-US": "/x/en_US"}),
+            ["Automatic", "UK English (unavailable)"],
+            id="no-library",
+        ),
+    ],
+)
+def test_spelling_keeps_an_unavailable_english_preference(
+    app, monkeypatch, status: Status, choices: list[str]
+) -> None:
+    pretend_os(monkeypatch, "linux")
+    monkeypatch.setattr(settings_dialog, "probe", lambda: status)
+    dlg = SettingsDialog(Settings(spell_english="en-GB"), partial(tr, "en"))
+    try:
+        menu = dlg.spell_english
+        assert menu.isEnabled()
+        assert [menu.itemText(i) for i in range(menu.count())] == choices
+        assert menu.currentText() == "UK English (unavailable)"
+        assert ("Using US English." in dlg.spell_hint.text()) == status.library
+        assert dlg.result_settings().spell_english == "en-GB"
+        menu.setCurrentIndex(menu.findData("auto"))
+        assert menu.currentText() == choices[0]
+        assert dlg.result_settings().spell_english == "auto"
+    finally:
+        dlg.deleteLater()
+        QCoreApplication.sendPostedEvents(dlg, QEvent.Type.DeferredDelete)
+
+
+def test_missing_english_dictionary_warning_at_startup(
+    app, window_settings, open_window, monkeypatch
+) -> None:
+    window_settings.setValue("spell_english", "en-GB")
+    window_settings.setValue("spell_check", True)
+    status = Status(library=True, dictionaries={"en-US": "en-US"})
+    monkeypatch.setattr(main_window, "probe", lambda: status)
+    monkeypatch.setattr(spelling, "open_dictionary", lambda source: FakeSpell())
+    messages = []
+    monkeypatch.setattr(
+        main_window.MainWindow, "_show_spelling_warning", lambda self, text: messages.append(text)
+    )
+    monkeypatch.setattr(SettingsDialog, "exec", lambda dialog: SettingsDialog.DialogCode.Rejected)
+
+    window = open_window()
+    pump(app)
+    assert len(messages) == 1
+    assert '"UK English"' in messages[0]
+    assert "Calculon is using US English" in messages[0]
+    assert "Spell Check in Settings" in messages[0]
+    window.open_settings()
+    assert len(messages) == 1
+    assert Settings.load().spell_english == "en-GB"
+
+
+def test_missing_english_dictionary_warning_with_only_ukrainian(window, monkeypatch) -> None:
+    window.spell_status = Status(library=True, dictionaries={"uk-UA": "uk-UA"})
+    window.settings.spell_english = "en-GB"
+    messages = []
+    monkeypatch.setattr(window, "_show_spelling_warning", messages.append)
+
+    window._warn_missing_english_dictionary()
+    assert messages == []
+    window.settings.spell_check = True
+    window._warn_missing_english_dictionary()
+    assert len(messages) == 1
+    assert '"UK English"' in messages[0]
+    assert "English spell check is off" in messages[0]
+    assert "Spell Check in Settings" in messages[0]
+
+
+def test_spelling_can_reset_to_automatic_without_usable_dictionaries(
+    app, window_settings, open_window, monkeypatch
+) -> None:
+    window_settings.setValue("spell_english", "en-GB")
+    window_settings.setValue("spell_check", True)
+    monkeypatch.setattr(main_window, "probe", lambda: Status(library=True))
+    messages = []
+    monkeypatch.setattr(
+        main_window.MainWindow, "_show_spelling_warning", lambda self, text: messages.append(text)
+    )
+
+    def choose_automatic(dialog: SettingsDialog) -> SettingsDialog.DialogCode:
+        menu = dialog.spell_english
+        assert menu.isEnabled()
+        assert [menu.itemText(i) for i in range(menu.count())] == [
+            "Automatic",
+            "UK English (unavailable)",
+        ]
+        assert menu.currentData() == "en-GB"
+        menu.setCurrentIndex(menu.findData("auto"))
+        return SettingsDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(SettingsDialog, "exec", choose_automatic)
+    window = open_window()
+    pump(app)
+    assert len(messages) == 1
+    assert '"UK English"' in messages[0]
+    assert "English spell check is off" in messages[0]
+    assert "choose Automatic" in messages[0]
+    window.open_settings()
+    saved = Settings.load()
+    assert saved.spell_english == "auto" and saved.spell_check
+    assert window.close()
+
+    reopened = open_window()
+    pump(app)
+    assert reopened.settings.spell_english == "auto"
+    assert len(messages) == 1
 
 
 @pytest.mark.parametrize(
@@ -2124,7 +2243,7 @@ MAC_DICTS = (
         ),
         pytest.param(
             "darwin",
-            Status(library=True, dictionaries={"en": "/x/en_US"}),
+            Status(library=True, dictionaries={"en-US": "/x/en_US"}),
             "English, with the system's Hunspell dictionaries. "
             f"No dictionary for Ukrainian. {MAC_DICTS}",
             id="macos no ukrainian",
@@ -2137,14 +2256,14 @@ MAC_DICTS = (
         ),
         pytest.param(
             "win32",
-            Status(library=True, dictionaries={"en": "en-US"}),
+            Status(library=True, dictionaries={"en-US": "en-US"}),
             "English, with the Windows spell checker. No dictionary for Ukrainian. Add the "
             "language in Windows Settings, under Time & language > Language & region.",
             id="windows no ukrainian",
         ),
         pytest.param(
             "win32",
-            Status(library=True, dictionaries={"en": "en-US", "uk": "uk-UA"}),
+            Status(library=True, dictionaries={"en-US": "en-US", "uk-UA": "uk-UA"}),
             "English, Ukrainian, with the Windows spell checker.",
             id="windows",
         ),
@@ -2161,6 +2280,72 @@ def test_spell_hint(
 SYSTEM_SPELLING = probe()
 
 
+def wait_for_spelling(window: main_window.MainWindow, app: QApplication) -> SpellChecker:
+    deadline = time.monotonic() + 10
+    while window.editor.spell is None and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
+    assert window.editor.spell is not None
+    return window.editor.spell
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32"
+    or not SYSTEM_SPELLING.library
+    or not {"en-US", "en-GB"}.issubset(SYSTEM_SPELLING.english),
+    reason="needs both US and UK Hunspell dictionaries",
+)
+def test_selecting_uk_english_changes_spelling_in_the_open_sheet(window, app, monkeypatch) -> None:
+    installed = Status(
+        library=True,
+        dictionaries={
+            locale: SYSTEM_SPELLING.dictionaries[locale] for locale in ("en-US", "en-GB")
+        },
+    )
+    status = installed
+    monkeypatch.setattr(main_window, "probe", lambda: status)
+    window.spell_status = status
+    window.new_sheet("")
+    window.editor.setPlainText("// color colour\n")
+
+    window._toggle_spelling()
+    american = wait_for_spelling(window, app)
+    assert underlined(window.editor, 0) == ["colour"]
+    american.ignore("colur")
+
+    def select_british(dialog: SettingsDialog) -> SettingsDialog.DialogCode:
+        menu = dialog.spell_english
+        assert [menu.itemData(i) for i in range(menu.count())] == ["auto", "en-US", "en-GB"]
+        menu.setCurrentIndex(menu.findData("en-GB"))
+        return SettingsDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(SettingsDialog, "exec", select_british)
+    window.open_settings()
+    british = wait_for_spelling(window, app)
+
+    assert Settings.load().spell_english == "en-GB"
+    assert underlined(window.editor, 0) == ["color"]
+    assert "colour" in british.suggest("color")
+    assert british.check("colur")  # words ignored earlier in the session still pass
+
+    messages = []
+    monkeypatch.setattr(window, "_show_spelling_warning", messages.append)
+    monkeypatch.setattr(SettingsDialog, "exec", lambda dialog: SettingsDialog.DialogCode.Rejected)
+    status = Status(library=True, dictionaries={"en-US": installed.dictionaries["en-US"]})
+    window.open_settings()
+    wait_for_spelling(window, app)
+    assert underlined(window.editor, 0) == ["colour"]
+    assert len(messages) == 1
+    assert "Calculon is using US English" in messages[0]
+    assert Settings.load().spell_english == "en-GB"
+
+    status = installed
+    window.open_settings()
+    wait_for_spelling(window, app)
+    assert underlined(window.editor, 0) == ["color"]
+    assert len(messages) == 1
+
+
 @pytest.mark.skipif(not SYSTEM_SPELLING.available, reason="needs the system's Hunspell")
 def test_spelling_loads_real_dictionaries_in_background(
     window, app, monkeypatch: pytest.MonkeyPatch
@@ -2172,11 +2357,7 @@ def test_spelling_loads_real_dictionaries_in_background(
     window.new_sheet("")
     window.editor.setPlainText("Taxi to airprot\n")
     window._toggle_spelling()
-    deadline = time.monotonic() + 10
-    while window.editor.spell is None and time.monotonic() < deadline:
-        app.processEvents()
-        time.sleep(0.01)
-    assert window.editor.spell is not None
+    wait_for_spelling(window, app)
     pump(app)
     assert underlined(window.editor, 0) == ["airprot"]
 

@@ -188,6 +188,25 @@ T = {
     "font_size": "Розмір тексту:",
     "ligatures": "Лігатури шрифту",
     "spell_check": "Підкреслювати слова з помилками",
+    "spell_english": "Англійський правопис",
+    "spell_english_auto": "Автоматично",
+    "spell_english_auto_using": "Автоматично ({dictionary})",
+    "spell_english_unavailable": "{dictionary} (словник недоступний)",
+    "spell_english_using": 'Calculon використовує словник "{dictionary}".',
+    "spell_english_notice_fallback": (
+        'Вибраний словник "{dictionary}" недоступний. Calculon використовує "{fallback}". '
+        'Щоб змінити словник, відкрийте розділ "Правопис" у налаштуваннях.'
+    ),
+    "spell_english_notice_none": (
+        'Вибраний словник "{dictionary}" недоступний. Перевірку англійського правопису вимкнено. '
+        'У розділі "Правопис" у налаштуваннях можна вибрати "Автоматично" або дізнатися, '
+        "як встановити словник."
+    ),
+    "spell_dict_en-US": "Англійська (США)",
+    "spell_dict_en-GB": "Англійська (Велика Британія)",
+    "spell_dict_en-CA": "Англійська (Канада)",
+    "spell_dict_en-AU": "Англійська (Австралія)",
+    "spell_dict_en": "Англійська без уточнення регіону",
     "spell_lang_en": "англійська",
     "spell_lang_uk": "українська",
     "hint_spell_ok": "Мови: {languages}. Словники Hunspell із системи.",

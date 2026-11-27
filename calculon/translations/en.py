@@ -180,6 +180,24 @@ T = {
     "font_size": "Text size:",
     "ligatures": "Font ligatures",
     "spell_check": "Underline misspelled words",
+    "spell_english": "English spelling",
+    "spell_english_auto": "Automatic",
+    "spell_english_auto_using": "Automatic ({dictionary})",
+    "spell_english_unavailable": "{dictionary} (unavailable)",
+    "spell_english_using": "Using {dictionary}.",
+    "spell_english_notice_fallback": (
+        'Your "{dictionary}" dictionary is unavailable. Calculon is using {fallback}. '
+        "To change dictionaries, open Spell Check in Settings."
+    ),
+    "spell_english_notice_none": (
+        'Your "{dictionary}" dictionary is unavailable. English spell check is off. '
+        "Open Spell Check in Settings to choose Automatic or find setup instructions."
+    ),
+    "spell_dict_en-US": "US English",
+    "spell_dict_en-GB": "UK English",
+    "spell_dict_en-CA": "Canadian English",
+    "spell_dict_en-AU": "Australian English",
+    "spell_dict_en": "Generic English",
     "spell_lang_en": "English",
     "spell_lang_uk": "Ukrainian",
     "hint_spell_ok": "{languages}, with the system's Hunspell dictionaries.",

@@ -31,7 +31,7 @@ from ..engine.currency import KNOWN_CODES
 from ..engine.numbers import NUMBER_STYLES, number_sample
 from ..rates import fetch_rates
 from ..settings import TIME_FORMATS, Settings
-from ..spelling import Status, platform_key, probe
+from ..spelling import AUTOMATIC_SPELLING, Status, platform_key, probe
 from ..translations import LANGUAGES
 from . import icons
 from .theme import GLACIER_DARK, PALETTES, Theme
@@ -94,7 +94,7 @@ def spell_hint(status: Status, tr) -> str:
     parts = []
     if status.dictionaries:
         found = "hint_spell_ok_windows" if system == "win32" else "hint_spell_ok"
-        parts.append(tr(found, languages=names(status.dictionaries)))
+        parts.append(tr(found, languages=names(status.selected())))
     if status.missing:
         if system == "win32":
             parts.append(tr("hint_spell_windows_missing", languages=names(status.missing)))
@@ -304,11 +304,49 @@ class SettingsDialog(QDialog):
         self.spell_check.setChecked(s.spell_check and status.available)
         self.spell_check.setEnabled(status.available)
         card.add("", self.spell_check)
-        self.spell_hint = QLabel(spell_hint(status, self.t))
+
+        def dictionary_name(locale: str) -> str:
+            return self.t(f"spell_dict_{locale}")
+
+        english_menu = QComboBox()
+        self.spell_english = english_menu
+        automatic = self.t("spell_english_auto")
+        locales = status.english if status.library else ()
+        if status.library and (locale := status.english_for(AUTOMATIC_SPELLING)):
+            automatic = self.t("spell_english_auto_using", dictionary=dictionary_name(locale))
+        english_menu.addItem(automatic, AUTOMATIC_SPELLING)
+        for locale in locales:
+            english_menu.addItem(dictionary_name(locale), locale)
+        index = english_menu.findData(s.spell_english)
+        if index == -1:
+            unavailable = self.t(
+                "spell_english_unavailable", dictionary=dictionary_name(s.spell_english)
+            )
+            index = english_menu.count()
+            english_menu.addItem(unavailable, s.spell_english)
+        english_menu.setCurrentIndex(index)
+        english_menu.setEnabled(english_menu.count() > 1)
+        label = self.t("spell_english")
+        english_menu.setAccessibleName(label)
+        card.add(label, english_menu)
+
+        self.spell_hint = QLabel()
         self.spell_hint.setObjectName("hint")
         self.spell_hint.setWordWrap(True)
         self.spell_hint.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         card.add("", self.spell_hint)
+        system_hint = spell_hint(status, self.t)
+
+        def update_hint() -> None:
+            hint = system_hint
+            preferred = english_menu.currentData()
+            active = status.english_for(preferred) if status.library else None
+            if active and preferred not in (AUTOMATIC_SPELLING, active):
+                hint += " " + self.t("spell_english_using", dictionary=dictionary_name(active))
+            self.spell_hint.setText(hint)
+
+        english_menu.currentIndexChanged.connect(update_hint)
+        update_hint()
         return [("", card)]
 
     def _vim(self, s: Settings) -> list[tuple[str, QWidget]]:
@@ -429,6 +467,7 @@ class SettingsDialog(QDialog):
                 if self.spell_check.isEnabled()
                 else self.original.spell_check
             ),
+            spell_english=self.spell_english.currentData(),
             number_style=self.number_style.currentData(),
             time_format=self.time_format.currentData(),
             dollar=dollar if dollar in KNOWN_CODES else self.original.dollar,

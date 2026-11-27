@@ -187,7 +187,9 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> FakeWindows:
 
 def test_probe_asks_windows_for_each_language(fake: FakeWindows) -> None:
     # the fake has no en-US, so probe() takes the next English it knows
-    assert spelling.probe() == Status(library=True, dictionaries={"en": "en-GB", "uk": "uk-UA"})
+    assert spelling.probe() == Status(
+        library=True, dictionaries={"en-GB": "en-GB", "uk-UA": "uk-UA"}
+    )
     assert fake.opened == []  # asking which languages exist opens no checker
     assert fake.com_modes and set(fake.com_modes) == {windows_spelling.COINIT_APARTMENTTHREADED}
     assert fake.tidy(), (fake.alive, fake.mistakes)
@@ -199,8 +201,22 @@ def test_probe_without_windows_spell_checker(fake: FakeWindows) -> None:
     assert status == Status(library=False) and not status.available
 
 
+def test_windows_selects_a_supported_english_variant(fake: FakeWindows) -> None:
+    fake.LANGUAGES = ("en-AU", "en-GB", "en-US", "en", "uk-UA")
+    status = spelling.probe()
+    assert status.english == ("en-US", "en-GB", "en-AU", "en")
+    assert status.selected() == {"en": "en-US", "uk": "uk-UA"}
+    checker = SpellChecker.load(status.selected("en-GB"))
+    try:
+        assert checker.check("rent") and checker.check("оренда")
+        assert fake.opened == ["en-GB", "uk-UA"]
+    finally:
+        checker.close()
+    assert fake.tidy()
+
+
 def test_windows_checks_and_suggests(fake: FakeWindows) -> None:
-    checker = SpellChecker.load(spelling.probe())
+    checker = SpellChecker.load(spelling.probe().selected())
     assert checker.languages == ["en", "uk"]
     assert fake.opened == []  # each checker opens on first use, on the thread that checks
     assert checker.check("rent") and checker.check("оренда")
@@ -230,20 +246,15 @@ def test_windows_language_that_wont_open_passes_everything(
     assert fake.tidy()
 
 
-def test_windows_tags_follow_the_dictionary_names() -> None:
-    assert spelling.windows_tags("en")[:2] == ["en-US", "en-GB"]
-    assert spelling.windows_tags("uk") == ["uk-UA", "uk"]
-
-
 SYSTEM = spelling.probe() if sys.platform == "win32" else Status(library=False)
 on_windows = pytest.mark.skipif(
-    "en" not in SYSTEM.dictionaries, reason="needs Windows' spell checker with English"
+    "en" in SYSTEM.missing, reason="needs Windows' spell checker with English"
 )
 
 
 @pytest.fixture(scope="module")
 def real() -> Iterator[SpellChecker]:
-    checker = SpellChecker.load(SYSTEM)
+    checker = SpellChecker.load(SYSTEM.selected())
     yield checker
     checker.close()
 
@@ -259,7 +270,7 @@ def test_real_windows_english(real: SpellChecker) -> None:
 
 
 @on_windows
-@pytest.mark.skipif("uk" not in SYSTEM.dictionaries, reason="needs Ukrainian added in Windows")
+@pytest.mark.skipif("uk" in SYSTEM.missing, reason="needs Ukrainian added in Windows")
 def test_real_windows_ukrainian(real: SpellChecker) -> None:
     for good in ("оренда", "Оренда", "Львів", "ґанок", "п'ять", "пʼять", "п’ять"):
         assert real.check(good), good

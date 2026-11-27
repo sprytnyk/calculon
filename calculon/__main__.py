@@ -65,11 +65,14 @@ def self_test() -> int:
     # spell check uses the system's spell checker, so a missing one is news, not a failure
     spell = probe()
     if spell.available:
+        sources = spell.selected()
         # en_US for a Hunspell file, en-US for a Windows language
-        found = ", ".join(f"{lang} ({Path(src).name})" for lang, src in spell.dictionaries.items())
+        found = ", ".join(f"{lang} ({Path(src).name})" for lang, src in sources.items())
         say(f"spell check: {found}")
+        if spell.english:
+            say(f"English spelling options: {', '.join(spell.english)}")
         # a build carries its own libraries; make sure the system's spell checker still works
-        checker = SpellChecker.load(spell)
+        checker = SpellChecker.load(sources)
         samples = {"en": ("hotel", "hotell"), "uk": ("оренда", "оредна")}
         for lang in checker.languages:
             good, typo = samples[lang]

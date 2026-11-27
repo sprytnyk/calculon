@@ -83,23 +83,13 @@ def test_own_words_ignore_and_vocabulary(tmp_path: Path) -> None:
     assert "zzz" not in SpellChecker(file).own  # only until Calculon closes
 
 
-def test_find_dictionary_prefers_us_english(tmp_path: Path) -> None:
-    for name in ("en_GB", "en_US", "uk_UA"):
-        (tmp_path / f"{name}.aff").write_text("SET UTF-8\n")
-        (tmp_path / f"{name}.dic").write_text("0\n")
-    (tmp_path / "en_CA.aff").write_text("")  # no .dic: not a dictionary
-    assert spelling.find_dictionary("en", [tmp_path]) == tmp_path / "en_US"
-    assert spelling.find_dictionary("uk", [tmp_path]) == tmp_path / "uk_UA"
-    assert spelling.find_dictionary("uk", [tmp_path / "nowhere"]) is None
-
-
 def test_install_hint_names_what_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(spelling, "platform_key", lambda: "linux")
     nothing = Status(library=False)
     assert nothing.install_command() == (
         "sudo apt install libhunspell-1.7-0 hunspell-en-us hunspell-uk"
     )
-    no_uk = Status(library=True, dictionaries={"en": "/x/en_US"})
+    no_uk = Status(library=True, dictionaries={"en-GB": "/x/en_GB"})
     assert no_uk.available and no_uk.missing == ["uk"]
     assert no_uk.install_command() == "sudo apt install hunspell-uk"
     monkeypatch.setattr(spelling, "platform_key", lambda: "darwin")
@@ -109,13 +99,37 @@ def test_install_hint_names_what_is_missing(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_probe_finds_hunspell_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    for name in ("en_US", "uk_UA"):
+    for name in ("en_GB", "en_US", "uk_UA"):
         (tmp_path / f"{name}.aff").write_text("SET UTF-8\n")
         (tmp_path / f"{name}.dic").write_text("0\n")
     monkeypatch.setattr(spelling, "platform_key", lambda: "linux")
     monkeypatch.setattr(spelling, "dictionary_dirs", lambda: [tmp_path])
     status = spelling.probe()
-    assert status.dictionaries == {"en": str(tmp_path / "en_US"), "uk": str(tmp_path / "uk_UA")}
+    assert status.english == ("en-US", "en-GB")
+    assert status.selected() == {"en": str(tmp_path / "en_US"), "uk": str(tmp_path / "uk_UA")}
+
+
+def test_hunspell_selects_an_installed_english_variant(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user = tmp_path / "user"
+    system = tmp_path / "system"
+    for directory, names in ((user, ("en_GB",)), (system, ("en_US", "en_GB", "uk_UA"))):
+        directory.mkdir()
+        for name in names:
+            (directory / f"{name}.aff").touch()
+            (directory / f"{name}.dic").touch()
+    (user / "en_CA.aff").touch()  # incomplete pair
+    monkeypatch.setattr(spelling, "platform_key", lambda: "linux")
+    monkeypatch.setattr(spelling, "dictionary_dirs", lambda: [user, system])
+    monkeypatch.setattr(spelling, "load_library", lambda: object())
+
+    status = spelling.probe()
+    assert status.english == ("en-GB", "en-US")
+    british = {"en": str(user / "en_GB"), "uk": str(system / "uk_UA")}
+    assert status.selected() == british  # Automatic keeps directory priority
+    assert status.selected("en-US") == british | {"en": str(system / "en_US")}
+    assert status.selected("en-CA") == british  # a missing preference uses Automatic
 
 
 SYSTEM = spelling.probe()
@@ -127,7 +141,7 @@ needs_hunspell = pytest.mark.skipif(
 
 @pytest.fixture(scope="module")
 def real() -> Iterator[SpellChecker]:
-    checker = SpellChecker.load(SYSTEM)
+    checker = SpellChecker.load(SYSTEM.selected())
     yield checker
     checker.close()
 
