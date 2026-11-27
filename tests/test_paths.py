@@ -23,11 +23,11 @@ def clean(app):
 
 def test_new_install_keeps_everything_in_config_dir(clean, home: Path) -> None:
     Settings(sheets_dir=str(home / "sheets")).save()
-    folder = paths.config_dir()
-    assert Path(open_settings().fileName()) == folder / "settings.ini"
-    assert (folder / "settings.ini").is_file()
-    assert own_words_file() == folder / "words.txt"
-    assert rates.cache_file() == folder / "rates-cache.json"
+    directory = paths.config_dir()
+    assert Path(open_settings().fileName()) == directory / "settings.ini"
+    assert (directory / "settings.ini").is_file()
+    assert own_words_file() == directory / "words.txt"
+    assert rates.cache_file() == directory / "rates-cache.json"
     assert not paths.uses_old_paths()
     assert Settings.load().sheets_dir == str(home / "sheets")
 

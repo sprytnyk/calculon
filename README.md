@@ -80,7 +80,7 @@ Calculon sheet need rewriting when pasted into Numara.
 | Languages             | English, Ukrainian, in sheets and menus      | 9, in sheets too, mixed with English  | English in menus and calculation keywords          |
 | Variables             | Any letters, as in `оренда = 2400`           | Words and phrases, letters not stated | Unicode letters, as in `ücret = 2400`              |
 | Currencies            | About 160, daily rates                       | 190, stocks with a paid data plan     | Frankfurter rates, adjustable update interval      |
-| Sync                  | Plain files, any tool                        | iCloud                                | Local folder with `.num` files on desktop          |
+| Sync                  | Plain files, any tool                        | iCloud                                | Local directory with `.num` files on desktop       |
 | CLI                   | No                                           | Yes                                   | No                                                 |
 
 Prices and features are from [soulver.app](https://soulver.app), the
