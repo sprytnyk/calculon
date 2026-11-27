@@ -7,7 +7,7 @@ import pytest
 from PySide6.QtCore import QEvent, QPoint, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QHelpEvent, QKeyEvent, qt_set_sequence_auto_mnemonic
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QStyle, QToolTip
+from PySide6.QtWidgets import QApplication, QToolTip
 from side_vim import Mode
 from side_vim.keys import control_modifier
 
@@ -144,7 +144,7 @@ def test_k_again_hides_the_message(vim, monkeypatch) -> None:
     assert hidden == [True]
 
 
-def test_cursor_hint_stays_until_toggled_or_moving(vim, monkeypatch) -> None:
+def test_cursor_hint_stays_until_toggled_or_moving(vim, app, monkeypatch) -> None:
     ed = vim.editor
     vim.activateWindow()
     assert QTest.qWaitForWindowActive(vim)
@@ -167,10 +167,8 @@ def test_cursor_hint_stays_until_toggled_or_moving(vim, monkeypatch) -> None:
     monkeypatch.setattr(QToolTip, "hideText", hide)
     monkeypatch.setattr(QToolTip, "text", lambda: tooltip)
     monkeypatch.setattr(QToolTip, "isVisible", lambda: bool(tooltip))
-    delay = ed.style().styleHint(QStyle.StyleHint.SH_ToolTip_WakeUpDelay)
-
     QTest.keyClicks(ed, "lj")
-    QTest.qWait(delay + 100)
+    pump(app)
     assert tooltip == ""
 
     hint = "Use 1,234.56. Group digits in threes or leave them ungrouped."
@@ -187,7 +185,7 @@ def test_cursor_hint_stays_until_toggled_or_moving(vim, monkeypatch) -> None:
         QTest.keyClicks(ed, back)
 
 
-def test_cursor_motion_keeps_the_results_hover_tooltip(vim, app) -> None:
+def test_cursor_motion_keeps_the_results_hover_tooltip(vim, app, monkeypatch) -> None:
     ed, results = vim.editor, vim.editor.results
     QTest.keyClicks(ed, "K")
     assert QToolTip.text() == "$900.00"
@@ -198,9 +196,13 @@ def test_cursor_motion_keeps_the_results_hover_tooltip(vim, app) -> None:
         assert results.toolTip() == "$900.00"
         hover = QHelpEvent(QEvent.Type.ToolTip, pos, results.mapToGlobal(pos))
         QApplication.sendEvent(results, hover)
-        ed.moveCursor(ed.textCursor().MoveOperation.Down)
-        QTest.qWait(400)
-        assert QToolTip.isVisible() and QToolTip.text() == "$900.00"
+        hide_requests = []
+        with monkeypatch.context() as observe:
+            observe.setattr(QToolTip, "hideText", lambda: hide_requests.append(True))
+            ed.moveCursor(ed.textCursor().MoveOperation.Down)
+            pump(app)
+            assert hide_requests == []
+            assert QToolTip.isVisible() and QToolTip.text() == "$900.00"
     finally:
         QToolTip.hideText()
         pump(app)
