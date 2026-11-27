@@ -208,11 +208,23 @@ using your old files. On Linux, `words.txt` stays in `~/.local/share/sprytnyk.de
 Calculon uses Hunspell on Linux and macOS and the built-in spell checker on Windows.
 It uses your system's dictionaries for English and Ukrainian.
 
+In Settings, open **Spell Check** and choose an **English spelling** dictionary
+for all your sheets. Calculon looks for US, UK, Canadian, Australian and generic
+English dictionaries. **Automatic** uses the first match. Windows tries them in
+that order. Hunspell does the same in each directory, starting with `$DICPATH`.
+
+If spell check is on and your saved dictionary is missing, Calculon tells you which
+dictionary it uses instead or says that English spell check is off. Calculon keeps
+your choice and uses it again when the dictionary returns.
+
 **Linux.** On Debian and Ubuntu:
 
 ```bash
 sudo apt install libhunspell-1.7-0 hunspell-en-us hunspell-uk
 ```
+
+Use `hunspell-en-gb` for UK English, `hunspell-en-ca` for Canadian English or
+`hunspell-en-au` for Australian English. Install several to switch between them in Settings.
 
 Other Linux distributions may use different package names. Calculon looks for
 dictionaries in `/usr/share/hunspell`, `/usr/share/myspell`, `~/.local/share/hunspell`
@@ -229,13 +241,21 @@ curl -LO $base/en/en_US.aff -LO $base/en/en_US.dic
 curl -LO $base/uk_UA/uk_UA.aff -LO $base/uk_UA/uk_UA.dic
 ```
 
-**Windows.** Calculon uses the spell checker built into Windows. Windows has a dictionary
-for each language added in Settings > Time & language > Language & region. Most systems
-have English already. Add Ukrainian there if you write in it.
+For UK English, also in `~/Library/Spelling`:
+
+```bash
+curl -LO "$base/en/en_GB.aff" -LO "$base/en/en_GB.dic"
+```
+
+Use `en_CA` or `en_AU` in the download command for Canadian or Australian English.
+
+**Windows.** Open **Language & region** under **Time & language** in Windows Settings.
+Add the language and install **Basic typing**. Calculon lists the English variants
+that Windows can check.
 
 > [!TIP]
-> The Spell Check page in Settings and `calculon --self-test` show which dictionaries
-> Calculon found and how to install any that are missing.
+> Reopen Settings after installing dictionaries to see the available choices.
+> `calculon --self-test` also lists the English spelling options it finds.
 
 ## Develop
 
