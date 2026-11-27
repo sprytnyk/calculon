@@ -270,11 +270,14 @@ uvx pre-commit install  # ruff and file checks before each commit
 make run                # start the app
 make check              # ruff and pytest
 make build              # build a test package in dist/
+make clean              # remove build outputs and local caches
 make icons              # remake assets/icon.png, .ico and .icns from icon-source.png
 make site               # remake the website's example sheets and colours in docs/
 make docs               # serve the website from docs/ at http://127.0.0.1:8000
 make gif                # remake the dark and light demos and screenshots (needs ffmpeg)
 ```
+
+`make clean` deletes `build/` and `dist/`, including any release archives in `dist/`.
 
 To check a Linux build, run `dist/calculon/calculon --self-test`. On Windows, run
 `dist/calculon/calculon.exe --self-test`. On macOS, run

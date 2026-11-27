@@ -43,5 +43,6 @@ build:
 	uv run pyinstaller calculon.spec --clean --noconfirm
 
 clean:
-	rm -rf build dist calculon/_version.py
-	find . -type d -name "__pycache__" -not -path "./.venv/*" -exec rm -rf {} +
+	rm -rf build dist calculon/_version.py .pytest_cache .ruff_cache
+	find . \( -path "./.venv" -o -path "./venv" \) -prune \
+		-o -type d -name "__pycache__" -prune -exec rm -rf {} +
