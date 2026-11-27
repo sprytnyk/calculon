@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QEvent, QPoint, Qt, QTimer
-from PySide6.QtGui import QGuiApplication, QKeyEvent, qt_set_sequence_auto_mnemonic
+from PySide6.QtGui import QGuiApplication, QHelpEvent, QKeyEvent, qt_set_sequence_auto_mnemonic
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QToolTip
+from PySide6.QtWidgets import QApplication, QStyle, QToolTip
 from side_vim import Mode
 from side_vim.keys import control_modifier
 
@@ -142,6 +142,68 @@ def test_k_again_hides_the_message(vim, monkeypatch) -> None:
     QTest.keyClicks(ed, "KK")
     assert shown == ["Use 1,234.56. Group digits in threes or leave them ungrouped."]
     assert hidden == [True]
+
+
+def test_cursor_hint_stays_until_toggled_or_moving(vim, monkeypatch) -> None:
+    ed = vim.editor
+    vim.activateWindow()
+    assert QTest.qWaitForWindowActive(vim)
+    ed.setFocus()
+    ed.setPlainText("// before\n100 100 1\n// after")
+    ed.recalculate()
+    ed.moveCursor(ed.textCursor().MoveOperation.Start)
+
+    tooltip = ""
+
+    def show(_pos, text, *_args):
+        nonlocal tooltip
+        tooltip = text
+
+    def hide():
+        nonlocal tooltip
+        tooltip = ""
+
+    monkeypatch.setattr(QToolTip, "showText", show)
+    monkeypatch.setattr(QToolTip, "hideText", hide)
+    monkeypatch.setattr(QToolTip, "text", lambda: tooltip)
+    monkeypatch.setattr(QToolTip, "isVisible", lambda: bool(tooltip))
+    delay = ed.style().styleHint(QStyle.StyleHint.SH_ToolTip_WakeUpDelay)
+
+    QTest.keyClicks(ed, "lj")
+    QTest.qWait(delay + 100)
+    assert tooltip == ""
+
+    hint = "Use 1,234.56. Group digits in threes or leave them ungrouped."
+    QTest.keyClicks(ed, "K")
+    assert tooltip == hint
+    QTest.keyClicks(ed, "K")
+    assert tooltip == ""
+
+    for motion, back in (("h", "l"), ("l", "h"), ("j", "k"), ("k", "j")):
+        QTest.keyClicks(ed, "K")
+        assert tooltip == hint
+        QTest.keyClicks(ed, motion)
+        assert tooltip == ""
+        QTest.keyClicks(ed, back)
+
+
+def test_cursor_motion_keeps_the_results_hover_tooltip(vim, app) -> None:
+    ed, results = vim.editor, vim.editor.results
+    QTest.keyClicks(ed, "K")
+    assert QToolTip.text() == "$900.00"
+    try:
+        pos = QPoint(results.width() // 2, ed.cursorRect().center().y())
+        QTest.mouseMove(results, pos - QPoint(1, 0))
+        QTest.mouseMove(results, pos)
+        assert results.toolTip() == "$900.00"
+        hover = QHelpEvent(QEvent.Type.ToolTip, pos, results.mapToGlobal(pos))
+        QApplication.sendEvent(results, hover)
+        ed.moveCursor(ed.textCursor().MoveOperation.Down)
+        QTest.qWait(400)
+        assert QToolTip.isVisible() and QToolTip.text() == "$900.00"
+    finally:
+        QToolTip.hideText()
+        pump(app)
 
 
 def test_yank_uses_the_system_clipboard(vim) -> None:

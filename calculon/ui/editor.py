@@ -670,6 +670,7 @@ class SheetEdit(QPlainTextEdit):
         self._last_text: str | None = None
         self.vim = None  # side-vim's VimMode, made the first time vim mode is turned on
         self._vim_pending = ""
+        self._cursor_hint: tuple[int, str] | None = None
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.setVerticalScrollBar(SheetScrollBar(self))
         self.setTabChangesFocus(False)
@@ -740,6 +741,7 @@ class SheetEdit(QPlainTextEdit):
     def show_document(self, doc: QTextDocument) -> None:
         if doc is self.document():
             return
+        self._dismiss_cursor_hint()
         doc.setDefaultFont(self.font())  # the zoom may have changed while it was away
         self.highlighter.spans = []
         self.highlighter.typing = NO_WORD
@@ -798,6 +800,7 @@ class SheetEdit(QPlainTextEdit):
             self.vim.pending_changed.connect(self.vim_pending_changed)
             self.vim.pending_changed.connect(self._remember_vim_pending)
             self.installEventFilter(self)
+            self.results.installEventFilter(self)
         if self.vim.enabled != on:
             self.vim.set_enabled(on)
         if not on and self.results.hasFocus():
@@ -807,6 +810,8 @@ class SheetEdit(QPlainTextEdit):
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
         event_type = event.type()
+        if watched is self.results and event_type == QEvent.Type.ToolTip and self.results.toolTip():
+            self._cursor_hint = None
         if (
             watched is self
             and event_type in (QEvent.Type.ShortcutOverride, QEvent.Type.KeyPress)
@@ -824,25 +829,36 @@ class SheetEdit(QPlainTextEdit):
                     self.vim_sheet_history.emit(key == "<C-i>")
                 return True
             if event_type == QEvent.Type.KeyPress and event.text() == "K":
-                self._show_cursor_hint()
+                self._toggle_cursor_hint()
+                self._update_typing()
                 return True
         return super().eventFilter(watched, event)
 
     def _remember_vim_pending(self, text: str) -> None:
         self._vim_pending = text
 
-    def _show_cursor_hint(self) -> None:
+    def _dismiss_cursor_hint(self) -> None:
+        if self._cursor_hint is not None and QToolTip.text() == self._cursor_hint[1]:
+            QToolTip.hideText()
+        self._cursor_hint = None
+
+    def _toggle_cursor_hint(self) -> None:
+        cursor = self.textCursor()
         pos = self.cursorRect().center()
-        text = self.hint_at(pos)
-        line = self.textCursor().blockNumber()
+        visible_text = QToolTip.text() if QToolTip.isVisible() else ""
+        if self._cursor_hint is not None and visible_text == self._cursor_hint[1]:
+            text = visible_text
+        else:
+            text = self.hint_at(pos) or self.result_warning(cursor.blockNumber())
         if not text:
-            text = self.result_warning(line)
-        if text:
-            if QToolTip.isVisible() and QToolTip.text() == text:
-                QToolTip.hideText()
-            else:
-                QToolTip.showText(self.viewport().mapToGlobal(pos), text, self.viewport())
-        self._update_typing()
+            return
+        if visible_text == text:
+            QToolTip.hideText()
+            self._cursor_hint = None
+            return
+        viewport = self.viewport()
+        QToolTip.showText(viewport.mapToGlobal(pos), text, viewport)
+        self._cursor_hint = cursor.position(), text
 
     def vim_on(self) -> bool:
         return self.vim is not None and self.vim.enabled
@@ -1019,6 +1035,8 @@ class SheetEdit(QPlainTextEdit):
             self._rehighlight_blocks(old[0], new[0])
 
     def _cursor_moved(self) -> None:
+        if self._cursor_hint is not None and self.textCursor().position() != self._cursor_hint[0]:
+            self._dismiss_cursor_hint()
         self._update_typing()
         sel = QTextEdit.ExtraSelection()
         sel.format.setBackground(QColor(self.theme.current_line))
@@ -1392,6 +1410,7 @@ class SheetEdit(QPlainTextEdit):
 
     def viewportEvent(self, event: QEvent) -> bool:  # noqa: N802
         if event.type() == QEvent.Type.ToolTip:
+            self._cursor_hint = None
             text = self.hint_at(event.pos())
             if text:
                 QToolTip.showText(event.globalPos(), text, self.viewport())
