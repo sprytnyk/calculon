@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
@@ -73,6 +74,14 @@ from tests.test_directory_dialog import assert_error_colour
 def pump(app) -> None:
     for _ in range(5):
         app.processEvents()
+
+
+def wait_for(app: QApplication, ready: Callable[[], bool]) -> None:
+    deadline = time.monotonic() + 10
+    while not ready() and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
+    assert ready()
 
 
 def test_warning_tooltip_has_an_opaque_themed_frame(window, app) -> None:
@@ -1261,6 +1270,89 @@ def test_saved_expanded_directories_read_back(
     window_settings.setValue("sidebar/expanded", saved)
     w = open_window(show=False)
     assert w.sidebar.expanded == expanded
+
+
+def test_startup_builds_the_sidebar_once_and_keeps_the_saved_sheet(
+    window_settings, open_window, tmp_path, monkeypatch
+) -> None:
+    store = SheetStore(tmp_path / "sheets")
+    remembered = store.create_sheet("Work", "Notes", "1")
+    other = store.create_sheet("", "Other", "2")
+    window_settings.setValue("last_sheet", remembered)
+    scans = []
+    saves = []
+    tree, save = SheetStore.tree, Settings.save
+
+    def read_tree(store, *, before_scan=None):
+        scans.append(store.root)
+        return tree(store, before_scan=before_scan)
+
+    def save_settings(settings):
+        saves.append(settings.last_sheet)
+        save(settings)
+
+    monkeypatch.setattr(SheetStore, "tree", read_tree)
+    monkeypatch.setattr(Settings, "save", save_settings)
+    window = open_window(show=False)
+    assert window.current == ("sheet", remembered)
+    assert scans == [store.root]
+    assert saves == []
+    assert str(store.root / "Work") in window.sidebar.watcher.directories()
+    window.open_sheet(other)
+    assert saves == [other]
+    assert Settings.load().last_sheet == other
+
+
+def test_startup_opens_pinned_sheet_if_remembered_sheet_disappears(
+    window_settings, open_window, tmp_path, monkeypatch
+) -> None:
+    store = SheetStore(tmp_path / "sheets")
+    remembered = store.create_sheet("", "Remembered", "1")
+    fallback = store.create_sheet("", "Backup", "2")
+    store.pin(fallback)
+    window_settings.setValue("last_sheet", remembered)
+    all_sheets = SheetStore.all_sheets
+    scans = []
+
+    def remove_remembered_after_scan(store):
+        sheets = all_sheets(store)
+        if not scans:
+            store.path(remembered).unlink()
+        scans.append(sheets)
+        return sheets
+
+    warnings = []
+    monkeypatch.setattr(SheetStore, "all_sheets", remove_remembered_after_scan)
+    monkeypatch.setattr(QMessageBox, "warning", lambda *args: warnings.append(args))
+    window = open_window(show=False)
+    assert scans == [[fallback, remembered], [fallback]]
+    assert warnings == []
+    assert window.current == ("sheet", fallback)
+    assert window.editor.toPlainText() == "2"
+    assert Settings.load().last_sheet == fallback
+
+
+def test_sidebar_picks_up_directory_added_during_startup(
+    window_settings, open_window, app, tmp_path, monkeypatch
+) -> None:
+    store = SheetStore(tmp_path / "sheets")
+    window_settings.setValue("last_sheet", store.create_sheet("", "Remembered", "1"))
+    tree = SheetStore.tree
+    added = "Added/Notes/First.txt"
+
+    def add_directory_after_scan(store, *, before_scan=None):
+        contents = tree(store, before_scan=before_scan)
+        if not store.path(added).exists():
+            store.create_sheet("Added/Notes", "First", "2")
+        return contents
+
+    monkeypatch.setattr(SheetStore, "tree", add_directory_after_scan)
+    window = open_window()
+    directory = str(store.root / "Added/Notes")
+    wait_for(app, lambda: directory in window.sidebar.watcher.directories())
+    assert window.sidebar._find("sheet", added) is not None
+    second = store.create_sheet("Added/Notes", "Second", "3")
+    wait_for(app, lambda: window.sidebar._find("sheet", second) is not None)
 
 
 def test_unknown_settings_fall_back_to_defaults(app) -> None:

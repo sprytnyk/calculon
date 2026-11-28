@@ -10,6 +10,7 @@ import os
 import shutil
 import tempfile
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -69,8 +70,9 @@ class SheetStore:
         name = rel.rsplit("/", 1)[-1]
         return name[: -len(EXT)] if name.endswith(EXT) else name
 
-    def tree(self) -> Node:
-        return Node("", "", True, self._children(""))
+    def tree(self, *, before_scan: Callable[[Path], None] | None = None) -> Node:
+        """Build the tree, calling before_scan before listing each directory."""
+        return Node("", "", True, self._children("", before_scan))
 
     def _entries(self, directory: str) -> list[Node]:
         nodes = []
@@ -96,12 +98,16 @@ class SheetStore:
             pass
         return nodes
 
-    def _children(self, directory: str) -> list[Node]:
+    def _children(
+        self, directory: str, before_scan: Callable[[Path], None] | None = None
+    ) -> list[Node]:
+        if before_scan is not None:
+            before_scan(self.root / directory)
         pinned = set(self.meta["pinned"])
         nodes: dict[str, Node] = {}
         for node in self._entries(directory):
             if node.is_dir:
-                node.children = self._children(node.rel)
+                node.children = self._children(node.rel, before_scan)
             elif node.rel in pinned:
                 continue
             nodes[node.rel.rsplit("/", 1)[-1]] = node

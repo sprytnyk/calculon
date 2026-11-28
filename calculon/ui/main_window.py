@@ -116,7 +116,7 @@ class MainWindow(QMainWindow):
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, self.settings.always_on_top)
         self.theme = themes.resolve(self.settings.theme, self.settings.colours)
         self.font_family = load_fonts()
-        self.store = self._open_store(self.settings.sheets_dir)
+        self.store, sheets = self._open_store(self.settings.sheets_dir)
         self.current: tuple[str, str] = ("", "")  # (kind, key)
         self._saved_mtime = 0.0
         self._saved_text = ""
@@ -135,7 +135,7 @@ class MainWindow(QMainWindow):
         self.rates.changed.connect(self._engine_changed)
         self.rates.status_changed.connect(self._update_rates_label)
 
-        self.sidebar = Sidebar(self.store, self.t)
+        self.sidebar = Sidebar(self.store, self.t, populate=False)
         self.editor = SheetEdit(self.theme)
         self.editor.results_width = self.settings.results_width
         self.banner = QLabel()
@@ -271,7 +271,7 @@ class MainWindow(QMainWindow):
         QGuiApplication.styleHints().colorSchemeChanged.connect(self._system_theme_changed)
         self.apply_settings()  # sets the theme first, then builds the menus with its icons
         self._restore_window()
-        self._open_initial()
+        self._open_initial(sheets)
         QTimer.singleShot(0, self, self._warn_missing_english_dictionary)
         QTimer.singleShot(0, self.rates, self.rates.refresh_if_stale)
 
@@ -281,13 +281,14 @@ class MainWindow(QMainWindow):
     def _directory_error(self, directory: str, exc: OSError) -> str:
         return directory_error(self.settings.language, directory, exc)
 
-    def _open_store(self, directory: str) -> SheetStore:
+    def _open_store(self, directory: str) -> tuple[SheetStore, list[str]]:
         if not directory:
             raise StorageError("no sheets directory chosen")
         store = SheetStore(Path(directory).expanduser())
-        if not store.all_sheets() and not store.trashed() and not store.meta["order"]:
-            store.create_sheet("", "Welcome", WELCOME)
-        return store
+        sheets = store.all_sheets()
+        if not sheets and not store.trashed() and not store.meta["order"]:
+            sheets = [store.create_sheet("", "Welcome", WELCOME)]
+        return store, sheets
 
     def _restore_window(self) -> None:
         qs = open_settings()
@@ -302,17 +303,32 @@ class MainWindow(QMainWindow):
         self.set_sidebar_visible(read_bool(qs.value("window/sidebar", True)))
         self.set_focus_mode(read_bool(qs.value("window/focus", False)))
 
-    def _open_initial(self) -> None:
+    def _open_initial(self, sheets: list[str] | None) -> None:
+        if not self.save_current():
+            return
         last = self.settings.last_sheet
-        sheets = self.store.all_sheets()
-        if last and last in sheets:
-            self.open_sheet(last)
-        elif self.store.pinned():
-            self.open_sheet(self.store.pinned()[0].rel)
-        elif sheets:
-            self.open_sheet(sheets[0])
-        else:
-            self.open_help()
+        for _ in range(2):
+            if sheets is None:
+                sheets = self.store.all_sheets()
+            if last and last in sheets:
+                rel = last
+            elif pinned := self.store.pinned():
+                rel = pinned[0].rel
+            elif sheets:
+                rel = sheets[0]
+            else:
+                break
+            try:
+                text = self.store.read(rel)
+            except FileNotFoundError:
+                sheets = None
+            except (OSError, UnicodeDecodeError) as exc:
+                QMessageBox.warning(self, self.t("app_name"), str(exc))
+                return
+            else:
+                self._open_saved_sheet(rel, text)
+                return
+        self.open_help()
 
     # menu text key -> icon name, where they differ
     ICONS = {
@@ -597,11 +613,12 @@ class MainWindow(QMainWindow):
         directory_changed = (
             Path(new.sheets_dir).expanduser() != Path(self.settings.sheets_dir).expanduser()
         )
+        sheets = None
         if directory_changed:
             if not self.save_current():
                 return
             try:
-                store = self._open_store(new.sheets_dir)
+                store, sheets = self._open_store(new.sheets_dir)
             except OSError as exc:
                 QMessageBox.warning(
                     self, self.t("settings_title"), self._directory_error(new.sheets_dir, exc)
@@ -619,7 +636,7 @@ class MainWindow(QMainWindow):
         self.rates.set_sources(new.rates_sources())
         self.apply_settings()
         if directory_changed:
-            self._open_initial()
+            self._open_initial(sheets)
         elif help_changed and self.current[0] == HELP:
             self.open_help()
         self._warn_missing_english_dictionary()
@@ -867,8 +884,9 @@ class MainWindow(QMainWindow):
         self._saved_text = text
         self._saved_mtime = self.store.mtime(rel)
         self.file_watcher.addPath(str(self.store.path(rel)))
-        self.settings.last_sheet = rel
-        self.settings.save()
+        if self.settings.last_sheet != rel:
+            self.settings.last_sheet = rel
+            self.settings.save()
         if focus:
             self.editor.setFocus()
 

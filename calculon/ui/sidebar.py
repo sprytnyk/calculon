@@ -1,5 +1,8 @@
 """The sheet list: pinned sheets, directories and sheets, help and trash."""
 
+from dataclasses import dataclass
+from pathlib import Path
+
 from PySide6.QtCore import (
     QFileSystemWatcher,
     QPoint,
@@ -35,7 +38,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..settings import open_settings
-from ..storage import TRASH_DIR, SheetStore
+from ..storage import TRASH_DIR, Node, SheetStore
 from . import icons
 
 ROLE = Qt.ItemDataRole.UserRole
@@ -49,6 +52,13 @@ TRASH = "trash"
 TRASHED = "trashed"
 TRASHED_DIR = "trashed_dir"
 TRASH_PATH = "trash_path"
+
+
+@dataclass
+class _Contents:
+    tree: Node
+    pinned: list[Node]
+    trashed: list[tuple[str, str]]
 
 
 class SheetTree(QTreeWidget):
@@ -123,10 +133,13 @@ class Sidebar(QWidget):
     show_in_directory = Signal(str)
     changed = Signal()  # something changed on disk
 
-    def __init__(self, store: SheetStore, tr, parent: QWidget | None = None):
+    def __init__(
+        self, store: SheetStore, tr, parent: QWidget | None = None, *, populate: bool = True
+    ):
         super().__init__(parent)
         self.store = store
         self.tr_ = tr
+        self._contents: _Contents | None = None
         # An empty list reads back from the file as None, and a one-item list as the item.
         saved = open_settings().value("sidebar/expanded", []) or []
         self.expanded: set[str] = {str(k) for k in (saved if isinstance(saved, list) else [saved])}
@@ -178,7 +191,8 @@ class Sidebar(QWidget):
         self._debounce.setSingleShot(True)
         self._debounce.setInterval(300)
         self._debounce.timeout.connect(self._disk_changed)
-        self.retranslate()
+        if populate:
+            self.retranslate()
 
     def t(self, key: str, **kw) -> str:
         return self.tr_(key, **kw)
@@ -201,37 +215,36 @@ class Sidebar(QWidget):
         open_settings().setValue("sidebar/expanded", [])
         self.rebuild()
 
-    def _snapshot(self) -> tuple:
-        """What the list shows, to skip rebuilds when only a sheet's text was saved."""
+    def _read_contents(self, *, reload_meta: bool = False) -> _Contents:
+        watched = set(self.watcher.directories())
+        scanned_paths: set[str] = set()
 
-        def walk(node) -> tuple:
-            return tuple((c.rel, c.is_dir, walk(c) if c.is_dir else ()) for c in node.children)
+        def watch(directory: Path) -> None:
+            path = str(directory)
+            if path not in watched and path not in scanned_paths:
+                self.watcher.addPath(path)
+            scanned_paths.add(path)
 
-        return (
-            walk(self.store.tree()),
-            tuple(n.rel for n in self.store.pinned()),
-            tuple(self.store.trashed()),
-        )
+        # Watch each directory before reading it so a change during the scan triggers a refresh.
+        root = self.store.root
+        watch(root)
+        if reload_meta or str(root) not in watched:
+            self.store.meta = self.store._load_meta()
+        tree = self.store.tree(before_scan=watch)
+        trash_directory = self.store.trash_dir
+        if trash_directory.is_dir():
+            watch(trash_directory)
+        contents = _Contents(tree, self.store.pinned(), self.store.trashed())
+        obsolete_watches = watched - scanned_paths
+        if obsolete_watches:
+            self.watcher.removePaths(list(obsolete_watches))
+        return contents
 
     def _disk_changed(self) -> None:
-        self.store.meta = self.store._load_meta()
-        if self._snapshot() != getattr(self, "_signature", None):
-            self.rebuild()
+        contents = self._read_contents(reload_meta=True)
+        if contents != self._contents:
+            self._render(contents)
         self.changed.emit()
-
-    def _watch(self) -> None:
-        dirs = []
-        directories = [self.store.tree()]
-        while directories:
-            directory = directories.pop()
-            dirs.append(str(self.store.root / directory.rel))
-            directories.extend(node for node in directory.children if node.is_dir)
-        if self.store.trash_dir.is_dir():
-            dirs.append(str(self.store.trash_dir))
-        old = self.watcher.directories()
-        if old:
-            self.watcher.removePaths(old)
-        self.watcher.addPaths(dirs)
 
     def _item(self, text: str, kind: str, key: str, icon: QIcon | None = None) -> QTreeWidgetItem:
         it = QTreeWidgetItem([text])
@@ -255,6 +268,9 @@ class Sidebar(QWidget):
         return it
 
     def rebuild(self, *, selection: tuple[str, str] | None = None) -> None:
+        self._render(self._read_contents(), selection=selection)
+
+    def _render(self, contents: _Contents, *, selection: tuple[str, str] | None = None) -> None:
         tree = self.tree
         selected_row = selection or self._selected()
         scroll = tree.verticalScrollBar().value()
@@ -280,7 +296,7 @@ class Sidebar(QWidget):
                 empty.setFlags(Qt.ItemFlag.NoItemFlags)
                 tree.addTopLevelItem(empty)
         else:
-            pinned = self.store.pinned()
+            pinned = contents.pinned
             if pinned:
                 sec = self._item(self.t("pinned").upper(), SECTION, PINNED)
                 tree.addTopLevelItem(sec)
@@ -302,7 +318,7 @@ class Sidebar(QWidget):
                         it = self._item(node.name, SHEET, node.rel, sheet_icon)
                         parent.addChild(it)
 
-            add(sec, self.store.tree().children)
+            add(sec, contents.tree.children)
             sec.setExpanded(True)
             help_item = self._item(
                 self.t("help"),
@@ -311,7 +327,7 @@ class Sidebar(QWidget):
                 icons.icon("help"),
             )
             tree.addTopLevelItem(help_item)
-            trashed = self.store.trashed()
+            trashed = contents.trashed
             trash = self._item(
                 f"{self.t('trash')} ({len(trashed)})" if trashed else self.t("trash"),
                 TRASH,
@@ -397,8 +413,7 @@ class Sidebar(QWidget):
             tree.verticalScrollBar().setValue(scroll)
         tree.blockSignals(False)
         QTimer.singleShot(0, tree, lambda: tree.setAnimated(True))
-        self._signature = self._snapshot()
-        self._watch()
+        self._contents = contents
 
     def _show_current(self, item: QTreeWidgetItem) -> None:
         """Select an item and open the directories it sits in, remembering them as open."""
