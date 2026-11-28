@@ -11,7 +11,8 @@ import functools
 import logging
 import sys
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from contextlib import ExitStack, contextmanager
 from ctypes import POINTER, byref, c_int, c_long, c_void_p, c_wchar_p
 
 log = logging.getLogger(__name__)
@@ -85,22 +86,29 @@ class Com:
             self.address = 0
 
 
-def _initialize_com(lib) -> bool:
-    """Return whether this call needs a matching CoUninitialize."""
+def _initialize_com(cleanup: ExitStack):
+    lib = ole32()
     hr = lib.CoInitializeEx(None, COINIT_APARTMENTTHREADED)
     if hr not in (S_OK, S_FALSE, RPC_E_CHANGED_MODE):
         raise OSError(f"COM didn't start: {hr & 0xFFFFFFFF:#010x}")
-    return hr != RPC_E_CHANGED_MODE
+    if hr != RPC_E_CHANGED_MODE:
+        cleanup.callback(lib.CoUninitialize)
+    return lib
 
 
-def _factory(lib) -> Com:
+@contextmanager
+def _factory(lib) -> Iterator[Com]:
     """Windows' spell checker factory, for this thread."""
     out = c_void_p()
     clsid, iid = GUID.parse(CLSID_SPELL_CHECKER_FACTORY), GUID.parse(IID_SPELL_CHECKER_FACTORY)
     hr = lib.CoCreateInstance(byref(clsid), None, CLSCTX_INPROC_SERVER, byref(iid), byref(out))
     if hr != S_OK or not out.value:
         raise OSError(f"no Windows spell checker: {hr & 0xFFFFFFFF:#010x}")
-    return Com(out.value)
+    factory = Com(out.value)
+    try:
+        yield factory
+    finally:
+        factory.release()
 
 
 def supported_tags(tags: Iterable[str]) -> list[str]:
@@ -108,53 +116,39 @@ def supported_tags(tags: Iterable[str]) -> list[str]:
 
     Raise OSError if Windows has no spell checker.
     """
-    lib = ole32()
-    needs_uninitialize = _initialize_com(lib)
-    try:
-        factory = _factory(lib)
-        try:
-            supported = []
-            for tag in tags:
-                yes = c_int()
-                hr = factory.call(
-                    FACTORY_IS_SUPPORTED, (c_wchar_p, POINTER(c_int)), tag, byref(yes)
-                )
-                if hr == S_OK and yes.value:
-                    supported.append(tag)
-            return supported
-        finally:
-            factory.release()
-    finally:
-        if needs_uninitialize:
-            lib.CoUninitialize()
+    with ExitStack() as cleanup, _factory(_initialize_com(cleanup)) as factory:
+        supported = []
+        for tag in tags:
+            yes = c_int()
+            hr = factory.call(FACTORY_IS_SUPPORTED, (c_wchar_p, POINTER(c_int)), tag, byref(yes))
+            if hr == S_OK and yes.value:
+                supported.append(tag)
+        return supported
 
 
-def _create_checker(tag: str) -> Com:
-    """Windows' spell checker for `tag`, for this thread. Raises OSError if it won't open."""
-    lib = ole32()
-    _initialize_com(lib)
-    factory = _factory(lib)
-    out = c_void_p()
-    try:
-        hr = factory.call(FACTORY_CREATE, (c_wchar_p, OUT), tag, byref(out))
-    finally:
-        factory.release()
-    if hr != S_OK or not out.value:
-        raise OSError(f"{hr & 0xFFFFFFFF:#010x}")
-    return Com(out.value)
+def _create_checker(tag: str) -> tuple[Com, ExitStack]:
+    with ExitStack() as cleanup:
+        with _factory(_initialize_com(cleanup)) as factory:
+            out = c_void_p()
+            hr = factory.call(FACTORY_CREATE, (c_wchar_p, OUT), tag, byref(out))
+            if hr != S_OK or not out.value:
+                raise OSError(f"{hr & 0xFFFFFFFF:#010x}")
+            checker = Com(out.value)
+            cleanup.callback(checker.release)
+        return checker, cleanup.pop_all()
 
 
 class WindowsDictionary:
     """Windows' spell checker for one language tag, such as en-US.
 
-    A COM object belongs to the thread that made it, and Calculon loads dictionaries on
-    a thread of their own. So this opens the checker on first use, on the thread that
-    checks, which is the UI thread. Opening is quick, unlike loading a Hunspell dictionary.
+    Calculon can construct this on a worker. The first check opens the COM object, and
+    the same thread must close it. For the editor, that's the UI thread.
     """
 
     def __init__(self, tag: str):
         self.tag = tag
         self._checker: Com | None = None
+        self._cleanup = ExitStack()
         self._failed = False
 
     def _open(self) -> Com | None:
@@ -162,7 +156,7 @@ class WindowsDictionary:
         language with no dictionary."""
         if self._checker is None and not self._failed:
             try:
-                self._checker = _create_checker(self.tag)
+                self._checker, self._cleanup = _create_checker(self.tag)
             except OSError as exc:
                 self._failed = True
                 log.warning("spell check: Windows can't check %s: %s", self.tag, exc)
@@ -212,6 +206,5 @@ class WindowsDictionary:
             strings.release()
 
     def close(self) -> None:
-        if self._checker is not None:
-            self._checker.release()
-            self._checker = None
+        self._checker = None
+        self._cleanup.close()

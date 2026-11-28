@@ -19,6 +19,7 @@ def say(text: str) -> None:
 
 def self_test() -> int:
     """Check a build has everything it needs: unit data, time zones, help, rates."""
+    from contextlib import closing
     from datetime import datetime
     from pathlib import Path
 
@@ -72,13 +73,12 @@ def self_test() -> int:
         if spell.english:
             say(f"English spelling options: {', '.join(spell.english)}")
         # a build carries its own libraries; make sure the system's spell checker still works
-        checker = SpellChecker.load(sources)
         samples = {"en": ("hotel", "hotell"), "uk": ("оренда", "оредна")}
-        for lang in checker.languages:
-            good, typo = samples[lang]
-            if not checker.check(good) or checker.check(typo):
-                failed.append(f"spell check: {lang} dictionary gives wrong answers")
-        checker.close()
+        with closing(SpellChecker.load(sources)) as checker:
+            for lang in checker.languages:
+                good, typo = samples[lang]
+                if not checker.check(good) or checker.check(typo):
+                    failed.append(f"spell check: {lang} dictionary gives wrong answers")
     else:
         say(f"spell check: off ({spell.install_command() or 'see the README'})")
     for item in failed:

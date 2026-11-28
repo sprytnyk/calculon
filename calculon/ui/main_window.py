@@ -29,6 +29,7 @@ from PySide6.QtGui import (
     QKeyEvent,
     QKeySequence,
     QMouseEvent,
+    QShowEvent,
     QTextDocument,
 )
 from PySide6.QtWidgets import (
@@ -268,6 +269,7 @@ class MainWindow(QMainWindow):
         self._open_settings_after_probe = False
         self._spell: SpellChecker | None = None
         self._spell_loading = False
+        self._spell_closed = False
         self._missing_english_notice: tuple[str, str | None] | None = None
         self.spelling_probed.connect(self._spelling_probed)
         self.spelling_loaded.connect(self._spelling_loaded)
@@ -776,7 +778,7 @@ class MainWindow(QMainWindow):
         show_settings = self._open_settings_after_probe
         self._open_settings_after_probe = False
         self._set_spelling_status(status)
-        if not self.isVisible():
+        if self._spell_closed or not self.isVisible():
             return
         if show_settings:
             self._show_settings()
@@ -832,7 +834,12 @@ class MainWindow(QMainWindow):
 
     def _apply_spelling(self) -> None:
         status = self.spell_status
-        if not self.settings.spell_check or status is None or not status.available:
+        if (
+            self._spell_closed
+            or not self.settings.spell_check
+            or status is None
+            or not status.available
+        ):
             self.editor.set_spell_checker(None)
             return
         sources = status.selected(self.settings.spell_english)
@@ -858,6 +865,9 @@ class MainWindow(QMainWindow):
 
     def _spelling_loaded(self, checker: SpellChecker) -> None:
         self._spell_loading = False
+        if self._spell_closed:
+            checker.close()
+            return
         status = self.spell_status
         assert status is not None
         sources = status.selected(self.settings.spell_english)
@@ -1330,6 +1340,12 @@ class MainWindow(QMainWindow):
     def about(self) -> None:
         AboutDialog(self.t, self.theme, self.windowIcon().pixmap(64, 64), self).exec()
 
+    def showEvent(self, event: QShowEvent) -> None:  # noqa: N802
+        super().showEvent(event)
+        if self._spell_closed:
+            self._spell_closed = False
+            self._apply_spelling()
+
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         if not self.save_current():
             event.ignore()
@@ -1341,4 +1357,10 @@ class MainWindow(QMainWindow):
         qs.setValue("window/sidebar", sidebar)
         qs.setValue("window/focus", self._focus)
         self.settings.save()
+        self._spell_closed = True
+        checker = self._spell
+        if checker is not None:
+            self.editor.set_spell_checker(None)
+            self._spell = None
+            checker.close()
         super().closeEvent(event)

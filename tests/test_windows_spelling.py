@@ -7,13 +7,19 @@ windows_spelling.py runs exactly as it does on Windows, on any system.
 import ctypes
 import logging
 import sys
+from collections import Counter
 from collections.abc import Callable, Iterator
+from concurrent.futures import ThreadPoolExecutor
 from ctypes import CFUNCTYPE, POINTER, c_int, c_long, c_void_p, c_wchar_p
+from threading import get_ident
+from time import monotonic, sleep
 
 import pytest
 
 from calculon import spelling, windows_spelling
 from calculon.spelling import SpellChecker, Status
+from calculon.storage import SheetStore
+from calculon.ui.settings_dialog import SettingsDialog
 from calculon.windows_spelling import (
     CHECKER_CHECK,
     CHECKER_SUGGEST,
@@ -25,6 +31,7 @@ from calculon.windows_spelling import (
     IID_SPELL_CHECKER_FACTORY,
     OUT,
     RELEASE,
+    RPC_E_CHANGED_MODE,
     S_FALSE,
     S_OK,
     ULONG,
@@ -51,7 +58,10 @@ class FakeWindows:
         # wrong calls, written down because an exception can't leave a callback
         self.mistakes: list[str] = []
         self.com_modes: list[int] = []
+        self.com_result = S_FALSE  # default to a thread where Qt has initialized COM
+        self.com_counts: Counter[int] = Counter()
         self.com_ended = 0
+        self.lifetime_events: list[str] = []
         self._keep: list[object] = []  # the memory behind every fake, kept alive
         # the functions windows_spelling.ole32() would have
         self.CoInitializeEx = self._function(self._start_com, c_long, c_void_p, ULONG)
@@ -63,10 +73,17 @@ class FakeWindows:
 
     def _start_com(self, _reserved, mode: int) -> int:
         self.com_modes.append(mode)
-        return S_FALSE  # Qt's UI thread has COM on already
+        if self.com_result in (S_OK, S_FALSE):
+            self.com_counts[get_ident()] += 1
+        return self.com_result
 
     def _stop_com(self) -> None:
+        thread = get_ident()
+        if self.com_counts[thread] == 0:
+            self.mistakes.append("uninitialized COM without a matching call on this thread")
+        self.com_counts[thread] -= 1
         self.com_ended += 1
+        self.lifetime_events.append("uninitialize")
         if "factory" in self.alive.values():
             self.mistakes.append("uninitialized COM before releasing the factory")
 
@@ -104,8 +121,11 @@ class FakeWindows:
         return ctypes.addressof(box)
 
     def _release(self, this: int) -> int:
-        if self.alive.pop(this, None) is None:
+        name = self.alive.pop(this, None)
+        if name is None:
             self.mistakes.append(f"released {this:#x} twice")
+        elif name in ("factory", "checker"):
+            self.lifetime_events.append(f"release {name}")
         return 0
 
     def _factory(self) -> int:
@@ -181,7 +201,7 @@ class FakeWindows:
 
     def tidy(self) -> bool:
         """Everything handed out came back, and nothing was called wrong."""
-        return not self.alive and not self.strings and not self.mistakes
+        return not (self.alive or self.strings or self.mistakes or any(self.com_counts.values()))
 
 
 @pytest.fixture
@@ -241,9 +261,30 @@ def test_windows_checks_and_suggests(fake: FakeWindows) -> None:
     assert fake.tidy(), (fake.alive, fake.strings, fake.mistakes)
 
 
+@pytest.mark.parametrize("result", [S_OK, S_FALSE, RPC_E_CHANGED_MODE])
+def test_windows_checker_keeps_com_until_close(fake: FakeWindows, result: int) -> None:
+    fake.com_result = result
+    dictionary = windows_spelling.WindowsDictionary("en-GB")
+    dictionary.close()  # construction is lazy
+    assert fake.com_modes == []
+    assert not dictionary.check("rnet")
+    assert dictionary.suggest("rnet") == ["rent", "net"]
+    assert fake.lifetime_events == ["release factory"]
+    assert fake.com_counts[get_ident()] == int(result != RPC_E_CHANGED_MODE)
+    dictionary.close()
+    dictionary.close()
+    expected = ["release factory", "release checker"]
+    if result != RPC_E_CHANGED_MODE:
+        expected.append("uninitialize")
+    assert fake.lifetime_events == expected
+    assert fake.tidy()
+
+
+@pytest.mark.parametrize("installed", [True, False])
 def test_windows_language_that_wont_open_passes_everything(
-    fake: FakeWindows, caplog: pytest.LogCaptureFixture
+    fake: FakeWindows, caplog: pytest.LogCaptureFixture, installed: bool
 ) -> None:
+    fake.installed = installed
     dictionary = windows_spelling.WindowsDictionary("de-DE")
     with caplog.at_level(logging.WARNING):
         assert dictionary.check("rnet")
@@ -251,7 +292,61 @@ def test_windows_language_that_wont_open_passes_everything(
         assert dictionary.check("Strasse")
     assert len(caplog.records) == 1  # one warning, not one for every word
     assert "de-DE" in caplog.text
+    assert fake.lifetime_events == (["release factory"] if installed else []) + ["uninitialize"]
     dictionary.close()
+    assert fake.tidy()
+
+
+def test_windows_checker_cleanup_when_switching_dictionaries_and_closing(
+    fake: FakeWindows, window_settings, open_window, app, tmp_path, monkeypatch
+) -> None:
+    fake.LANGUAGES = ("en-US", "en-GB", "uk-UA")
+    window_settings.setValue("spell_check", True)
+    SheetStore(tmp_path / "sheets").create_sheet("", "Spelling", "rnet оредна\n")
+    window = open_window()
+
+    def wait_for_checker(english: str) -> SpellChecker:
+        deadline = monotonic() + 10
+        while monotonic() < deadline:
+            app.processEvents()
+            checker = window.editor.spell
+            if checker is not None and checker.sources.get("en") == english:
+                return checker
+            sleep(0.01)
+        pytest.fail(f"spelling checker did not load {english}")
+
+    checker = wait_for_checker("en-US")
+    assert not checker.check("rnet") and not checker.check("оредна")
+    assert fake.com_counts == Counter({get_ident(): 2})
+    monkeypatch.setattr(SettingsDialog, "exec", lambda self: SettingsDialog.DialogCode.Rejected)
+    for _ in range(3):
+        window.open_settings()
+    assert fake.com_counts == Counter({get_ident(): 2})
+
+    def choose_british(dialog):
+        menu = dialog.spell_english
+        menu.setCurrentIndex(menu.findData("en-GB"))
+        return SettingsDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(SettingsDialog, "exec", choose_british)
+    window.open_settings()
+    checker = wait_for_checker("en-GB")
+    assert checker.suggest("rnet") == ["rent", "net"]
+    assert not checker.check("оредна")
+    assert fake.com_counts == Counter({get_ident(): 2})
+    assert window.close()
+    assert window.editor.spell is None
+    assert fake.tidy()
+
+    late_checker = SpellChecker.load(checker.sources)
+    window.spelling_loaded.emit(late_checker)
+    assert late_checker.dictionaries == {}
+    assert fake.tidy()
+
+    window.show()
+    checker = wait_for_checker("en-GB")
+    assert checker.suggest("rnet") == ["rent", "net"]
+    assert window.close()
     assert fake.tidy()
 
 
@@ -276,6 +371,25 @@ def test_real_windows_english(real: SpellChecker) -> None:
         assert not real.check(bad), bad
     assert "hotel" in real.suggest("hotell")
     assert "receive" in real.suggest("recieve")
+
+
+@on_windows
+def test_real_windows_checker_balances_com_on_a_fresh_thread() -> None:
+    def check() -> tuple[bool, int]:
+        lib = windows_spelling.ole32()
+        checker = SpellChecker.load(spelling.probe().selected())
+        try:
+            misspelled = not checker.check("hotell")
+        finally:
+            checker.close()
+        mode = windows_spelling.COINIT_APARTMENTTHREADED
+        result = lib.CoInitializeEx(None, mode)
+        if result in (S_OK, S_FALSE):
+            lib.CoUninitialize()
+        return misspelled, result
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        assert executor.submit(check).result() == (True, S_OK)
 
 
 @on_windows
