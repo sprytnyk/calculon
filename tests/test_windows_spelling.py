@@ -51,9 +51,11 @@ class FakeWindows:
         # wrong calls, written down because an exception can't leave a callback
         self.mistakes: list[str] = []
         self.com_modes: list[int] = []
+        self.com_ended = 0
         self._keep: list[object] = []  # the memory behind every fake, kept alive
         # the functions windows_spelling.ole32() would have
         self.CoInitializeEx = self._function(self._start_com, c_long, c_void_p, ULONG)
+        self.CoUninitialize = self._function(self._stop_com, None)
         self.CoCreateInstance = self._function(
             self._create, c_long, POINTER(GUID), c_void_p, ULONG, POINTER(GUID), OUT
         )
@@ -62,6 +64,11 @@ class FakeWindows:
     def _start_com(self, _reserved, mode: int) -> int:
         self.com_modes.append(mode)
         return S_FALSE  # Qt's UI thread has COM on already
+
+    def _stop_com(self) -> None:
+        self.com_ended += 1
+        if "factory" in self.alive.values():
+            self.mistakes.append("uninitialized COM before releasing the factory")
 
     def _create(self, clsid, _outer, _context, iid, out) -> int:
         if not self.installed:
@@ -192,6 +199,7 @@ def test_probe_asks_windows_for_each_language(fake: FakeWindows) -> None:
     )
     assert fake.opened == []  # asking which languages exist opens no checker
     assert fake.com_modes and set(fake.com_modes) == {windows_spelling.COINIT_APARTMENTTHREADED}
+    assert fake.com_ended == 1
     assert fake.tidy(), (fake.alive, fake.mistakes)
 
 
@@ -199,6 +207,7 @@ def test_probe_without_windows_spell_checker(fake: FakeWindows) -> None:
     fake.installed = False
     status = spelling.probe()
     assert status == Status(library=False) and not status.available
+    assert fake.com_ended == 1
 
 
 def test_windows_selects_a_supported_english_variant(fake: FakeWindows) -> None:

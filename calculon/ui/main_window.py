@@ -1,5 +1,6 @@
 """Main window."""
 
+import contextlib
 import logging
 import sys
 import threading
@@ -54,7 +55,7 @@ from ..help_sheet import read_help
 from ..paths import FONTS
 from ..rates import RatesService
 from ..settings import Settings, open_settings, own_words_file, read_bool
-from ..spelling import AUTOMATIC_SPELLING, SpellChecker, probe
+from ..spelling import AUTOMATIC_SPELLING, SpellChecker, Status, probe
 from ..storage import EXT, SheetStore, StorageError
 from ..translations import LANGUAGES, tr
 from . import icons
@@ -106,6 +107,7 @@ def load_fonts() -> str:
 
 
 class MainWindow(QMainWindow):
+    spelling_probed = Signal(object)
     spelling_loaded = Signal(object)  # a SpellChecker, from the thread that loads it
 
     def __init__(self, settings: Settings | None = None) -> None:
@@ -261,18 +263,21 @@ class MainWindow(QMainWindow):
         s.show_in_directory.connect(self.show_in_directory)
         s.changed.connect(self._sidebar_changed)
 
-        # what spell check can use here; dictionaries load only once it's turned on
-        self.spell_status = probe()
+        self.spell_status: Status | None = None
+        self._spell_probing = False
+        self._open_settings_after_probe = False
         self._spell: SpellChecker | None = None
         self._spell_loading = False
         self._missing_english_notice: tuple[str, str | None] | None = None
+        self.spelling_probed.connect(self._spelling_probed)
         self.spelling_loaded.connect(self._spelling_loaded)
 
         QGuiApplication.styleHints().colorSchemeChanged.connect(self._system_theme_changed)
         self.apply_settings()  # sets the theme first, then builds the menus with its icons
         self._restore_window()
         self._open_initial(sheets)
-        QTimer.singleShot(0, self, self._warn_missing_english_dictionary)
+        if self.settings.spell_check:
+            self.editor.viewport().installEventFilter(self)
         QTimer.singleShot(0, self.rates, self.rates.refresh_if_stale)
 
     def t(self, key: str, **kw) -> str:
@@ -471,15 +476,14 @@ class MainWindow(QMainWindow):
             m, "toggle_line_numbers", self._toggle_line_numbers, "Ctrl+Shift+L", checkable=True
         )
         act.setChecked(self.settings.line_numbers)
-        act = self._action(
+        self._action(
             m,
             "toggle_spelling",
             self._toggle_spelling,
             "Ctrl+Alt+S" if mac else "F7",
             checkable=True,
         )
-        act.setChecked(self.settings.spell_check and self.spell_status.available)
-        act.setEnabled(self.spell_status.available)
+        self._update_spelling_action()
         self.editor.menu_actions = {key: self._actions[key] for group in EDIT_MENU for key in group}
 
         m = bar.addMenu(self.t("menu_help"))
@@ -501,7 +505,11 @@ class MainWindow(QMainWindow):
         self.addActions(list(self._actions.values()))
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # noqa: N802
-        """Shortcuts work while a menu is open too; Qt ignores them there by default."""
+        if event.type() == QEvent.Type.Paint and obj is self.editor.viewport():
+            # Start the probe after the editor's first paint.
+            obj.removeEventFilter(self)
+            QTimer.singleShot(0, self, self._start_spelling_probe)
+        # Qt ignores shortcuts while a menu is open.
         if isinstance(obj, QMenu) and event.type() == QEvent.Type.KeyPress:
             assert isinstance(event, QKeyEvent)
             action = self._action_for_key(event)
@@ -594,12 +602,13 @@ class MainWindow(QMainWindow):
         self.editor.set_engine(self.rates.table, s.engine_config(), s.format_options())
 
     def open_settings(self) -> None:
-        status = probe()
-        availability_changed = self.spell_status.available != status.available
-        self.spell_status = status
-        self._apply_spelling()
-        if availability_changed:
-            self.build_menus()
+        if self._spell_probing:
+            self._open_settings_after_probe = True
+            return
+        self._set_spelling_status(probe())
+        self._show_settings()
+
+    def _show_settings(self) -> None:
         self._warn_missing_english_dictionary()
         dlg = SettingsDialog(self.settings, self.t, self)
         if dlg.exec() != SettingsDialog.DialogCode.Accepted:
@@ -725,14 +734,60 @@ class MainWindow(QMainWindow):
         self.editor.set_line_numbers(self.settings.line_numbers)
 
     def _toggle_spelling(self) -> None:
+        if not self.settings.spell_check and self.spell_status is None and not self._spell_probing:
+            self._set_spelling_status(probe())
+        if self.spell_status is not None and not self.spell_status.available:
+            return
         self.settings.spell_check = not self.settings.spell_check
         self.settings.save()
+        self._update_spelling_action()
         self._apply_spelling()
         self._warn_missing_english_dictionary()
+
+    def _update_spelling_action(self) -> None:
+        action = self._actions["toggle_spelling"]
+        enabled = self.spell_status is None or self.spell_status.available
+        action.setEnabled(enabled)
+        action.setChecked(enabled and self.settings.spell_check)
+
+    def _set_spelling_status(self, status: Status) -> None:
+        self.spell_status = status
+        self._update_spelling_action()
+        self._apply_spelling()
+
+    def _start_spelling_probe(self) -> None:
+        if not self.settings.spell_check or self.spell_status is not None:
+            return
+        self._spell_probing = True
+
+        def probe_in_background() -> None:
+            try:
+                status = probe()
+            except Exception:
+                log.exception("couldn't check which spelling dictionaries are available")
+                status = Status(library=False)
+            with contextlib.suppress(RuntimeError):  # Qt may have deleted the window
+                self.spelling_probed.emit(status)
+
+        threading.Thread(target=probe_in_background, name="spelling-discovery", daemon=True).start()
+
+    def _spelling_probed(self, status: Status) -> None:
+        self._spell_probing = False
+        show_settings = self._open_settings_after_probe
+        self._open_settings_after_probe = False
+        self._set_spelling_status(status)
+        if not self.isVisible():
+            return
+        if show_settings:
+            self._show_settings()
+        else:
+            self._warn_missing_english_dictionary()
 
     def _warn_missing_english_dictionary(self) -> None:
         preferred = self.settings.spell_english
         status = self.spell_status
+        if status is None:
+            return
         active = status.english_for(preferred) if status.library else None
         if preferred in (AUTOMATIC_SPELLING, active):
             self._missing_english_notice = None
@@ -776,10 +831,11 @@ class MainWindow(QMainWindow):
         warning.deleteLater()
 
     def _apply_spelling(self) -> None:
-        if not (self.settings.spell_check and self.spell_status.available):
+        status = self.spell_status
+        if not self.settings.spell_check or status is None or not status.available:
             self.editor.set_spell_checker(None)
             return
-        sources = self.spell_status.selected(self.settings.spell_english)
+        sources = status.selected(self.settings.spell_english)
         if self._spell is not None and self._spell.sources == sources:
             self.editor.set_spell_checker(self._spell)
             return
@@ -802,7 +858,9 @@ class MainWindow(QMainWindow):
 
     def _spelling_loaded(self, checker: SpellChecker) -> None:
         self._spell_loading = False
-        sources = self.spell_status.selected(self.settings.spell_english)
+        status = self.spell_status
+        assert status is not None
+        sources = status.selected(self.settings.spell_english)
         if checker.sources != sources:
             checker.close()
         else:

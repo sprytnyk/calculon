@@ -58,6 +58,8 @@ def ole32():
     lib = ctypes.WinDLL("ole32")
     lib.CoInitializeEx.argtypes = [c_void_p, ULONG]
     lib.CoInitializeEx.restype = c_long
+    lib.CoUninitialize.argtypes = []
+    lib.CoUninitialize.restype = None
     lib.CoCreateInstance.argtypes = [POINTER(GUID), c_void_p, ULONG, POINTER(GUID), OUT]
     lib.CoCreateInstance.restype = c_long
     lib.CoTaskMemFree.argtypes = [c_void_p]
@@ -83,13 +85,16 @@ class Com:
             self.address = 0
 
 
-def _factory() -> Com:
-    """Windows' spell checker factory, for this thread."""
-    lib = ole32()
-    # Qt's UI thread usually has COM on already, and then this only says so
+def _initialize_com(lib) -> bool:
+    """Return whether this call needs a matching CoUninitialize."""
     hr = lib.CoInitializeEx(None, COINIT_APARTMENTTHREADED)
     if hr not in (S_OK, S_FALSE, RPC_E_CHANGED_MODE):
         raise OSError(f"COM didn't start: {hr & 0xFFFFFFFF:#010x}")
+    return hr != RPC_E_CHANGED_MODE
+
+
+def _factory(lib) -> Com:
+    """Windows' spell checker factory, for this thread."""
     out = c_void_p()
     clsid, iid = GUID.parse(CLSID_SPELL_CHECKER_FACTORY), GUID.parse(IID_SPELL_CHECKER_FACTORY)
     hr = lib.CoCreateInstance(byref(clsid), None, CLSCTX_INPROC_SERVER, byref(iid), byref(out))
@@ -99,26 +104,36 @@ def _factory() -> Com:
 
 
 def supported_tags(tags: Iterable[str]) -> list[str]:
-    """The language tags Windows can spell check, in the order requested.
+    """Return the language tags Windows can check, in the requested order.
 
-    Raises OSError if this Windows has no spell checker at all.
+    Raise OSError if Windows has no spell checker.
     """
-    factory = _factory()
+    lib = ole32()
+    needs_uninitialize = _initialize_com(lib)
     try:
-        supported = []
-        for tag in tags:
-            yes = c_int()
-            hr = factory.call(FACTORY_IS_SUPPORTED, (c_wchar_p, POINTER(c_int)), tag, byref(yes))
-            if hr == S_OK and yes.value:
-                supported.append(tag)
-        return supported
+        factory = _factory(lib)
+        try:
+            supported = []
+            for tag in tags:
+                yes = c_int()
+                hr = factory.call(
+                    FACTORY_IS_SUPPORTED, (c_wchar_p, POINTER(c_int)), tag, byref(yes)
+                )
+                if hr == S_OK and yes.value:
+                    supported.append(tag)
+            return supported
+        finally:
+            factory.release()
     finally:
-        factory.release()
+        if needs_uninitialize:
+            lib.CoUninitialize()
 
 
 def _create_checker(tag: str) -> Com:
     """Windows' spell checker for `tag`, for this thread. Raises OSError if it won't open."""
-    factory = _factory()
+    lib = ole32()
+    _initialize_com(lib)
+    factory = _factory(lib)
     out = c_void_p()
     try:
         hr = factory.call(FACTORY_CREATE, (c_wchar_p, OUT), tag, byref(out))

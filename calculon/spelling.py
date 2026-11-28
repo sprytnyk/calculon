@@ -22,6 +22,7 @@ import re
 import sys
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
+from functools import cache
 from pathlib import Path
 from typing import Protocol
 
@@ -98,16 +99,9 @@ def hunspell_dictionaries(locales: Iterable[str], dirs: Iterable[Path]) -> dict[
     return found
 
 
-_lib: ctypes.CDLL | None = None
-_lib_tried = False
-
-
+@cache
 def load_library() -> ctypes.CDLL | None:
     """The Hunspell library, or None if this system doesn't have it."""
-    global _lib, _lib_tried
-    if _lib_tried:
-        return _lib
-    _lib_tried = True
     names = list(LIBRARIES.get(platform_key(), ()))
     for short in ("hunspell-1.7", "hunspell"):
         if found := ctypes.util.find_library(short):
@@ -118,7 +112,6 @@ def load_library() -> ctypes.CDLL | None:
         except OSError:
             continue
         _declare(lib)
-        _lib = lib
         log.info("spell check: using %s", name)
         return lib
     return None

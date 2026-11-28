@@ -8,6 +8,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
+from threading import Event
 from types import SimpleNamespace
 
 import pytest
@@ -2184,6 +2185,60 @@ def test_spelling_keeps_an_unavailable_english_preference(
         QCoreApplication.sendPostedEvents(dlg, QEvent.Type.DeferredDelete)
 
 
+def test_startup_skips_spelling_discovery_until_enabled(open_window, app, monkeypatch) -> None:
+    calls = []
+
+    def probe_spelling() -> Status:
+        calls.append(True)
+        return Status(library=False)
+
+    monkeypatch.setattr(main_window, "probe", probe_spelling)
+    window = open_window()
+    pump(app)
+    assert calls == []
+    action = window._actions["toggle_spelling"]
+    action.trigger()
+    assert calls == [True]
+    assert not action.isEnabled() and not action.isChecked()
+    assert not window.settings.spell_check
+
+
+def test_spelling_discovery_leaves_the_editor_usable_while_it_runs(
+    app, window_settings, open_window, monkeypatch
+) -> None:
+    window_settings.setValue("spell_check", True)
+    started, release = Event(), Event()
+    status = Status(library=False)
+
+    def probe_spelling() -> Status:
+        started.set()
+        assert release.wait(timeout=10)
+        return status
+
+    opened = []
+    monkeypatch.setattr(main_window, "probe", probe_spelling)
+
+    def record_settings(dialog: SettingsDialog) -> SettingsDialog.DialogCode:
+        opened.append(dialog)
+        return SettingsDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(SettingsDialog, "exec", record_settings)
+    window = open_window(show=False)
+    assert not started.is_set()
+    window.show()
+    try:
+        wait_for(app, started.is_set)
+        window.editor.selectAll()
+        QTest.keyClicks(window.editor, "2")
+        assert window.editor.toPlainText() == "2"
+        window.open_settings()
+        assert opened == []
+    finally:
+        release.set()
+    wait_for(app, lambda: bool(opened))
+    assert window.spell_status is status
+
+
 def test_missing_english_dictionary_warning_at_startup(
     app, window_settings, open_window, monkeypatch
 ) -> None:
@@ -2199,7 +2254,7 @@ def test_missing_english_dictionary_warning_at_startup(
     monkeypatch.setattr(SettingsDialog, "exec", lambda dialog: SettingsDialog.DialogCode.Rejected)
 
     window = open_window()
-    pump(app)
+    wait_for(app, lambda: bool(messages))
     assert len(messages) == 1
     assert '"UK English"' in messages[0]
     assert "Calculon is using US English" in messages[0]
@@ -2249,7 +2304,7 @@ def test_spelling_can_reset_to_automatic_without_usable_dictionaries(
 
     monkeypatch.setattr(SettingsDialog, "exec", choose_automatic)
     window = open_window()
-    pump(app)
+    wait_for(app, lambda: bool(messages))
     assert len(messages) == 1
     assert '"UK English"' in messages[0]
     assert "English spell check is off" in messages[0]
@@ -2260,7 +2315,7 @@ def test_spelling_can_reset_to_automatic_without_usable_dictionaries(
     assert window.close()
 
     reopened = open_window()
-    pump(app)
+    wait_for(app, lambda: reopened.spell_status is not None)
     assert reopened.settings.spell_english == "auto"
     assert len(messages) == 1
 
@@ -2373,10 +2428,7 @@ SYSTEM_SPELLING = probe()
 
 
 def wait_for_spelling(window: main_window.MainWindow, app: QApplication) -> SpellChecker:
-    deadline = time.monotonic() + 10
-    while window.editor.spell is None and time.monotonic() < deadline:
-        app.processEvents()
-        time.sleep(0.01)
+    wait_for(app, lambda: window.editor.spell is not None)
     assert window.editor.spell is not None
     return window.editor.spell
 
