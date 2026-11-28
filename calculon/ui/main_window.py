@@ -613,9 +613,12 @@ class MainWindow(QMainWindow):
     def _show_settings(self) -> None:
         self._warn_missing_english_dictionary()
         dlg = SettingsDialog(self.settings, self.t, self)
-        if dlg.exec() != SettingsDialog.DialogCode.Accepted:
-            return
-        new = dlg.result_settings()
+        try:
+            if dlg.exec() != SettingsDialog.DialogCode.Accepted:
+                return
+            new = dlg.result_settings()
+        finally:
+            dlg.deleteLater()
         help_changed = (
             new.language != self.settings.language
             or new.number_style != self.settings.number_style

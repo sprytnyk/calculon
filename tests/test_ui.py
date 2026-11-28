@@ -1051,6 +1051,27 @@ def test_settings_dialog_round_trip(window) -> None:
     assert new.money_decimals == window.settings.money_decimals
 
 
+@pytest.mark.parametrize("accepted", [False, True])
+def test_settings_dialog_is_deleted_after_it_closes(window, accepted: bool) -> None:
+    original_size = window.settings.font_size
+
+    def finish_dialog(size: int) -> None:
+        dialog = QApplication.activeModalWidget()
+        assert isinstance(dialog, SettingsDialog)
+        dialog.font_size.setValue(size)
+        if accepted:
+            dialog.accept()
+        else:
+            dialog.reject()
+
+    for size in (18, 20):
+        QTimer.singleShot(0, partial(finish_dialog, size))
+        window.open_settings()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        assert window.findChildren(SettingsDialog) == []
+        assert window.settings.font_size == (size if accepted else original_size)
+
+
 def test_settings_selector_border_changes_when_focused(window, app) -> None:
     dlg = SettingsDialog(window.settings, window.t, window)
     dlg.show()
